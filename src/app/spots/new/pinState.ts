@@ -1,4 +1,8 @@
-import type { FoundPlace, GeocodedSpotLocation, SaveSpotFailure } from '@/domain/spot';
+import type {
+  FoundPlace,
+  GeocodedSpotLocation,
+  SaveSpotFailure,
+} from '@/domain/spot';
 import type { SpotCategory } from '@/shared/spot';
 
 /**
@@ -22,6 +26,7 @@ export interface PinDraft {
 export type PinFailure =
   | SaveSpotFailure
   | { readonly kind: 'place_not_found' }
+  | { readonly kind: 'place_search_unconfigured' }
   | { readonly kind: 'place_search_unavailable' };
 
 export type PinFormState =
@@ -33,11 +38,27 @@ export type PinFormState =
       readonly draft: PinDraft;
     }
   /** 가게 이름으로 찾은 업체들. 하나를 고르면 이름 · 주소가 채워지고 located로 간다. */
-  | { readonly status: 'place_searched'; readonly draft: PinDraft; readonly places: readonly FoundPlace[] }
+  | {
+      readonly status: 'place_searched';
+      readonly draft: PinDraft;
+      readonly places: readonly FoundPlace[];
+    }
   /** 주소 검색 결과가 여럿이다. 사용자가 하나를 고르면 located로 간다. */
-  | { readonly status: 'searched'; readonly draft: PinDraft; readonly candidates: readonly GeocodedSpotLocation[] }
+  | {
+      readonly status: 'searched';
+      readonly draft: PinDraft;
+      readonly candidates: readonly GeocodedSpotLocation[];
+    }
   /** 좌표가 확인됐다. 지도에 핀을 미리 보이고 저장 버튼을 연다. */
-  | { readonly status: 'located'; readonly draft: PinDraft; readonly location: GeocodedSpotLocation }
-  | { readonly status: 'failed'; readonly failure: PinFailure; readonly draft: PinDraft };
+  | {
+      readonly status: 'located';
+      readonly draft: PinDraft;
+      readonly location: GeocodedSpotLocation;
+    }
+  | {
+      readonly status: 'failed';
+      readonly failure: PinFailure;
+      readonly draft: PinDraft;
+    };
 
 export const IDLE_PIN_STATE: PinFormState = { status: 'idle' };

@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
-import type { PinFormState } from '@/app/spots/new/pinState';
+import type { PinDraft, PinFormState } from '@/app/spots/new/pinState';
 import { IDLE_PIN_STATE } from '@/app/spots/new/pinState';
 import type { PinFailure } from '@/app/spots/new/pinState';
 import { SPOT_CATEGORIES } from '@/shared/spot';
@@ -14,7 +14,7 @@ import { saveFailureMessage } from './saveFailureMessage';
 /**
  * 이름 · 주소 · 카테고리를 받아 좌표를 확인하고 저장하는 폼 — T51(#108) · T52(#124).
  *
- * 찾는 길이 둘이다. **이름으로**(`intent=search_place`)는 네이버 검색 Local API로
+ * 찾는 길이 둘이다. **이름으로**(`intent=search_place`)는 카카오 Local API로
  * 업체를 찾아 이름과 주소를 함께 채우고, **주소로**(`intent=search`)는 Maps
  * Geocoding으로 주소 후보를 받는다. 둘 다 후보를 골라(`pickPlace=<번호>` ·
  * `pick=<주소>`) 좌표 확인(`located`)으로 모이고, 거기서만 "이 위치로 저장"
@@ -235,45 +235,71 @@ function failureMessage(failure: PinFailure): string {
       return '그 이름으로 등록된 가게를 찾지 못했어요. 아래에 주소를 직접 넣어 찾아 주세요.';
     case 'place_search_unavailable':
       return '지금은 이름으로 찾을 수 없어요. 주소로 찾거나 잠시 후 다시 시도해 주세요.';
+    case 'place_search_unconfigured':
+      return '가게 검색이 아직 연결되지 않았어요. 주소를 직접 입력해 위치를 찾아 주세요.';
     default:
       return saveFailureMessage(failure);
   }
 }
 
+/**
+ * 검색 뒤에도 편집을 이어간다. 액션의 자동 리셋은 제어 select까지 첫 옵션으로
+ * 돌릴 수 있다. React 커밋 중에는 합성 onReset이 호출되지 않으므로 DOM 이벤트를
+ * 취소하고, 입력값은 서버 응답과 사용자의 편집으로만 갱신한다.
+ */
+function preserveDraftOnReset(form: HTMLFormElement) {
+  const preventReset = (event: Event) => event.preventDefault();
+  form.addEventListener('reset', preventReset);
+  return () => form.removeEventListener('reset', preventReset);
+}
+
 export function PinSpotForm({ action }: Props) {
-  const [state, submit, pending] = useActionState(action, IDLE_PIN_STATE);
+  const [draft, setDraft] = useState<PinDraft>({
+    name: '',
+    address: '',
+    category: 'other',
+  });
+  const addressSearchRef = useRef<HTMLButtonElement>(null);
+  const [state, submit, pending] = useActionState(
+    async (previous: PinFormState, formData: FormData) => {
+      const next = await action(previous, formData);
+      // 선택 결과와 편집 중인 값을 제어 입력으로 맞춘다.
+      if (next.status !== 'idle') setDraft(next.draft);
+      return next;
+    },
+    IDLE_PIN_STATE,
+  );
 
-  // 각 검색은 자기 칸만 있으면 열린다. 이름으로 찾는 길과 주소로 찾는 길은
-  // 서로를 요구하지 않는다 — 이름이 애매해도 주소를 알면 찾을 수 있어야 한다.
-  // 빈 칸으로 눌러 실패를 받아 보게 하는 대신 버튼 상태로 먼저 말한다.
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const hasName = name.trim().length > 0;
-  const hasAddress = address.trim().length > 0;
-
-  const draft = state.status === 'idle' ? null : state.draft;
-  const located = state.status === 'located' ? state : null;
-  const searched = state.status === 'searched' ? state : null;
-  const placeSearched = state.status === 'place_searched' ? state : null;
+  // 각 검색은 자기 입력 칸만 채워지면 활성화한다. 선택으로 채운 주소도 포함한다.
+  const hasName = draft.name.trim().length > 0;
+  const hasAddress = draft.address.trim().length > 0;
+  const addressMatches =
+    state.status !== 'idle' && state.draft.address === draft.address.trim();
+  const located = state.status === 'located' && addressMatches ? state : null;
+  const searched = state.status === 'searched' && addressMatches ? state : null;
+  const placeSearched =
+    state.status === 'place_searched' && state.draft.name === draft.name.trim()
+      ? state
+      : null;
 
   return (
-    <form className={form} action={submit}>
+    <form
+      className={form}
+      action={submit}
+      aria-busy={pending}
+      ref={preserveDraftOnReset}
+    >
       <div className={field}>
         <label className={label} htmlFor="spot-name">
           가게 이름
         </label>
         <div className={inline}>
           <input
-            // 값이 바뀌면 다시 마운트한다. 비제어 입력이라 그러지 않으면 업체를
-            // 골라 서버가 새 이름을 돌려줘도 화면의 글자는 그대로 남는다.
-            key={`name-${draft?.name ?? ''}`}
             id="spot-name"
             name="name"
             className={`${control} ${inlineField}`}
-            defaultValue={draft?.name ?? ''}
-            onChange={event => {
-              setName(event.target.value);
-            }}
+            value={draft.name}
+            onChange={event => setDraft({ ...draft, name: event.target.value })}
             placeholder="피롤츠 커피하우스"
             maxLength={200}
             disabled={pending}
@@ -289,63 +315,10 @@ export function PinSpotForm({ action }: Props) {
           </button>
         </div>
         <p className={hint}>
-          네이버에 등록된 가게를 이름으로 찾습니다. 안 나오면 아래에 주소를 직접
-          넣어 주세요.
+          상호명과 지역을 함께 검색하면 찾기 쉬워요. 예: 성수 블루보틀. 목록에서
+          고르면 주소가 채워집니다.
         </p>
       </div>
-
-      <div className={field}>
-        <label className={label} htmlFor="spot-address">
-          주소
-        </label>
-        <input
-          key={`address-${draft?.address ?? ''}`}
-          id="spot-address"
-          name="address"
-          className={control}
-          defaultValue={draft?.address ?? ''}
-          onChange={event => {
-            setAddress(event.target.value);
-          }}
-          placeholder="서울 용산구 한강대로 56-1"
-          disabled={pending}
-        />
-        <p className={hint}>
-          주소로 찾습니다 — 가게 이름은 위 칸에서 찾아 주세요. 동 이름만으로는
-          위치를 특정할 수 없으니 도로명이나 번지까지 적어 주세요. 여러 곳이
-          나오면 골라 주세요.
-        </p>
-      </div>
-
-      <div className={field}>
-        <label className={label} htmlFor="spot-category">
-          카테고리
-        </label>
-        <select
-          id="spot-category"
-          name="category"
-          className={control}
-          defaultValue={draft?.category ?? 'other'}
-          disabled={pending}
-        >
-          {SPOT_CATEGORIES.map(code => (
-            <option key={code} value={code}>
-              {labelOf(code)}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {state.status === 'invalid' && (
-        <p className={alert} role="alert">
-          {state.message}
-        </p>
-      )}
-      {state.status === 'failed' && (
-        <p className={alert} role="alert">
-          {failureMessage(state.failure)}
-        </p>
-      )}
 
       {placeSearched !== null && (
         <section className={field} aria-label="가게 검색 결과">
@@ -368,17 +341,83 @@ export function PinSpotForm({ action }: Props) {
                     {place.category.length > 0 ? `${place.category} · ` : ''}
                     {place.address}
                   </span>
+                  {place.secondaryAddress !== null && (
+                    <span className={hint}>지번: {place.secondaryAddress}</span>
+                  )}
                 </button>
               </li>
             ))}
           </ul>
-          {/* display 최댓값이 5이고 start도 1이라 더 볼 방법이 없다. 화면이 그 사실을
-              숨기면 사용자는 "다음"을 찾다 만다. */}
           <p className={hint}>
-            한 번에 최대 5곳까지 보여 줍니다. 없으면 이름을 더 정확히 적어
-            주세요.
+            카카오 검색 결과를 최대 15곳까지 보여 줍니다. 찾는 가게가 없으면
+            지역이나 지점명을 더해 검색해 주세요.
           </p>
         </section>
+      )}
+
+      <div className={field}>
+        <label className={label} htmlFor="spot-address">
+          주소
+        </label>
+        <input
+          id="spot-address"
+          name="address"
+          className={control}
+          value={draft.address}
+          onChange={event =>
+            setDraft({ ...draft, address: event.target.value })
+          }
+          onKeyDown={event => {
+            if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+            event.preventDefault();
+            if (!pending && addressSearchRef.current !== null) {
+              event.currentTarget.form?.requestSubmit(addressSearchRef.current);
+            }
+          }}
+          placeholder="서울 용산구 한강대로 56-1"
+          disabled={pending}
+        />
+        <p className={hint}>
+          주소로 찾습니다 — 가게 이름은 위 칸에서 찾아 주세요. 동 이름만으로는
+          위치를 특정할 수 없으니 도로명이나 번지까지 적어 주세요. 여러 곳이
+          나오면 골라 주세요.
+        </p>
+      </div>
+
+      <div className={field}>
+        <label className={label} htmlFor="spot-category">
+          카테고리
+        </label>
+        <select
+          id="spot-category"
+          name="category"
+          className={control}
+          value={draft.category}
+          onChange={event => {
+            const category = SPOT_CATEGORIES.find(
+              code => code === event.target.value,
+            );
+            if (category !== undefined) setDraft({ ...draft, category });
+          }}
+          disabled={pending}
+        >
+          {SPOT_CATEGORIES.map(code => (
+            <option key={code} value={code}>
+              {labelOf(code)}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {state.status === 'invalid' && (
+        <p className={alert} role="alert">
+          {state.message}
+        </p>
+      )}
+      {state.status === 'failed' && (
+        <p className={alert} role="alert">
+          {failureMessage(state.failure)}
+        </p>
       )}
 
       {searched !== null && (
@@ -425,15 +464,15 @@ export function PinSpotForm({ action }: Props) {
             <SpotMap
               latitude={located.location.coordinates.latitude}
               longitude={located.location.coordinates.longitude}
-              placeName={located.draft.name}
+              placeName={draft.name}
             />
           </div>
           <div className={previewText}>
             {/* 주소부터 찾은 사람은 아직 이름이 없다. 저장이 막히는 이유를
                 여기서 미리 말한다 — 눌러 보고 알게 하지 않는다. */}
             <p className={label}>
-              {located.draft.name.length > 0
-                ? located.draft.name
+              {draft.name.trim().length > 0
+                ? draft.name
                 : '저장하려면 위에 가게 이름을 적어 주세요'}
             </p>
             <p className={hint}>
@@ -458,6 +497,7 @@ export function PinSpotForm({ action }: Props) {
           </button>
         )}
         <button
+          ref={addressSearchRef}
           type="submit"
           name="intent"
           value="search"

@@ -45,6 +45,90 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('PinSpotForm', () => {
+  it.each([
+    ['가게 이름', 'search_place'],
+    ['주소', 'search'],
+  ])('%s에서 Enter를 누르면 해당 검색을 실행한다', async (label, intent) => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    render(<PinSpotForm action={recording({ status: 'idle' }, seen)} />);
+    await user.type(screen.getByLabelText(label), '검색어{Enter}');
+    await waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0].intent).toBe(intent);
+  });
+
+  it('주소를 고치면 이전 미리보기와 저장 버튼을 닫는다', async () => {
+    const user = userEvent.setup();
+    render(<PinSpotForm action={recording(LOCATED, [])} />);
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+    await screen.findByRole('region', { name: '찾은 위치 미리보기' });
+    await user.type(screen.getByLabelText('주소'), ' 다른 주소');
+    expect(
+      screen.queryByRole('region', { name: '찾은 위치 미리보기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '이 위치로 저장' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('확인한 위치의 이름과 카테고리를 수정해도 저장할 때 입력값을 유지한다', async () => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    render(<PinSpotForm action={recording(LOCATED, seen)} />);
+    await fill(user);
+    expect(screen.getByLabelText('카테고리')).toHaveValue('cafe');
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+    await screen.findByRole('region', { name: '찾은 위치 미리보기' });
+    expect(screen.getByLabelText('카테고리')).toHaveValue('cafe');
+    await user.clear(screen.getByLabelText('가게 이름'));
+    await user.type(screen.getByLabelText('가게 이름'), '나의 아지트');
+    await user.selectOptions(screen.getByLabelText('카테고리'), 'other');
+    expect(
+      screen.getByRole('region', { name: '찾은 위치 미리보기' }),
+    ).toHaveTextContent('나의 아지트');
+    await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
+    await waitFor(() => expect(seen).toHaveLength(2));
+    expect(seen[1]).toMatchObject({
+      intent: 'save',
+      name: '나의 아지트',
+      category: 'other',
+    });
+  });
+
+  it('상호명을 바꾸면 이전 가게 목록을 숨긴다', async () => {
+    const user = userEvent.setup();
+    render(
+      <PinSpotForm
+        action={recording(
+          {
+            status: 'place_searched',
+            draft: DRAFT,
+            places: [
+              {
+                name: DRAFT.name,
+                address: DRAFT.address,
+                category: '카페',
+                secondaryAddress: '서울 용산구 한강로3가 40-999',
+              },
+            ],
+          },
+          [],
+        )}
+      />,
+    );
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: '검색' }));
+    await screen.findByRole('region', { name: '가게 검색 결과' });
+    expect(
+      screen.getByText('지번: 서울 용산구 한강로3가 40-999'),
+    ).toBeInTheDocument();
+    await user.type(screen.getByLabelText('가게 이름'), ' 다른 지점');
+    expect(
+      screen.queryByRole('region', { name: '가게 검색 결과' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('가게 이름으로 찾기는 intent=search_place로 이름을 보낸다', async () => {
     const user = userEvent.setup();
     const seen: Record<string, string>[] = [];
@@ -77,8 +161,9 @@ describe('PinSpotForm', () => {
       ).toBeInTheDocument();
     });
     expect(seen[0]).toMatchObject({ intent: 'search_place', name: DRAFT.name });
-    // 5건 상한을 숨기지 않는다
-    expect(screen.getByText(/최대 5곳/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/카카오 검색 결과를 최대 15곳/),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '이 위치로 저장' }),
     ).not.toBeInTheDocument();
@@ -130,7 +215,8 @@ describe('PinSpotForm', () => {
     );
     render(<PinSpotForm action={action} />);
 
-    await fill(user);
+    await user.type(screen.getByLabelText('가게 이름'), DRAFT.name);
+    expect(screen.getByRole('button', { name: '주소 검색' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: '검색' }));
     await waitFor(() => {
       expect(
@@ -143,11 +229,12 @@ describe('PinSpotForm', () => {
       expect(seen).toHaveLength(2);
     });
     expect(seen[1]?.['pickPlace']).toBe('1');
-    // 비제어 입력이라도 서버가 돌려준 값이 화면에 반영돼야 한다
+    // 서버가 돌려준 선택 결과가 입력 칸에 반영돼야 한다
     expect(screen.getByLabelText('가게 이름')).toHaveValue('피롤츠 로스터리');
     expect(screen.getByLabelText('주소')).toHaveValue(
       '서울 용산구 한강대로 60',
     );
+    expect(screen.getByRole('button', { name: '다시 검색' })).toBeEnabled();
   });
 
   it('이름으로 못 찾으면 주소로 찾으라고 말한다 — 길이 끊기지 않는다', async () => {

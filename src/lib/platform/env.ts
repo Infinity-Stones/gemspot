@@ -85,20 +85,15 @@ export function supabaseSecretKey(): string | null {
 }
 
 /**
- * 네이버 **검색** Local API 키 — 가게 이름으로 업체를 찾는다(T52).
+ * 카카오 Local REST API 키 — 가게 이름으로 업체와 주소를 찾는다.
  *
- * Maps(Geocoding)와 **다른 서비스, 다른 콘솔, 다른 키**다. Maps는 네이버 클라우드
- * 플랫폼(NCP)에서, 이 둘은 developers.naver.com에서 발급한다. 한쪽 키를 다른 쪽에
- * 넣으면 401이 난다 — 이름을 `NAVER_SEARCH_*`로 못박아 둔 이유다.
+ * Kakao Developers에서 발급한 REST API 키를 사용한다.
+ * JavaScript 키와 다르며 NEXT_PUBLIC_ 접두사로 브라우저에 공개하지 않는다.
  *
- * 둘 다 없으면 이름 검색이 비활성이고, 주소 검색 경로는 그대로 동작한다.
+ * 없으면 이름 검색이 불가능하고, 주소 검색 경로는 그대로 동작한다.
  */
-export function naverSearchClientId(): string | null {
-  return readOptional('NAVER_SEARCH_CLIENT_ID');
-}
-
-export function naverSearchClientSecret(): string | null {
-  return readOptional('NAVER_SEARCH_CLIENT_SECRET');
+export function kakaoRestApiKey(): string | null {
+  return readOptional('KAKAO_REST_API_KEY');
 }
 
 /**

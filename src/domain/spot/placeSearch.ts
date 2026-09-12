@@ -1,10 +1,13 @@
-import type { LocalPlace, LocalSearchOutcome } from '@/lib/platform/naverLocalSearch';
-import { searchLocalPlaces as defaultSearch } from '@/lib/platform/naverLocalSearch';
+import type {
+  LocalPlace,
+  LocalSearchOutcome,
+} from '@/lib/platform/kakaoLocalSearch';
+import { searchLocalPlaces as defaultSearch } from '@/lib/platform/kakaoLocalSearch';
 
 /**
  * 가게 이름으로 스팟 찾기 — T52(#124).
  *
- * 사용자가 아는 것은 대개 주소가 아니라 가게 이름이다. 검색 Local API가
+ * 사용자가 아는 것은 대개 주소가 아니라 가게 이름이다. 카카오 Local API가
  * 이름 → (상호명 · 분류 · 주소)를 주고, 좌표는 그 주소를 Geocoding에 태워
  * 얻는다(T22 #31). 그래서 이 모듈은 좌표를 다루지 않는다.
  */
@@ -36,21 +39,37 @@ export interface SearchPlacesDeps {
  * 사용자는 고른 뒤에야 막힌다.
  */
 export function toFoundPlace(place: LocalPlace): FoundPlace | null {
-  const primary = place.roadAddress.length > 0 ? place.roadAddress : place.jibunAddress;
+  const primary =
+    place.roadAddress.length > 0 ? place.roadAddress : place.jibunAddress;
   if (primary.length === 0) return null;
   const secondary =
-    place.roadAddress.length > 0 && place.jibunAddress.length > 0 ? place.jibunAddress : null;
-  return { name: place.name, category: place.category, address: primary, secondaryAddress: secondary };
+    place.roadAddress.length > 0 && place.jibunAddress.length > 0
+      ? place.jibunAddress
+      : null;
+  return {
+    name: place.name,
+    category: place.category,
+    address: primary,
+    secondaryAddress: secondary,
+  };
 }
 
-export async function searchPlaces(query: string, deps: SearchPlacesDeps = {}): Promise<SearchPlacesResult> {
+export async function searchPlaces(
+  query: string,
+  deps: SearchPlacesDeps = {},
+): Promise<SearchPlacesResult> {
   const search = deps.search ?? defaultSearch;
   const outcome = await search(query);
   if (!outcome.ok) {
-    return { kind: 'unavailable', reason: outcome.error.kind === 'no_api_key' ? 'no_api_key' : 'http' };
+    return {
+      kind: 'unavailable',
+      reason: outcome.error.kind === 'no_api_key' ? 'no_api_key' : 'http',
+    };
   }
   const places = outcome.places
     .map(toFoundPlace)
     .filter((place): place is FoundPlace => place !== null);
-  return places.length === 0 ? { kind: 'not_found' } : { kind: 'results', places };
+  return places.length === 0
+    ? { kind: 'not_found' }
+    : { kind: 'results', places };
 }
