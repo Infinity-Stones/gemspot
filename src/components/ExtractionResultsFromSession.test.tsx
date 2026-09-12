@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
@@ -25,14 +25,6 @@ beforeEach(() => {
 /** 목록은 요약 알럿(T14) 뒤에 있다. 결과를 만지려면 먼저 그것을 지나야 한다. */
 async function openList(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: '목록 보기' }));
-}
-
-/** 후보 카드의 저장 · 삭제는 이름이 같고, 어느 건의 것인지는 그룹이 말한다. */
-function decide(candidateName: string, choice: '저장' | '삭제') {
-  const group = screen.getByRole('group', {
-    name: `${candidateName} 처리 방법`,
-  });
-  return within(group).getByRole('button', { name: choice });
 }
 
 function putCandidates(
@@ -108,7 +100,7 @@ describe('ExtractionResultsFromSession', () => {
     ).toBeInTheDocument();
   });
 
-  it('저장을 고른 건만 액션에 넘긴다 — 좌표는 보내지 않는다', async () => {
+  it('주소가 확인된 건만 액션에 넘긴다 — 좌표는 보내지 않는다', async () => {
     const user = userEvent.setup();
     putCandidates([
       {
@@ -116,13 +108,11 @@ describe('ExtractionResultsFromSession', () => {
         name: '피롤츠 커피하우스',
         roadAddress: '서울 용산구 한강대로 56-1',
       },
-      { id: 'c2', name: '텅 베이커리', roadAddress: '서울 마포구 와우산로 29' },
+      { id: 'c2', name: '텅 베이커리', roadAddress: null },
     ]);
     render(<ExtractionResultsFromSession />);
     await openList(user);
 
-    await user.click(decide('피롤츠 커피하우스', '저장'));
-    await user.click(decide('텅 베이커리', '삭제'));
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
     await waitFor(() => {
@@ -156,7 +146,6 @@ describe('ExtractionResultsFromSession', () => {
     render(<ExtractionResultsFromSession />);
     await openList(user);
 
-    await user.click(decide('피롤츠 커피하우스', '저장'));
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
     await waitFor(() => {
