@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { ExtractionResultCandidate } from './ExtractionResults';
@@ -55,83 +55,68 @@ describe('ExtractionResults', () => {
     expect(screen.getByRole('button', { name: '목록 보기' })).toHaveFocus();
   });
 
-  it('알럿을 확인하면 성공 탭과 목록을 보여준다', async () => {
+  it('알럿을 확인하면 성공과 실패를 한 화면에 함께 보여준다', async () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
-    const successTab = screen.getByRole('tab', { name: '성공 2' });
-    expect(successTab).toHaveAttribute('aria-selected', 'true');
-    expect(successTab).toHaveFocus();
+    // 탭으로 갈라 두면 한쪽을 못 본 채 넘어간다. 둘 다 할 일이 있는 목록이다.
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
     expect(screen.getByText('파브리키친')).toBeInTheDocument();
-    expect(screen.queryByText('에그앤플라워')).not.toBeInTheDocument();
+    // 실패 건도 같은 화면에 있다 — 탭 뒤에 숨지 않는다.
+    expect(screen.getByRole('textbox', { name: '상호명' })).toHaveValue(
+      '에그앤플라워',
+    );
     expect(
-      screen.getByRole('combobox', { name: '피롤츠 커피하우스 카테고리' }),
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
     ).toHaveValue('cafe');
     expect(
-      screen.getByRole('combobox', { name: '파브리키친 카테고리' }),
+      screen.getByRole('combobox', { name: '파브리키친 저장할 카테고리 선택' }),
     ).toHaveValue('meal');
   });
 
-  it('실패 탭에서 주소가 없는 후보만 보여준다', async () => {
+  it('주소를 못 찾았다는 안내는 토스트로 한 번만 지나간다', async () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    await user.click(screen.getByRole('tab', { name: '실패 1' }));
 
-    expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '도로명 주소를 찾지 못했습니다.',
+    );
     expect(
-      screen.getByText('도로명 주소를 찾지 못했습니다.'),
+      screen.getByRole('button', { name: '에그앤플라워 스크린샷 이미지 보기' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: '에그앤플라워 스크린샷' }),
-    ).toHaveAttribute('src', 'blob:egg-and-flower');
-    expect(screen.queryByText('피롤츠 커피하우스')).not.toBeInTheDocument();
   });
 
-  it('방향키로 탭과 결과 목록을 함께 바꾼다', async () => {
-    const user = userEvent.setup();
-    render(<ExtractionResults candidates={CANDIDATES} />);
-
-    await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    const successTab = screen.getByRole('tab', { name: '성공 2' });
-    successTab.focus();
-    await user.keyboard('{ArrowRight}');
-
-    const failureTab = screen.getByRole('tab', { name: '실패 1' });
-    expect(failureTab).toHaveFocus();
-    expect(failureTab).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
-  });
-
-  it('성공 건이 없으면 알럿 확인 후 실패 탭부터 연다', async () => {
+  it('성공 건이 없으면 실패 목록만 남는다', async () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={[CANDIDATES[1]]} />);
 
     expect(screen.getByText('성공 0건 · 실패 1건')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
-    expect(screen.getByRole('tab', { name: '실패 1' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    expect(screen.getByRole('textbox', { name: '상호명' })).toHaveValue(
+      '에그앤플라워',
     );
-    expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '선택 완료' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('후보가 없으면 0건을 알린 뒤 빈 상태를 보여준다', async () => {
+  it('후보가 없으면 0건을 알린 뒤 빈 화면을 보여준다', async () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={[]} />);
 
     expect(screen.getByText('성공 0건 · 실패 0건')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
-    expect(
-      screen.getByText('주소 입력이 필요한 결과가 없습니다.'),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('새 추출 데이터를 받으면 목록보다 새 알럿을 먼저 보여준다', async () => {
@@ -151,78 +136,42 @@ describe('ExtractionResults', () => {
     expect(screen.queryByText('피롤츠 커피하우스')).not.toBeInTheDocument();
   });
 
-  it('성공 건마다 상호명과 주소를 보여주고 저장 또는 삭제를 고르게 한다', async () => {
+  it('성공 건마다 상호명과 주소를 보여주고 카테고리를 고르게 한다', async () => {
     const user = userEvent.setup();
-    render(<ExtractionResults candidates={CANDIDATES} onContinue={vi.fn()} />);
+    render(<ExtractionResults candidates={CANDIDATES} />);
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
-    expect(
-      screen.getByRole('group', { name: '피롤츠 커피하우스 처리 방법' }),
-    ).toHaveTextContent('저장삭제');
-    expect(
-      screen.getByRole('group', { name: '파브리키친 처리 방법' }),
-    ).toHaveTextContent('저장삭제');
+    expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
     expect(
       screen.getByText('서울 용산구 한강대로 56-1, 2층'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('서울 용산구 한강대로15길 23-6'),
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
     ).toBeInTheDocument();
   });
 
-  it('모든 성공 건을 고르기 전에는 STEP 4 전달을 막는다', async () => {
+  it('주소가 확인된 후보를 STEP 4 경계로 넘긴다', async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();
     render(
-      <ExtractionResults candidates={CANDIDATES} onContinue={onContinue} />,
+      <ExtractionResults
+        candidates={[CANDIDATES[0]]}
+        onContinue={onContinue}
+      />,
     );
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    const complete = screen.getByRole('button', { name: '선택 완료' });
-    expect(complete).toBeDisabled();
-
-    const pirouettes = screen.getByRole('group', {
-      name: '피롤츠 커피하우스 처리 방법',
-    });
-    await user.click(within(pirouettes).getByRole('button', { name: '저장' }));
-
-    expect(
-      screen.getByText('2건 중 1건 선택 · 저장 대상 1건'),
-    ).toBeInTheDocument();
-    expect(complete).toBeDisabled();
-    expect(onContinue).not.toHaveBeenCalled();
-  });
-
-  it('저장을 고른 성공 후보만 STEP 4 경계로 넘긴다', async () => {
-    const user = userEvent.setup();
-    const onContinue = vi.fn();
-    render(
-      <ExtractionResults candidates={CANDIDATES} onContinue={onContinue} />,
-    );
-
-    await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    const pirouettes = screen.getByRole('group', {
-      name: '피롤츠 커피하우스 처리 방법',
-    });
-    const fabri = screen.getByRole('group', {
-      name: '파브리키친 처리 방법',
-    });
-    await user.click(within(pirouettes).getByRole('button', { name: '저장' }));
     await user.selectOptions(
-      screen.getByRole('combobox', { name: '피롤츠 커피하우스 카테고리' }),
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
       'other',
     );
-    await user.click(within(fabri).getByRole('button', { name: '삭제' }));
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
-    expect(
-      within(pirouettes).getByRole('button', { name: '저장' }),
-    ).toHaveAttribute('aria-pressed', 'true');
-    expect(within(fabri).getByRole('button', { name: '삭제' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
     expect(onContinue).toHaveBeenCalledOnce();
     expect(onContinue).toHaveBeenCalledWith([
       {
@@ -241,12 +190,11 @@ describe('ExtractionResults', () => {
     render(<ExtractionResults candidates={[CANDIDATES[0]]} />);
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    await user.click(screen.getByRole('button', { name: '저장' }));
 
     expect(screen.getByRole('button', { name: '선택 완료' })).toBeDisabled();
   });
 
-  it('실패 건의 상호명과 주소를 고쳐 저장 대상에 추가한다', async () => {
+  it('실패 건의 상호명과 주소를 고쳐 성공 데이터로 옮긴다', async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();
     render(
@@ -266,28 +214,19 @@ describe('ExtractionResults', () => {
 
     // 타이핑은 폼의 초안만 바꾼다. 명시적으로 추가하기 전에는 실패 건이
     // 성공(다음 저장 단계로 넘길 대상)에 섞이지 않는다.
-    expect(screen.getByRole('tab', { name: '성공 0' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '실패 1' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '선택 완료' }),
+    ).not.toBeInTheDocument();
     expect(onContinue).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: '저장 대상에 추가' }));
+    await user.click(
+      screen.getByRole('button', { name: '성공 데이터로 추가' }),
+    );
 
-    expect(screen.getByRole('tab', { name: '성공 1' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '실패 0' })).toBeInTheDocument();
     expect(onContinue).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole('tab', { name: '성공 1' }));
     expect(screen.getByText('에그 앤 플라워')).toBeInTheDocument();
     expect(screen.getByText('서울 용산구 신흥로 26길 35')).toBeInTheDocument();
     expect(screen.getByText('직접 입력')).toBeInTheDocument();
-    expect(
-      screen.getByText('1건 중 1건 선택 · 저장 대상 1건'),
-    ).toBeInTheDocument();
-    expect(
-      within(
-        screen.getByRole('group', { name: '에그 앤 플라워 처리 방법' }),
-      ).getByRole('button', { name: '저장' }),
-    ).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
@@ -325,38 +264,52 @@ describe('ExtractionResults', () => {
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(
-      screen.getAllByRole('img', { name: '가게 둘이 담긴 스크린샷' }),
+      screen.getAllByRole('button', {
+        name: '가게 둘이 담긴 스크린샷 이미지 보기',
+      }),
     ).toHaveLength(1);
-    expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
-    expect(screen.getByText('두 번째 가게')).toBeInTheDocument();
+    // 한 장에서 나온 후보는 각자 자기 입력 칸을 갖는다.
+    const names = screen.getAllByRole('textbox', { name: '상호명' });
+    expect(names.map(field => (field as HTMLInputElement).value)).toEqual([
+      '에그앤플라워',
+      '두 번째 가게',
+    ]);
   });
 
-  it('실패 이미지를 목록에서 개별 삭제한다', async () => {
+  it('한 장에서 나온 후보를 하나씩 지운다 — 옆 후보는 남는다', async () => {
     const user = userEvent.setup();
-    const otherFailure: ExtractionResultCandidate = {
-      ...CANDIDATES[1],
-      id: 'other-failure',
-      name: '남은 가게',
-      uploadImage: {
-        id: 'upload-other',
-        src: 'blob:other',
-        alt: '남은 스크린샷',
-      },
+    const sharedImage = {
+      id: 'upload-shared',
+      src: 'blob:shared',
+      alt: '가게 둘이 담긴 스크린샷',
     };
-    render(<ExtractionResults candidates={[CANDIDATES[1], otherFailure]} />);
-
-    await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    await user.click(
-      screen.getByRole('button', { name: '에그앤플라워 스크린샷 삭제' }),
+    render(
+      <ExtractionResults
+        candidates={[
+          { ...CANDIDATES[1], id: 'first', uploadImage: sharedImage },
+          {
+            ...CANDIDATES[1],
+            id: 'second',
+            name: '남은 가게',
+            uploadImage: sharedImage,
+          },
+        ]}
+      />,
     );
 
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
+    await user.click(screen.getByRole('button', { name: '에그앤플라워 삭제' }));
+
+    const names = screen.getAllByRole('textbox', { name: '상호명' });
+    expect(names.map(field => (field as HTMLInputElement).value)).toEqual([
+      '남은 가게',
+    ]);
+    // 한 건을 지웠다고 그 장에서 나온 다른 건까지 사라지지 않는다.
     expect(
-      screen.queryByRole('img', { name: '에그앤플라워 스크린샷' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: '남은 스크린샷' }),
+      screen.getByRole('button', {
+        name: '가게 둘이 담긴 스크린샷 이미지 보기',
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '실패 1' })).toBeInTheDocument();
   });
 
   it('실패 앨범에는 재시도 동작이 없다', async () => {

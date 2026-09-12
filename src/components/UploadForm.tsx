@@ -403,6 +403,9 @@ export function UploadForm({ action }: Props) {
   };
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejection, setRejection] = useState<UploadRejection | null>(null);
+  // 서버가 돌려준 실패는 액션 상태에 남는다. 다시 고르거나 지운 뒤에도 그대로
+  // 두면 화면이 지난 일을 계속 말하므로, 그때부터는 덮어 둔다.
+  const [isFailureDismissed, setIsFailureDismissed] = useState(false);
 
   /**
    * 경고 상자가 재시도 버튼을 들고 있는가.
@@ -412,7 +415,10 @@ export function UploadForm({ action }: Props) {
    * 자리에서 다음 행동이 끝나야 한다.
    */
   const retryInWarning =
-    state.status === 'failed' && isRetryable(state.reason) && image !== null;
+    !isFailureDismissed &&
+    state.status === 'failed' &&
+    isRetryable(state.reason) &&
+    image !== null;
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
@@ -441,6 +447,10 @@ export function UploadForm({ action }: Props) {
   // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 URL이
   // 하나씩 새고 revokeObjectURL은 두 번 불린다.
   function choose(picked: readonly File[]) {
+    // 다시 고르는 순간 앞선 실패는 지나간 일이 된다. 남겨 두면 방금 고친 것도
+    // 여전히 문제인 것처럼 읽힌다.
+    setIsFailureDismissed(true);
+
     // 드래그 앤 드롭이나 공유하기로 여러 장이 들어와도 **첫 장만** 본다.
     // 멀티 업로드를 지원하지 않으므로 나머지는 볼 이유가 없다.
     const [file] = picked;
@@ -482,12 +492,17 @@ export function UploadForm({ action }: Props) {
    * 그 둘이 갈라질 수 있고, 갈라진 자리가 이 버그였다.
    */
   function sendPickedImage() {
+    // 다시 보내는 순간부터는 새 결과를 기다린다.
+    setIsFailureDismissed(false);
+
     const formData = new FormData();
     if (image !== null) formData.append('image', image.file);
     submit(formData);
   }
 
   function clear() {
+    setIsFailureDismissed(true);
+
     const going = imageRef.current;
     if (going === null) return;
 
@@ -578,52 +593,53 @@ export function UploadForm({ action }: Props) {
         </div>
       )}
 
-      {(state.status === 'failed' || state.status === 'invalid') && (
-        <div className={warning}>
-          {/*
+      {!isFailureDismissed &&
+        (state.status === 'failed' || state.status === 'invalid') && (
+          <div className={warning}>
+            {/*
             role="alert"를 상자가 아니라 문구에만 준다. 이 역할은
             aria-live="assertive"라 내용이 바뀔 때마다 통째로 읽히는데, 폴백
             버튼까지 그 안에 있으면 누를 것이 낭독에 섞여 되풀이된다.
           */}
-          <div role="alert">
-            <p className={warningTitle}>추출하지 못했습니다</p>
-            <ul className={warningList}>
-              <li>
-                {state.status === 'failed'
-                  ? explainFailure(state.reason)
-                  : state.message}
-              </li>
-            </ul>
-          </div>
+            <div role="alert">
+              <p className={warningTitle}>추출하지 못했습니다</p>
+              <ul className={warningList}>
+                <li>
+                  {state.status === 'failed'
+                    ? explainFailure(state.reason)
+                    : state.message}
+                </li>
+              </ul>
+            </div>
 
-          {state.status === 'failed' && (
-            <div className={fallbackActions}>
-              {retryInWarning && (
-                /*
+            {state.status === 'failed' && (
+              <div className={fallbackActions}>
+                {retryInWarning && (
+                  /*
                   같은 폼을 그대로 다시 보낸다. 고른 장이 입력에 남아 있으므로
                   사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던
                   적은 없다.
                 */
-                <button
-                  type="submit"
-                  className={retryButton}
-                  disabled={pending}
-                  aria-busy={pending}
-                >
-                  {pending ? '읽는 중…' : '다시 시도'}
-                </button>
-              )}
-              {/*
+                  <button
+                    type="submit"
+                    className={retryButton}
+                    disabled={pending}
+                    aria-busy={pending}
+                  >
+                    {pending ? '읽는 중…' : '다시 시도'}
+                  </button>
+                )}
+                {/*
                 읽지 못한 장소도 주소를 알면 스팟이 된다. 재시도가 통하지 않는
                 실패(키 없음)에서는 이것이 유일한 길이다.
               */}
-              <Link className={fallbackLink} href={SPOT_NEW_PATH}>
-                주소로 직접 핀 찍기 →
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
+                <Link className={fallbackLink} href={SPOT_NEW_PATH}>
+                  주소로 직접 핀 찍기 →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
 
       {image !== null && (
         <>

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
+import { FloatingActionBar } from './FloatingActionBar';
+import { Toast } from './Toast';
 import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
-import type { FormEvent, KeyboardEvent } from 'react';
+import type { FormEvent } from 'react';
 
 export interface UploadImage {
   /** 업로드 한 장의 식별자. 후보 id와 달리 한 이미지에서 나온 후보들이 공유한다. */
@@ -67,7 +69,7 @@ const alertBackdrop = css({
   display: 'grid',
   placeItems: 'center',
   p: '6',
-  bg: 'slate.950',
+  bg: 'slate.950/60',
 });
 
 const alertCard = css({
@@ -136,58 +138,18 @@ const alertButton = css({
   },
 });
 
-const tabList = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, 1fr)',
-  gap: '1',
-  p: '1',
-  rounded: 'xl',
-  bg: 'slate.100',
-  _dark: { bg: 'slate.800' },
-});
-
-const tab = css({
-  minHeight: '11',
-  px: '4',
-  rounded: 'lg',
-  color: 'slate.600',
-  textStyle: 'sm',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { color: 'slate.900' },
-  _selected: {
-    bg: 'white',
-    color: 'violet.700',
-    shadow: 'sm',
-  },
-  _dark: {
-    color: 'slate.300',
-    _hover: { color: 'white' },
-    _selected: {
-      bg: 'slate.950',
-      color: 'violet.300',
-    },
-  },
-});
-
-const summary = css({
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
-});
-
 const list = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '3',
+  gap: '4',
   m: '0',
   p: '0',
   listStyle: 'none',
 });
 
 const album = css({
-  display: 'grid',
-  gridTemplateColumns: { base: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+  display: 'flex',
+  flexDirection: 'column',
   gap: '4',
   m: '0',
   p: '0',
@@ -203,19 +165,80 @@ const albumCard = css({
   borderStyle: 'solid',
   borderColor: 'slate.200',
   bg: 'white',
+  boxShadow: 'sm',
   _dark: {
     borderColor: 'slate.800',
     bg: 'slate.900',
   },
 });
 
-const failureImage = css({
+// 원본은 주소를 옮겨 적을 때만 필요하다. 카드마다 큰 사진을 펼쳐 두면
+// 정작 채워야 할 입력칸이 화면 밖으로 밀린다.
+const previewButton = css({
+  minHeight: '11',
+  px: '3',
+  rounded: 'md',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.300',
+  color: 'slate.700',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _hover: { borderColor: 'slate.500', bg: 'slate.50' },
+  _dark: {
+    borderColor: 'slate.700',
+    color: 'slate.200',
+    _hover: { borderColor: 'slate.500', bg: 'slate.800' },
+  },
+});
+
+const previewDialog = css({
+  // 네이티브 dialog는 inset과 margin으로 자리를 잡는다. auto 마진이 양축을
+  // 모두 가운데로 민다.
+  inset: '0',
+  m: 'auto',
+  width: 'full',
+  maxWidth: 'lg',
+  p: '0',
+  rounded: 'xl',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'white',
+  overflow: 'hidden',
+  _dark: { borderColor: 'slate.800', bg: 'slate.900' },
+  // 딤은 뒤를 가리는 게 아니라 앞을 띄우는 장치다. 꽉 채우면 원본이 어느
+  // 화면 위에 떠 있는지 사라진다.
+  '&::backdrop': { bg: 'slate.950/60' },
+});
+
+const previewImage = css({
   display: 'block',
   width: 'full',
-  aspectRatio: 'square',
-  objectFit: 'cover',
+  height: 'auto',
+  maxHeight: '[70dvh]',
+  objectFit: 'contain',
   bg: 'slate.100',
   _dark: { bg: 'slate.950' },
+});
+
+const previewFooter = css({
+  display: 'flex',
+  justifyContent: 'flex-end',
+  p: '3',
+});
+
+const previewClose = css({
+  minHeight: '11',
+  px: '4',
+  rounded: 'md',
+  bg: 'slate.900',
+  color: 'white',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _dark: { bg: 'slate.100', color: 'slate.900' },
 });
 
 const albumDetails = css({
@@ -241,6 +264,13 @@ const manualForm = css({
   flexDirection: 'column',
   gap: '3',
   width: 'full',
+  p: '4',
+  rounded: 'lg',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'slate.50',
+  _dark: { borderColor: 'slate.800', bg: 'slate.950' },
 });
 
 const field = css({
@@ -262,7 +292,8 @@ const input = css({
   minHeight: '11',
   px: '3',
   rounded: 'md',
-  borderWidth: 'hairline',
+  // 1px은 이 크기에서 묻혀 입력칸이 있는지조차 보이지 않는다.
+  borderWidth: '[1.5px]',
   borderStyle: 'solid',
   borderColor: 'slate.300',
   bg: 'white',
@@ -276,9 +307,9 @@ const input = css({
 });
 
 const addButton = css({
-  alignSelf: 'flex-start',
+  width: 'full',
+  minHeight: '11',
   px: '4',
-  py: '2',
   rounded: 'md',
   borderWidth: 'hairline',
   borderStyle: 'solid',
@@ -296,91 +327,111 @@ const addButton = css({
   },
 });
 
+// 아이콘은 작지만 누를 자리는 44px을 지킨다. 그 여백이 카드 안에서 빈칸처럼
+// 보이지 않도록, 남는 만큼을 음수 마진으로 되돌린다.
 const deleteButton = css({
-  px: '3',
-  py: '2',
+  alignSelf: 'flex-end',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '11',
+  height: '11',
+  mt: '-2',
+  mb: '-3',
+  mr: '-2',
   rounded: 'md',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'red.300',
-  color: 'red.700',
-  textStyle: 'sm',
-  fontWeight: 'semibold',
+  color: 'red.600',
   cursor: 'pointer',
-  _hover: { borderColor: 'red.600', bg: 'red.50' },
+  _hover: { color: 'red.700', bg: 'red.50' },
   _dark: {
-    borderColor: 'red.800',
-    color: 'red.300',
-    _hover: { borderColor: 'red.400', bg: 'red.950' },
+    color: 'red.400',
+    _hover: { color: 'red.300', bg: 'red.950' },
   },
 });
 
+// 한 건이 어디서 시작해 어디서 끝나는지 카드가 말한다. 추출된 값과 그에
+// 딸린 카테고리가 같은 면 위에 있어야 두 건이 섞여 읽히지 않는다.
 const card = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '2',
+  gap: '3',
   p: '5',
   rounded: 'xl',
   borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'slate.200',
   bg: 'white',
+  boxShadow: 'sm',
   _dark: {
     borderColor: 'slate.800',
     bg: 'slate.900',
   },
 });
 
-const choices = css({
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+const sectionTitle = css({
+  display: 'flex',
+  alignItems: 'center',
   gap: '2',
-  mt: '2',
-});
-
-const choice = css({
-  minHeight: '10',
-  px: '4',
-  rounded: 'lg',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'slate.300',
-  color: 'slate.700',
-  textStyle: 'sm',
+  mb: '3',
+  textStyle: 'md',
   fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { borderColor: 'slate.500' },
-  _pressed: {
-    borderColor: 'violet.600',
-    bg: 'violet.50',
-    color: 'violet.800',
-  },
-  _dark: {
-    borderColor: 'slate.700',
-    color: 'slate.300',
-    _hover: { borderColor: 'slate.500' },
-    _pressed: {
-      borderColor: 'violet.400',
-      bg: 'violet.950',
-      color: 'violet.200',
-    },
-  },
+  color: 'violet.700',
+  _dark: { color: 'violet.300' },
 });
 
-const completion = css({
+// 건수는 색만으로 구분되지 않게 숫자를 그대로 읽힌다. 원은 그 숫자가
+// 제목이 아니라 개수라는 것만 표시한다.
+const countBadge = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '6',
+  height: '6',
+  px: '1',
+  rounded: 'full',
+  bg: 'violet.600',
+  color: 'white',
+  textStyle: 'xs',
+  fontWeight: 'bold',
+  _dark: { bg: 'violet.500' },
+});
+
+const failureSectionTitle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  mb: '3',
+  textStyle: 'md',
+  fontWeight: 'semibold',
+  color: 'red.700',
+  _dark: { color: 'red.300' },
+});
+
+const failureCountBadge = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '6',
+  height: '6',
+  px: '1',
+  rounded: 'full',
+  bg: 'red.600',
+  color: 'white',
+  textStyle: 'xs',
+  fontWeight: 'bold',
+  _dark: { bg: 'red.500' },
+});
+
+const decideRow = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '2',
-  mt: '4',
+  gap: '1',
 });
 
-const completionHint = css({
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
-});
+const decideSelect = css({ width: 'full' });
 
 const continueButton = css({
+  width: 'full',
   minHeight: '11',
   px: '5',
   rounded: 'lg',
@@ -405,40 +456,37 @@ const continueButton = css({
   },
 });
 
+// 추출해 온 값(상호명 · 주소)만 따로 담는다. 이 카드 안에서 사용자가 고르는
+// 것(카테고리 · 저장/삭제)과 서버가 읽어 온 것이 같은 바탕에 섞이면, 무엇을
+// 확인해야 하는지가 드러나지 않는다.
+const extracted = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+  px: '4',
+  py: '3',
+  rounded: 'lg',
+  bg: 'violet.50',
+  _dark: { bg: 'violet.950' },
+});
+
 const candidateName = css({
   textStyle: 'md',
   fontWeight: 'semibold',
+  color: 'violet.900',
+  _dark: { color: 'violet.100' },
 });
 
 const address = css({
   textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  color: 'violet.700',
+  _dark: { color: 'violet.300' },
 });
 
 const manualOrigin = css({
   textStyle: 'xs',
   color: 'violet.700',
   _dark: { color: 'violet.300' },
-});
-
-const failureHint = css({
-  textStyle: 'sm',
-  color: 'red.700',
-  _dark: { color: 'red.300' },
-});
-
-const empty = css({
-  py: '12',
-  px: '5',
-  textAlign: 'center',
-  rounded: 'xl',
-  borderWidth: 'hairline',
-  borderStyle: 'dashed',
-  borderColor: 'slate.300',
-  color: 'slate.600',
-  textStyle: 'sm',
-  _dark: { borderColor: 'slate.700', color: 'slate.400' },
 });
 
 function isSuccessfulCandidate(
@@ -481,7 +529,44 @@ function failureAlbumOf(
   return [...byImage.values()];
 }
 
-type CandidateDecision = 'save' | 'delete';
+interface ImagePreviewProps {
+  readonly image: UploadImage;
+  readonly onClose: () => void;
+}
+
+/**
+ * 원본 보기. 네이티브 `dialog`를 쓰는 이유는 포커스 가둠과 Esc 닫기를 브라우저가
+ * 이미 들고 있어서다 — 직접 만들면 그 둘을 다시 구현하게 된다.
+ */
+function ImagePreview({ image, onClose }: ImagePreviewProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  return (
+    <dialog
+      className={previewDialog}
+      ref={dialogRef}
+      aria-label={`${image.alt} 원본`}
+      onClose={onClose}
+    >
+      <img className={previewImage} src={image.src} alt={image.alt} />
+      <div className={previewFooter}>
+        <button
+          className={previewClose}
+          type="button"
+          onClick={() => {
+            dialogRef.current?.close();
+          }}
+        >
+          닫기
+        </button>
+      </div>
+    </dialog>
+  );
+}
 
 interface ManualCandidateFormProps {
   readonly candidate: ExtractionResultCandidate;
@@ -490,6 +575,7 @@ interface ManualCandidateFormProps {
     name: string,
     roadAddress: string,
   ) => void;
+  readonly onDelete: (candidate: ExtractionResultCandidate) => void;
 }
 
 /**
@@ -500,6 +586,7 @@ interface ManualCandidateFormProps {
 function ManualCandidateForm({
   candidate,
   onConfirm,
+  onDelete,
 }: ManualCandidateFormProps) {
   const [name, setName] = useState(candidate.name);
   const [roadAddress, setRoadAddress] = useState('');
@@ -514,6 +601,27 @@ function ManualCandidateForm({
 
   return (
     <form className={manualForm} onSubmit={confirm}>
+      <button
+        className={deleteButton}
+        type="button"
+        onClick={() => {
+          onDelete(candidate);
+        }}
+        aria-label={`${candidate.name} 삭제`}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M4 4l10 10M14 4L4 14" />
+        </svg>
+      </button>
       <label className={field}>
         <span className={fieldLabel}>상호명</span>
         <input
@@ -539,7 +647,7 @@ function ManualCandidateForm({
         />
       </label>
       <button className={addButton} type="submit">
-        저장 대상에 추가
+        성공 데이터로 추가
       </button>
     </form>
   );
@@ -556,62 +664,45 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   const successes = reviewCandidates.filter(isSuccessfulCandidate);
   const initialFailureCount = candidatesOf(candidates, 'failure').length;
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
-  const [deletedFailureImageIds, setDeletedFailureImageIds] = useState<
+  // 한 장에서 가게가 둘 나올 수 있다. 이미지 단위로 지우면 지우려던 것 옆의
+  // 멀쩡한 후보까지 함께 사라진다.
+  const [deletedFailureCandidateIds, setDeletedFailureCandidateIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
   const failures = candidatesOf(reviewCandidates, 'failure').filter(
-    candidate => !deletedFailureImageIds.has(candidate.uploadImage.id),
+    candidate => !deletedFailureCandidateIds.has(candidate.id),
   );
   const failureAlbum = failureAlbumOf(failures);
-  // 성공 확인이 기본 흐름이다. 성공이 하나도 없을 때만 실패 탭부터 열어 빈
-  // 화면을 한 번 거치지 않게 한다.
-  const [selected, setSelected] = useState<ResultKind>(() =>
-    successes.length > 0 ? 'success' : 'failure',
-  );
-  const [decisions, setDecisions] = useState<
-    Readonly<Record<string, CandidateDecision>>
-  >({});
+  // 건수는 이미지가 아니라 후보로 센다. 한 장에서 두 가게가 나올 수 있어,
+  // 앨범 장수로 세면 사용자가 채워야 할 칸 수와 어긋난다.
+  const failureCount = failures.length;
+  const [previewImage, setPreviewImage] = useState<UploadImage | null>(null);
+  // 실패 안내는 카드마다 되뇌지 않는다. 같은 말이 카드 수만큼 쌓이면 정작
+  // 채워야 할 입력칸을 가린다 — 한 번 지나가고 끝낸다.
+  const [isFailureNoticeVisible, setIsFailureNoticeVisible] = useState(false);
   // 사용자가 바꾼 건만 여기 둔다. 기본값을 상태로 미리 채우지 않아야 VLM
   // 제안과 사용자의 명시적 수정을 구분할 수 있다.
   const [categories, setCategories] = useState<
     Readonly<Record<string, SpotCategory>>
   >({});
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
-  const successTabRef = useRef<HTMLButtonElement>(null);
-  const failureTabRef = useRef<HTMLButtonElement>(null);
-
   useEffect(() => {
-    if (isSummaryOpen) {
-      summaryButtonRef.current?.focus();
-      return;
-    }
+    if (isSummaryOpen) summaryButtonRef.current?.focus();
+  }, [isSummaryOpen]);
 
-    const selectedTab = selected === 'success' ? successTabRef : failureTabRef;
-    selectedTab.current?.focus();
-  }, [isSummaryOpen, selected]);
-
-  const panelId = `extraction-${selected}-panel`;
-  const decidedCount = successes.filter(
-    candidate => decisions[candidate.id] !== undefined,
-  ).length;
-  const savedCandidates = successes
-    .filter(candidate => decisions[candidate.id] === 'save')
-    .map(({ id, name, roadAddress, suggestedCategory, origin }) => ({
+  // 저장·삭제를 건마다 고르게 하지 않는다. 주소가 확인된 건은 그대로 저장
+  // 대상이고, 빼고 싶으면 실패 쪽처럼 그 건을 지우면 된다.
+  const savedCandidates = successes.map(
+    ({ id, name, roadAddress, suggestedCategory, origin }) => ({
       id,
       name,
       roadAddress,
       suggestedCategory,
       origin,
       category: categories[id] ?? suggestedCategory,
-    }));
-  const canContinue =
-    successes.length > 0 &&
-    decidedCount === successes.length &&
-    onContinue !== undefined;
-
-  function decide(candidateId: string, decision: CandidateDecision) {
-    setDecisions(current => ({ ...current, [candidateId]: decision }));
-  }
+    }),
+  );
+  const canContinue = successes.length > 0 && onContinue !== undefined;
 
   /**
    * `select`가 주는 값은 문자열이다. 좁히지 않고 넣으면 목록에 없는 값이
@@ -621,6 +712,12 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   function chooseCategory(candidateId: string, value: string) {
     if (!isSpotCategory(value)) return;
     setCategories(current => ({ ...current, [candidateId]: value }));
+  }
+
+  function deleteFailureCandidate(candidate: ExtractionResultCandidate) {
+    setDeletedFailureCandidateIds(
+      current => new Set([...current, candidate.id]),
+    );
   }
 
   function confirmManualCandidate(
@@ -637,31 +734,6 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
     setReviewCandidates(current =>
       current.map(item => (item.id === candidate.id ? confirmed : item)),
     );
-    // 이 버튼은 단순히 주소를 고치는 동작이 아니라 저장 대상 편입까지
-    // 확정한다(T17). T15의 선택 상태에도 같은 id를 저장으로 표시하되,
-    // 실제 STEP 4 전달은 아래 "선택 완료"를 눌러야만 일어난다.
-    decide(candidate.id, 'save');
-  }
-
-  function selectAndFocus(kind: ResultKind) {
-    setSelected(kind);
-    const tab = kind === 'success' ? successTabRef : failureTabRef;
-    tab.current?.focus();
-  }
-
-  function moveTab(event: KeyboardEvent<HTMLButtonElement>) {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-
-    event.preventDefault();
-    const next =
-      event.key === 'Home'
-        ? 'success'
-        : event.key === 'End'
-          ? 'failure'
-          : selected === 'success'
-            ? 'failure'
-            : 'success';
-    selectAndFocus(next);
   }
 
   if (isSummaryOpen) {
@@ -691,6 +763,7 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
             type="button"
             onClick={() => {
               setIsSummaryOpen(false);
+              setIsFailureNoticeVisible(failureCount > 0);
             }}
           >
             목록 보기
@@ -702,74 +775,51 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
 
   return (
     <section className={shell} aria-label="추출 결과">
-      <p className={summary} aria-live="polite">
-        주소 확인 {successes.length}건 · 주소 입력 필요 {failures.length}건
-      </p>
-
-      <div className={tabList} role="tablist" aria-label="추출 결과 구분">
-        <button
-          ref={successTabRef}
-          className={tab}
-          type="button"
-          role="tab"
-          id="extraction-success-tab"
-          aria-controls="extraction-success-panel"
-          aria-selected={selected === 'success'}
-          tabIndex={selected === 'success' ? 0 : -1}
-          onClick={() => {
-            setSelected('success');
+      {isFailureNoticeVisible && (
+        <Toast
+          message="도로명 주소를 찾지 못했습니다."
+          onDismiss={() => {
+            setIsFailureNoticeVisible(false);
           }}
-          onKeyDown={moveTab}
-        >
-          성공 {successes.length}
-        </button>
-        <button
-          ref={failureTabRef}
-          className={tab}
-          type="button"
-          role="tab"
-          id="extraction-failure-tab"
-          aria-controls="extraction-failure-panel"
-          aria-selected={selected === 'failure'}
-          tabIndex={selected === 'failure' ? 0 : -1}
-          onClick={() => {
-            setSelected('failure');
-          }}
-          onKeyDown={moveTab}
-        >
-          실패 {failures.length}
-        </button>
-      </div>
+        />
+      )}
 
-      <div
-        id={panelId}
-        role="tabpanel"
-        aria-labelledby={`extraction-${selected}-tab`}
-      >
-        {(selected === 'success' ? successes.length : failureAlbum.length) ===
-        0 ? (
-          <p className={empty}>
-            {selected === 'success'
-              ? '주소가 확인된 결과가 없습니다.'
-              : '주소 입력이 필요한 결과가 없습니다.'}
-          </p>
-        ) : selected === 'success' ? (
+      {previewImage !== null && (
+        <ImagePreview
+          image={previewImage}
+          onClose={() => {
+            setPreviewImage(null);
+          }}
+        />
+      )}
+
+      {successes.length > 0 && (
+        <section aria-label="주소가 확인된 결과">
+          <h2 className={sectionTitle}>
+            성공 데이터
+            <span className={countBadge}>{successes.length}</span>
+          </h2>
           <ul className={list}>
             {successes.map(candidate => (
               <li className={card} key={candidate.id}>
-                <h2 className={candidateName}>{candidate.name}</h2>
-                <p className={address}>{candidate.roadAddress}</p>
-                {candidate.origin === 'manual' ? (
-                  <p className={manualOrigin}>직접 입력</p>
-                ) : null}
-                <label className={field}>
-                  <span className={fieldLabel}>카테고리</span>
+                <div className={decideRow}>
+                  <span className={fieldLabel}>추출 정보</span>
+                  <div className={extracted}>
+                    <h3 className={candidateName}>{candidate.name}</h3>
+                    <p className={address}>{candidate.roadAddress}</p>
+                    {candidate.origin === 'manual' ? (
+                      <p className={manualOrigin}>직접 입력</p>
+                    ) : null}
+                  </div>
+                </div>
+                <label className={decideRow}>
+                  <span className={fieldLabel}>저장할 카테고리 선택</span>
                   <select
-                    className={input}
+                    className={`${input} ${decideSelect}`}
                     // 카드마다 보이는 글자가 같아서 이름만으로는 어느 가게의
                     // 것인지 읽히지 않는다. 보이는 "카테고리"를 접근명에
                     // 그대로 품어 음성 제어도 같은 말로 집을 수 있게 둔다.
-                    aria-label={`${candidate.name} 카테고리`}
+                    aria-label={`${candidate.name} 저장할 카테고리 선택`}
                     value={
                       categories[candidate.id] ?? candidate.suggestedCategory
                     }
@@ -784,90 +834,64 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
                     ))}
                   </select>
                 </label>
-                <div
-                  className={choices}
-                  role="group"
-                  aria-label={`${candidate.name} 처리 방법`}
-                >
-                  <button
-                    className={choice}
-                    type="button"
-                    aria-pressed={decisions[candidate.id] === 'save'}
-                    onClick={() => {
-                      decide(candidate.id, 'save');
-                    }}
-                  >
-                    저장
-                  </button>
-                  <button
-                    className={choice}
-                    type="button"
-                    aria-pressed={decisions[candidate.id] === 'delete'}
-                    onClick={() => {
-                      decide(candidate.id, 'delete');
-                    }}
-                  >
-                    삭제
-                  </button>
-                </div>
               </li>
             ))}
           </ul>
-        ) : (
+        </section>
+      )}
+
+      {failureCount > 0 && (
+        <section aria-label="주소 입력이 필요한 결과">
+          <h2 className={failureSectionTitle}>
+            실패 데이터
+            <span className={failureCountBadge}>{failureCount}</span>
+          </h2>
           <ul className={album}>
             {failureAlbum.map(({ image, candidates: failedCandidates }) => (
               <li className={albumCard} key={image.id}>
-                <img className={failureImage} src={image.src} alt={image.alt} />
                 <div className={albumDetails}>
-                  <p className={failureHint}>도로명 주소를 찾지 못했습니다.</p>
+                  <button
+                    className={previewButton}
+                    type="button"
+                    onClick={() => {
+                      setPreviewImage(image);
+                    }}
+                    aria-label={`${image.alt} 이미지 보기`}
+                  >
+                    이미지 보기
+                  </button>
                   <ul className={failureNames}>
                     {failedCandidates.map(candidate => (
                       <li key={candidate.id}>
-                        <h2 className={candidateName}>{candidate.name}</h2>
                         <ManualCandidateForm
                           candidate={candidate}
                           onConfirm={confirmManualCandidate}
+                          onDelete={deleteFailureCandidate}
                         />
                       </li>
                     ))}
                   </ul>
-                  <button
-                    type="button"
-                    className={deleteButton}
-                    onClick={() => {
-                      setDeletedFailureImageIds(
-                        current => new Set([...current, image.id]),
-                      );
-                    }}
-                    aria-label={`${image.alt} 삭제`}
-                  >
-                    삭제
-                  </button>
                 </div>
               </li>
             ))}
           </ul>
-        )}
+        </section>
+      )}
 
-        {selected === 'success' && successes.length > 0 ? (
-          <div className={completion}>
-            <p className={completionHint} aria-live="polite">
-              {successes.length}건 중 {decidedCount}건 선택 · 저장 대상{' '}
-              {savedCandidates.length}건
-            </p>
-            <button
-              className={continueButton}
-              type="button"
-              disabled={!canContinue}
-              onClick={() => {
-                onContinue?.(savedCandidates);
-              }}
-            >
-              선택 완료
-            </button>
-          </div>
-        ) : null}
-      </div>
+      {successes.length > 0 ? (
+        <FloatingActionBar>
+          <button
+            className={continueButton}
+            type="button"
+            disabled={!canContinue}
+            onClick={() => {
+              onContinue?.(savedCandidates);
+            }}
+          >
+            선택 완료
+          </button>
+        </FloatingActionBar>
+      ) : null}
     </section>
   );
 }

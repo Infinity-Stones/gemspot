@@ -28,8 +28,10 @@ const backLink = css({
   alignSelf: 'flex-start',
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '2',
+  justifyContent: 'center',
+  minWidth: '11',
   minHeight: '11',
+  ml: '[-10px]',
   textStyle: 'sm',
   color: 'violet.700',
   textDecoration: 'none',
@@ -37,17 +39,27 @@ const backLink = css({
   _dark: { color: 'violet.300' },
 });
 
-// 화살표는 장식이라 접근 가능한 이름에서 뺀다 — 스크린리더가 "왼쪽 화살표"를
-// 읽어 봐야 목적지를 알려 주지 않는다.
-const arrow = css({ lineHeight: 'none' });
+const arrow = css({ display: 'block' });
 
 export function BackLink({ href, label }: Props) {
   return (
-    <Link className={backLink} href={href}>
-      <span className={arrow} aria-hidden="true">
-        ←
-      </span>
-      {label}
+    // 글자 없이 화살표만 둔다. 목적지는 접근 가능한 이름으로 남겨, 화면에서
+    // 자리를 먹지 않으면서 보조 기술에는 어디로 가는지 그대로 전한다.
+    <Link className={backLink} href={href} aria-label={label}>
+      <svg
+        className={arrow}
+        width="20"
+        height="20"
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 4 6 10l6 6" />
+      </svg>
     </Link>
   );
 }
