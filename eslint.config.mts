@@ -143,6 +143,21 @@ export default defineConfig([
     settings: { next: { rootDir: import.meta.dirname } },
   },
 
+  {
+    // blob URL 미리보기에는 next/image를 쓸 수 없다 — 예외를 여기 적는다.
+    //
+    // `no-img-element`가 권하는 next/image는 (1) 서버가 받아올 수 있는 주소와
+    // (2) 미리 아는 width·height를 전제한다. 브라우저가 방금 만든
+    // `blob:` URL은 둘 다 아니다. 서버는 그 주소를 열 수 없고, 파일을 디코딩하기
+    // 전에는 크기를 모른다. 룰이 말하는 LCP·대역폭 걱정도 성립하지 않는다 —
+    // 이 이미지는 이미 사용자 기기에 있는 파일이고 네트워크를 타지 않는다.
+    //
+    // 스코프를 파일 하나로 좁힌 이유: 다른 자리에서 img를 쓰고 싶어지면 그때
+    // 다시 판단해야 한다. 패턴으로 넓혀 두면 그 판단이 생략된다.
+    files: ['src/components/UploadForm.tsx'],
+    rules: { '@next/next/no-img-element': 'off' },
+  },
+
   reactHooks.configs.flat['recommended-latest'],
 
   jsxA11y.flatConfigs.recommended,
