@@ -1,5 +1,4 @@
 import type { PlanOutcome } from '@/domain/route';
-import type { SpotSource } from '@/domain/spot';
 
 /**
  * 동선 만들기 화면이 서버 액션과 주고받는 상태.
@@ -12,12 +11,13 @@ export type RoutePlanState =
   | { readonly status: 'idle' }
   /** 문장이 비었다. 서버까지 가지 않고 돌려보낸다. */
   | { readonly status: 'invalid'; readonly message: string }
+  /** 제출 시점에 저장 스팟을 다시 읽지 못했다. */
+  | { readonly status: 'load_failed' }
   | {
       readonly status: 'done';
       /** 되묻기 답을 이어 붙인 뒤의 전체 문장. 다음 제출의 history가 된다. */
       readonly sentence: string;
       readonly outcome: PlanOutcome;
-      readonly spotSource: SpotSource;
     };
 
 export const IDLE_STATE: RoutePlanState = { status: 'idle' };

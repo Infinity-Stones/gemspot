@@ -7,7 +7,6 @@ import type {
 } from '@/lib/platform/spotStorage';
 import type { SavedSpot } from '@/shared/spot';
 import { deleteSpot, findSpot, insertSpot, loadSpots } from './repository';
-import { SEED_SPOTS } from './seed';
 
 const SPOT: SavedSpot = {
   id: '5f6d1c2e-0000-4000-8000-000000000001',
@@ -21,34 +20,32 @@ const SPOT: SavedSpot = {
 };
 
 describe('loadSpots', () => {
-  it('저장소가 설정되지 않았으면 시드, storeError는 null', async () => {
+  it('저장소가 설정되지 않았으면 빈 목록과 오류를 돌려준다', async () => {
     const read = (): Promise<ReadStoredSpotsResult> =>
       Promise.resolve({ ok: false, error: { kind: 'unconfigured' } });
     const result = await loadSpots({ read });
     expect(result).toEqual({
-      spots: SEED_SPOTS,
-      source: 'seed',
-      storeError: null,
+      spots: [],
+      error: { kind: 'unconfigured' },
     });
   });
 
-  it('읽기 실패는 이유를 올리고, 성공한 빈 목록은 시드로 바꾸지 않는다', async () => {
+  it('읽기 실패는 빈 목록과 이유를 돌려주고, 성공한 빈 목록과 구분한다', async () => {
     const failed = (): Promise<ReadStoredSpotsResult> =>
       Promise.resolve({
         ok: false,
         error: { kind: 'query', message: 'permission denied' },
       });
-    await expect(loadSpots({ read: failed })).resolves.toMatchObject({
-      source: 'seed',
-      storeError: 'permission denied',
+    await expect(loadSpots({ read: failed })).resolves.toEqual({
+      spots: [],
+      error: { kind: 'query', message: 'permission denied' },
     });
 
     const empty = (): Promise<ReadStoredSpotsResult> =>
       Promise.resolve({ ok: true, spots: [] });
     await expect(loadSpots({ read: empty })).resolves.toEqual({
       spots: [],
-      source: 'store',
-      storeError: null,
+      error: null,
     });
   });
 });
@@ -69,7 +66,7 @@ describe('insertSpot', () => {
 });
 
 describe('findSpot', () => {
-  it('저장소 결과를 돌려주고, 설정되지 않았을 때 번들 스팟을 찾는다', async () => {
+  it('저장소 결과를 돌려주고, 설정되지 않았을 때도 시드 ID를 해석하지 않는다', async () => {
     const read = (id: string): Promise<ReadStoredSpotResult> =>
       Promise.resolve({ ok: true, spot: id === SPOT.id ? SPOT : null });
     await expect(findSpot(SPOT.id, { read })).resolves.toEqual(SPOT);
@@ -78,15 +75,20 @@ describe('findSpot', () => {
       Promise.resolve({ ok: false, error: { kind: 'unconfigured' } });
     await expect(
       findSpot('seed-cafe-b', { read: unconfigured }),
-    ).resolves.toMatchObject({
-      name: '카페 B',
-    });
+    ).resolves.toBeNull();
   });
 
-  it('저장소에 행이 없으면 null이다', async () => {
+  it('저장소에 행이 없거나 읽기 오류면 null이다', async () => {
     const missing = (): Promise<ReadStoredSpotResult> =>
       Promise.resolve({ ok: true, spot: null });
     await expect(findSpot('missing', { read: missing })).resolves.toBeNull();
+
+    const failed = (): Promise<ReadStoredSpotResult> =>
+      Promise.resolve({
+        ok: false,
+        error: { kind: 'query', message: 'permission denied' },
+      });
+    await expect(findSpot(SPOT.id, { read: failed })).resolves.toBeNull();
   });
 });
 

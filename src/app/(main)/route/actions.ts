@@ -23,20 +23,28 @@ export async function planRouteAction(
 ): Promise<RoutePlanState> {
   const sentence = readText(formData, 'sentence');
   if (sentence.length === 0) {
-    return { status: 'invalid', message: '어디서 몇 시부터 몇 시까지 걷고 싶은지 한 문장으로 적어 주세요.' };
+    return {
+      status: 'invalid',
+      message:
+        '어디서 몇 시부터 몇 시까지 걷고 싶은지 한 문장으로 적어 주세요.',
+    };
   }
 
   const history = readText(formData, 'history');
-  const combined = (history.length > 0 ? `${history}\n${sentence}` : sentence).slice(0, MAX_SENTENCE_LENGTH);
+  const combined = (
+    history.length > 0 ? `${history}\n${sentence}` : sentence
+  ).slice(0, MAX_SENTENCE_LENGTH);
 
-  const { spots, source } = await loadSpots();
+  const { spots, error } = await loadSpots();
+  if (error !== null) return { status: 'load_failed' };
+
   const outcome = await planRoute({
     sentence: combined,
     now: formatSeoulIso(Date.now()),
     spots: spots.map(toRouteCandidate),
   });
 
-  return { status: 'done', sentence: combined, outcome, spotSource: source };
+  return { status: 'done', sentence: combined, outcome };
 }
 
 function readText(formData: FormData, name: string): string {

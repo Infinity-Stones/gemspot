@@ -17,13 +17,13 @@ import { HOME_PATH } from '@/shared/routes';
  * 파라미터가 그 둘을 함께 만족하는 유일한 자리다 — 닫기는 `/`로 돌아가는
  * 링크 하나로 끝난다(T28).
  */
-const SAMPLE_SPOT = {
-  placeName: '피롤츠 커피하우스',
-  roadAddress: '서울 용산구 한강대로 56-1, 2층',
-  jibunAddress: '서울 용산구 한강로3가 40-999',
-  latitude: 37.5299,
-  longitude: 126.9648,
-};
+interface ResolvedSpot {
+  readonly placeName: string;
+  readonly roadAddress: string;
+  readonly jibunAddress: string;
+  readonly latitude: number;
+  readonly longitude: number;
+}
 
 const screen = css({
   position: 'relative',
@@ -63,9 +63,7 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function resolveSavedSpot(
-  id: string,
-): Promise<typeof SAMPLE_SPOT | null> {
+async function resolveSavedSpot(id: string): Promise<ResolvedSpot | null> {
   const saved = await findSpot(id);
   if (saved === null) return null;
   return {
@@ -94,18 +92,16 @@ export default async function HomePage({ searchParams }: Props) {
   // 이미 저장된 것을 들여다보는 자리다(D10 · #40).
   const selected = readOne(params['spot']);
 
-  // 결과 id로 저장된 스팟을 읽는다(T51). `sample`은 저장소 없이 화면을 볼 수
-  // 있게 남긴 데모 값이다. 없는 id면 패널 없는 홈으로 — 지도를 빈 핀으로 채우지 않는다.
+  // 결과 id로 저장된 스팟을 읽는다(T51). 없는 id면 패널 없는 홈으로 — 지도를
+  // 빈 핀으로 채우지 않는다.
   const spotPromise =
-    result === 'sample'
-      ? Promise.resolve(SAMPLE_SPOT)
-      : result !== undefined
-        ? resolveSavedSpot(result)
-        : selected !== undefined
-          ? resolveSavedSpot(selected)
-          : Promise.resolve(null);
+    result !== undefined
+      ? resolveSavedSpot(result)
+      : selected !== undefined
+        ? resolveSavedSpot(selected)
+        : Promise.resolve(null);
 
-  const [{ spots, source, storeError }, spot] = await Promise.all([
+  const [{ spots, error }, spot] = await Promise.all([
     spotsPromise,
     spotPromise,
   ]);
@@ -122,14 +118,9 @@ export default async function HomePage({ searchParams }: Props) {
     <main className={screen}>
       <div className={mapArea}>
         <HomeMap spot={spot} markers={markers} />
-        {source === 'seed' && (
-          <p
-            className={dataNotice}
-            role={storeError === null ? 'status' : 'alert'}
-          >
-            {storeError === null
-              ? '예시 스팟을 표시하고 있습니다.'
-              : '저장한 스팟을 불러오지 못해 예시 스팟을 표시합니다.'}
+        {error !== null && (
+          <p className={dataNotice} role="alert">
+            저장한 스팟을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
           </p>
         )}
         <PinFab />

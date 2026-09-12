@@ -11,7 +11,7 @@ import { planRouteAction } from './actions';
  * 시간 · 동네 · 취향을 칸에 나눠 받는 순간 "그냥 안 가는" 쪽이 다시 편해진다.
  *
  * 서버 컴포넌트로 남긴다. 클라이언트에 필요한 것은 문장 입력과 제출 상태
- * 뿐이고(`RouteComposer`), 스팟 목록은 여기서 개수와 출처만 읽어 넘긴다 —
+ * 뿐이고(`RouteComposer`), 스팟 목록은 여기서 개수와 오류 상태만 읽어 넘긴다 —
  * 스팟이 하나도 없으면 문장을 받을 이유가 없다.
  */
 
@@ -43,7 +43,7 @@ const lede = css({
 });
 
 export default async function RoutePage() {
-  const { spots, source } = await loadSpots();
+  const { spots, error } = await loadSpots();
 
   return (
     <main className={shell}>
@@ -57,7 +57,7 @@ export default async function RoutePage() {
       <RouteComposer
         action={planRouteAction}
         spotCount={spots.length}
-        spotSource={source}
+        loadFailed={error !== null}
       />
     </main>
   );

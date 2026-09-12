@@ -186,7 +186,7 @@ describe('isRoadAddress — 갈래도로', () => {
   });
 
   it('띄어 쓴 갈래도로도 읽는다', () => {
-    // 공식 표기는 붙여 쓰지만 사람이 적으면 띄운다. 시드 데이터가 그 표기다.
+    // 공식 표기는 붙여 쓰지만 사람이 입력할 때는 띄어 쓸 수 있다.
     expect(isRoadAddress('서울 성동구 성수이로 7길 20')).toBe(true);
     expect(isRoadAddress('서울 성동구 성수일로 12길 31')).toBe(true);
   });

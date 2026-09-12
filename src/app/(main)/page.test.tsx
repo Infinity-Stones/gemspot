@@ -51,8 +51,10 @@ const STORED_SPOT: SavedSpot = {
   origin: 'manual',
 };
 
-function renderHome() {
-  return HomePage({ searchParams: Promise.resolve({}) }).then(render);
+function renderHome(
+  searchParams: Record<string, string | string[] | undefined> = {},
+) {
+  return HomePage({ searchParams: Promise.resolve(searchParams) }).then(render);
 }
 
 describe('HomePage 저장 스팟 목록', () => {
@@ -65,8 +67,7 @@ describe('HomePage 저장 스팟 목록', () => {
   it('저장소 목록을 지도용 최소 계약으로 바꿔 전부 넘긴다', async () => {
     domain.loadSpots.mockResolvedValue({
       spots: [STORED_SPOT],
-      source: 'store',
-      storeError: null,
+      error: null,
     });
 
     await renderHome();
@@ -79,32 +80,42 @@ describe('HomePage 저장 스팟 목록', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('저장소 읽기가 실패하면 폴백 목록과 실패 안내를 함께 보인다', async () => {
+  it('저장소 읽기가 실패하면 빈 지도 데이터와 오류 안내만 보인다', async () => {
     domain.loadSpots.mockResolvedValue({
-      spots: [STORED_SPOT],
-      source: 'seed',
-      storeError: 'permission denied',
+      spots: [],
+      error: { kind: 'query', message: 'permission denied' },
     });
 
     await renderHome();
 
-    expect(screen.getByTestId('home-map')).toHaveTextContent('stored-1');
+    expect(screen.getByTestId('home-map')).toBeEmptyDOMElement();
     expect(screen.getByRole('alert')).toHaveTextContent(
-      '저장한 스팟을 불러오지 못해 예시 스팟을 표시합니다.',
+      '저장한 스팟을 불러오지 못했습니다.',
+    );
+    expect(screen.queryByText(/예시 스팟/)).not.toBeInTheDocument();
+  });
+
+  it('저장소가 설정되지 않았어도 더미 스팟 없이 오류로 표시한다', async () => {
+    domain.loadSpots.mockResolvedValue({
+      spots: [],
+      error: { kind: 'unconfigured' },
+    });
+
+    await renderHome();
+
+    expect(screen.getByTestId('home-map')).toBeEmptyDOMElement();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '저장한 스팟을 불러오지 못했습니다.',
     );
   });
 
-  it('저장소가 설정되지 않았으면 예시 데이터임을 알린다', async () => {
-    domain.loadSpots.mockResolvedValue({
-      spots: [STORED_SPOT],
-      source: 'seed',
-      storeError: null,
-    });
+  it('result=sample도 저장소에서 찾으며 번들 상세를 열지 않는다', async () => {
+    domain.loadSpots.mockResolvedValue({ spots: [], error: null });
+    domain.findSpot.mockResolvedValue(null);
 
-    await renderHome();
+    await renderHome({ result: 'sample' });
 
-    expect(screen.getByRole('status')).toHaveTextContent(
-      '예시 스팟을 표시하고 있습니다.',
-    );
+    expect(domain.findSpot).toHaveBeenCalledWith('sample');
+    expect(screen.queryByTestId('spot-detail')).not.toBeInTheDocument();
   });
 });
