@@ -6,6 +6,8 @@
  * 싣는다. 그 규칙도 lint(no-restricted-syntax)가 잡는다.
  */
 
+export { extractCandidates } from './extractCandidates';
+export type { ExtractedCandidate } from './extractCandidates';
 export {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
