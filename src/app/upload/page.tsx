@@ -57,8 +57,8 @@ export default function UploadPage() {
         <h1 className={title}>스크린샷 올리기</h1>
       </div>
       <p className={lede}>
-        가게 이름과 주소가 찍힌 스크린샷을 고르세요. 여러 장을 한 번에 올릴 수
-        있습니다.
+        가게 이름과 주소가 찍힌 스크린샷 한 장을 고르세요. 한 장 안에 가게가
+        여러 곳이면 각각 따로 뽑습니다.
       </p>
       <UploadForm />
       <p>
