@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { css } from 'styled-system/css';
-import { PinByAddressForm } from '@/components/spot/PinByAddressForm';
+import { PinSpotForm } from '@/components/spot/PinSpotForm';
 import { pinSpotAction } from './actions';
 
 /**
@@ -41,7 +41,7 @@ export default function NewSpotPage() {
         장소 이름과 주소를 적으면 위치를 찾아 지도에 미리 보여 드립니다. 맞으면 저장하세요.
         도로명 주소가 가장 정확합니다.
       </p>
-      <PinByAddressForm action={pinSpotAction} />
+      <PinSpotForm action={pinSpotAction} />
     </main>
   );
 }

@@ -10,6 +10,8 @@ export type { InsertSpotResult, LoadSpotsResult, NewSpot, SpotSource } from './r
 export { locateAddress, saveSpot, searchAddress } from './save';
 export type { LocateAddressResult, SaveSpotFailure, SaveSpotInput, SaveSpotOutcome, SearchAddressResult } from './save';
 export { prepareGeocodedLocations } from './geocoding';
+export { searchPlaces, toFoundPlace } from './placeSearch';
+export type { FoundPlace, SearchPlacesResult } from './placeSearch';
 export { prepareGeocodedLocation } from './geocoding';
 export type {
   GeocodedSpotLocation,
