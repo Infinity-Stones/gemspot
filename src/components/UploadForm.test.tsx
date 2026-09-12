@@ -3,6 +3,14 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MAX_IMAGE_BYTES, MAX_IMAGE_COUNT } from '@/domain/extraction';
+/**
+ * `useRouter`는 앱 라우터 컨텍스트를 요구한다 — jsdom에는 없어서 'invariant
+ * expected app router to be mounted'로 죽는다. 이 컴포넌트가 라우터를 쓰는 것은
+ * 추출이 끝난 뒤 결과 화면으로 넘기기 위한 한 줄뿐이라, 그 한 줄만 세운다.
+ */
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+
 import { UploadForm } from './UploadForm';
 
 function screenshot(name: string, lastModified = 1_757_289_600_000) {
@@ -71,6 +79,7 @@ const create = vi.fn<(blob: Blob) => string>(() => {
 });
 
 beforeEach(() => {
+  push.mockClear();
   created.length = 0;
   create.mockClear();
   revoke.mockClear();

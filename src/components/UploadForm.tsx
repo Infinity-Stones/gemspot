@@ -1,9 +1,19 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
+import { extractAction } from '@/app/upload/actions';
+import {
+  CANDIDATES_SESSION_KEY,
+  IDLE_EXTRACT_STATE,
+} from '@/app/upload/extractState';
 import { ACCEPTED_IMAGE_TYPES, screenUploads } from '@/domain/extraction';
-import type { UploadRejection } from '@/domain/extraction';
+import { UPLOAD_RESULTS_PATH } from '@/shared/routes';
+import type {
+  ExtractFailureReason,
+  UploadRejection,
+} from '@/domain/extraction';
 
 /**
  * 업로드할 이미지를 고르는 수단.
@@ -223,7 +233,58 @@ function explain(rejection: UploadRejection): string {
   }
 }
 
+/**
+ * 실패한 이유를 문장으로 바꾼다.
+ *
+ * **빈 목록으로 접지 않는다.** "읽었는데 가게가 없었다"와 "읽지 못했다"는
+ * 사용자가 할 일이 다르다 — 앞은 다른 사진을 고르는 것이고 뒤는 다시 해 보거나
+ * 직접 입력하는 것이다.
+ */
+function explainFailure(reason: ExtractFailureReason): string {
+  switch (reason) {
+    case 'no_api_key':
+      return '추출에 쓰는 키가 설정되지 않았습니다. 배포 환경의 환경 변수를 확인해 주세요.';
+    case 'timeout':
+      return '읽는 데 너무 오래 걸렸습니다. 다시 시도해 주세요.';
+    case 'network':
+      return '추출 서비스에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.';
+    case 'parse':
+      return '추출 결과를 읽지 못했습니다. 다시 시도해 주세요.';
+  }
+}
+
+const submitButton = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '2',
+  px: '5',
+  py: '3',
+  rounded: 'lg',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'slate.900',
+  bg: 'slate.900',
+  color: 'white',
+  cursor: 'pointer',
+  textStyle: 'md',
+  fontWeight: 'semibold',
+  transition: 'colors',
+  _hover: { bg: 'slate.700', borderColor: 'slate.700' },
+  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
+  _dark: {
+    borderColor: 'slate.100',
+    bg: 'slate.100',
+    color: 'slate.900',
+    _hover: { bg: 'white', borderColor: 'white' },
+  },
+});
+
 export function UploadForm() {
+  const router = useRouter();
+  const [state, submit, pending] = useActionState(
+    extractAction,
+    IDLE_EXTRACT_STATE,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
@@ -284,10 +345,27 @@ export function UploadForm() {
 
     URL.revokeObjectURL(going.previewUrl);
     setImage(null);
+    // 입력을 비워야 방금 뺀 그 파일을 다시 고를 때 change가 뜬다.
+    if (inputRef.current !== null) inputRef.current.value = '';
   }
 
+  useEffect(() => {
+    if (state.status !== 'done') return;
+
+    try {
+      sessionStorage.setItem(
+        CANDIDATES_SESSION_KEY,
+        JSON.stringify(state.candidates),
+      );
+    } catch {
+      // 저장소가 막혀 있으면 결과 화면이 빈 상태를 보여준다. 여기서 이동을
+      // 막으면 사용자는 아무 일도 일어나지 않은 화면만 보게 된다.
+    }
+    router.push(UPLOAD_RESULTS_PATH);
+  }, [state, router]);
+
   return (
-    <div className={shell}>
+    <form className={shell} action={submit}>
       {/*
         버튼이 입력을 대신 누른다. label로 감싸는 방법도 되지만, 감춰진 입력이
         포커스를 받으면 포커스 링이 화면 밖에 그려진다. 버튼은 그 자리에서
@@ -301,11 +379,12 @@ export function UploadForm() {
         // 버튼의 이름이고, 이 입력의 이름이 되어 주지 않는다.
         aria-label="스크린샷 파일 선택"
         accept={ACCEPT}
+        name="image"
         onChange={event => {
           choose(Array.from(event.target.files ?? []));
-          // 값을 비워야 같은 파일을 다시 고를 때 change가 또 뜬다. 안 비우면
-          // 실수로 뺀 장을 되돌릴 방법이 "다른 파일을 하나 고르기"가 된다.
-          event.target.value = '';
+          // 값을 비우지 않는다. 이 입력이 폼의 필드라 제출할 때 FormData가
+          // 여기서 파일을 가져간다 — 비우면 서버에 빈 폼이 간다. 대신 장을
+          // 뺄 때 비워서 같은 파일을 다시 고를 수 있게 한다.
         }}
       />
       <button
@@ -335,6 +414,19 @@ export function UploadForm() {
         </div>
       )}
 
+      {(state.status === 'failed' || state.status === 'invalid') && (
+        <div className={warning} role="alert">
+          <p className={warningTitle}>추출하지 못했습니다</p>
+          <ul className={warningList}>
+            <li>
+              {state.status === 'failed'
+                ? explainFailure(state.reason)
+                : state.message}
+            </li>
+          </ul>
+        </div>
+      )}
+
       {image !== null && (
         <>
           <p className={count}>1장 선택됨</p>
@@ -360,8 +452,16 @@ export function UploadForm() {
               ×
             </button>
           </div>
+          <button
+            type="submit"
+            className={submitButton}
+            disabled={pending}
+            aria-busy={pending}
+          >
+            {pending ? '읽는 중…' : '주소 읽기'}
+          </button>
         </>
       )}
-    </div>
+    </form>
   );
 }
