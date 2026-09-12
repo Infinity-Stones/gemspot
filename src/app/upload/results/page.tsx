@@ -1,5 +1,7 @@
 import { css } from 'styled-system/css';
+import { BackLink } from '@/components/BackLink';
 import { ExtractionResultsFromSession } from '@/components/ExtractionResultsFromSession';
+import { UPLOAD_PATH } from '@/shared/routes';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -49,6 +51,7 @@ const lede = css({
 export default function UploadResultsPage() {
   return (
     <main className={shell}>
+      <BackLink href={UPLOAD_PATH} label="업로드로 돌아가기" />
       <header className={heading}>
         <h1 className={title}>추출 결과</h1>
         <p className={lede}>
