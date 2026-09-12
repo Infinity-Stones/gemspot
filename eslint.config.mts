@@ -361,6 +361,8 @@ export default defineConfig([
         { type: 'shared', pattern: 'src/shared' },
         { type: 'platform', pattern: 'src/lib/platform' },
         { type: 'example', pattern: 'src/domain/example' },
+        { type: 'spot', pattern: 'src/domain/spot' },
+        { type: 'route', pattern: 'src/domain/route' },
         // 레이어 부모 폴더 직속(src/lib·src/domain 바로 아래)에 떨어진 파일의
         // 격리 element. 어떤 policy에도 없으므로, 이 자리에 파일이 생기면
         // 그것이 무언가를 import하거나 import되는 순간 에러가 난다 —
@@ -432,6 +434,25 @@ export default defineConfig([
               ],
             },
             {
+              // spot(저장) · route(추천)도 같은 규칙이다. 둘은 서로를 열지
+              // 않는다 — route가 스팟 목록이 필요하면 app이 spot 배럴에서 읽어
+              // RouteCandidate로 투영해 넘긴다(T48).
+              from: { element: { type: 'spot' } },
+              allow: [
+                {
+                  to: { element: { types: { anyOf: ['shared', 'platform'] } } },
+                },
+              ],
+            },
+            {
+              from: { element: { type: 'route' } },
+              allow: [
+                {
+                  to: { element: { types: { anyOf: ['shared', 'platform'] } } },
+                },
+              ],
+            },
+            {
               // app은 platform을 직접 만지지 않는다 — 데이터 접근은 전부 도메인
               // 배럴 경유다. node 코어도 열지 않는다(클라이언트 번들 누수 예방).
               from: { element: { type: 'app' } },
@@ -440,7 +461,7 @@ export default defineConfig([
                   to: {
                     element: {
                       types: {
-                        anyOf: ['shared', 'example', 'design-system'],
+                        anyOf: ['shared', 'example', 'spot', 'route', 'design-system'],
                       },
                     },
                   },
