@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { css } from 'styled-system/css';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { SpotMap } from '@/components/SpotMap';
+import { ROUTE_PATH } from '@/shared/routes';
 
 /**
  * 홈 — 화면을 라우트가 아니라 `?result`로 가른다.
@@ -80,6 +81,9 @@ export default async function HomePage({ searchParams }: Props) {
         <p className={lede}>캡처를 올리면 저장한 장소가 지도에 찍힙니다.</p>
         <Link className={action} href="/?result=sample">
           저장 결과 화면 보기
+        </Link>
+        <Link className={action} href={ROUTE_PATH}>
+          동선 만들기
         </Link>
       </main>
     );
