@@ -29,6 +29,32 @@ export function parseIso(iso: string): number | null {
   return Number.isNaN(ms) ? null : ms;
 }
 
+const WALL_CLOCK = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(:\d{2})?$/;
+
+/**
+ * 오프셋이 없는 벽시계 ISO에 서울 오프셋을 붙인다. 이미 오프셋이 있으면 그대로
+ * 두고, 어느 쪽도 아니면 `null`.
+ *
+ * `parseIso`가 오프셋을 요구하는 것은 옳다 — 내부 계산이 서버(UTC)와
+ * 브라우저(로컬)에서 갈리면 안 된다. 다만 **바깥에서 들어오는 값**은 그 규칙을
+ * 모른다. LLM은 같은 프롬프트에도 `19:00:00+09:00`과 `19:00:00`을 번갈아
+ * 돌려준다(#144). 이 앱은 Asia/Seoul 고정이라 벽시계 시각에 붙일 오프셋이
+ * 하나로 정해져 있으므로, 경계에서 받아들이고 정규화한다.
+ */
+export function normalizeSeoulIso(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (parseIso(trimmed) !== null) return trimmed;
+
+  const matched = WALL_CLOCK.exec(trimmed);
+  if (matched === null) return null;
+  const day = matched[1];
+  const hourMinute = matched[2];
+  if (day === undefined || hourMinute === undefined) return null;
+  const seconds = matched[3] ?? ':00';
+  const normalized = `${day}T${hourMinute}${seconds}+09:00`;
+  return parseIso(normalized) === null ? null : normalized;
+}
+
 function pad2(n: number): string {
   return n < 10 ? `0${String(n)}` : String(n);
 }

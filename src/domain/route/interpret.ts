@@ -5,7 +5,7 @@ import { timeWindowProblem } from '@/shared/routeRequest';
 import type { SpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORY_TABLE } from '@/shared/spotCategory';
-import { parseIso } from '@/shared/time';
+import { normalizeSeoulIso, parseIso } from '@/shared/time';
 import type { InterpretationDraft, MissingField } from './types';
 
 /**
@@ -23,6 +23,16 @@ import type { InterpretationDraft, MissingField } from './types';
 export const QUESTION_WINDOW = '몇 시부터 몇 시까지요?';
 export const QUESTION_AREA = '어느 동네에서 걸을까요?';
 export const QUESTION_BOTH = '몇 시부터 몇 시까지, 어느 동네에서 걸을까요?';
+/**
+ * 시간대를 **읽었는데 이미 지난** 경우. 없는 것과 같은 질문을 돌려주면 사용자는
+ * 같은 답을 반복하고 고리에서 빠져나오지 못한다(#144).
+ */
+export const QUESTION_PAST_WINDOW = '그 시간은 이미 지났어요. 몇 시부터 몇 시까지 걸으실래요?';
+export const QUESTION_PAST_WINDOW_AND_AREA =
+  '그 시간은 이미 지났어요. 몇 시부터 몇 시까지, 어느 동네에서 걸을까요?';
+
+/** 시간대를 못 쓰게 된 이유. 되묻는 문구가 여기서 갈린다. */
+export type WindowIssue = 'ok' | 'absent' | 'unusable' | 'past';
 
 export type InterpretationResult =
   | { readonly kind: 'complete'; readonly draft: InterpretationDraft & { window: TimeWindow; areaName: string } }
@@ -104,27 +114,53 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * 응답의 시간대를 읽는다. 오프셋이 없는 벽시계 시각도 받아들인다 — 모델이
+ * 같은 프롬프트에도 오프셋을 붙였다 말았다 하기 때문이다(#144).
+ *
+ * 읽기는 했지만 못 쓰는 경우를 이유별로 갈라 돌려준다. 전부 "없음"으로 접으면
+ * 화면이 왜 거절됐는지 말할 수 없다.
+ */
+export function readWindow(
+  raw: unknown,
+  now: string,
+): { readonly window: TimeWindow | null; readonly issue: WindowIssue } {
+  if (raw === null || raw === undefined) return { window: null, issue: 'absent' };
+  if (!isRecord(raw)) return { window: null, issue: 'unusable' };
+
+  const rawStart = raw['start'];
+  const rawEnd = raw['end'];
+  if (typeof rawStart !== 'string' || typeof rawEnd !== 'string') {
+    return { window: null, issue: 'unusable' };
+  }
+  const start = normalizeSeoulIso(rawStart);
+  const end = normalizeSeoulIso(rawEnd);
+  if (start === null || end === null) return { window: null, issue: 'unusable' };
+
+  const candidate = { start, end };
+  if (timeWindowProblem(candidate) !== null) return { window: null, issue: 'unusable' };
+
+  // 지난 시각을 그대로 받으면 사용자는 어제 동선을 받는다. 다만 "없음"과는
+  // 구분한다 — 이유를 말해야 다른 답을 할 수 있다.
+  const nowMs = parseIso(now);
+  const endMs = parseIso(end);
+  if (nowMs === null || endMs === null) return { window: null, issue: 'unusable' };
+  if (endMs <= nowMs) return { window: null, issue: 'past' };
+
+  return { window: candidate, issue: 'ok' };
+}
+
+/**
  * LLM 응답을 `InterpretationDraft`로 좁힌다. 스키마 밖이면 `null`.
  * 표에 없는 카테고리 코드는 버리고 나머지는 살린다.
  */
-export function parseDraft(raw: unknown, now: string): InterpretationDraft | null {
+export function parseDraft(
+  raw: unknown,
+  now: string,
+): { readonly draft: InterpretationDraft; readonly windowIssue: WindowIssue } | null {
   if (!isRecord(raw)) return null;
   const { window, areaName, preferredCategories, requiredSpotNames } = raw;
 
-  let parsedWindow: TimeWindow | null = null;
-  if (window !== null && window !== undefined) {
-    if (!isRecord(window) || typeof window['start'] !== 'string' || typeof window['end'] !== 'string') {
-      return null;
-    }
-    const candidate = { start: window['start'], end: window['end'] };
-    // 형식이 틀렸거나, 역순이거나, 종료가 이미 지났으면 "시간대가 없다"로 본다.
-    // 지난 시각을 그대로 받으면 사용자는 어제 동선을 받는다.
-    const nowMs = parseIso(now);
-    const endMs = parseIso(candidate.end);
-    const usable =
-      timeWindowProblem(candidate) === null && nowMs !== null && endMs !== null && endMs > nowMs;
-    parsedWindow = usable ? candidate : null;
-  }
+  const { window: parsedWindow, issue: windowIssue } = readWindow(window, now);
 
   if (areaName !== null && areaName !== undefined && typeof areaName !== 'string') return null;
   const parsedArea = typeof areaName === 'string' && areaName.trim().length > 0 ? areaName.trim() : null;
@@ -137,10 +173,13 @@ export function parseDraft(raw: unknown, now: string): InterpretationDraft | nul
     : [];
 
   return {
-    window: parsedWindow,
-    areaName: parsedArea,
-    preferredCategories: [...new Set(categories)],
-    requiredSpotNames: [...new Set(names)],
+    draft: {
+      window: parsedWindow,
+      areaName: parsedArea,
+      preferredCategories: [...new Set(categories)],
+      requiredSpotNames: [...new Set(names)],
+    },
+    windowIssue,
   };
 }
 
@@ -152,9 +191,12 @@ export function missingOf(draft: InterpretationDraft): readonly MissingField[] {
   return missing;
 }
 
-export function questionFor(missing: readonly MissingField[]): string {
+export function questionFor(missing: readonly MissingField[], windowIssue: WindowIssue = 'absent'): string {
   const askWindow = missing.includes('window');
   const askArea = missing.includes('area');
+  if (askWindow && windowIssue === 'past') {
+    return askArea ? QUESTION_PAST_WINDOW_AND_AREA : QUESTION_PAST_WINDOW;
+  }
   if (askWindow && askArea) return QUESTION_BOTH;
   if (askWindow) return QUESTION_WINDOW;
   return QUESTION_AREA;
@@ -169,12 +211,13 @@ export async function interpret(input: InterpretInput): Promise<InterpretationRe
   });
   if (!result.ok) return { kind: 'failed', error: result.error };
 
-  const draft = parseDraft(result.data, input.now);
-  if (draft === null) return { kind: 'failed', error: { kind: 'invalid_schema' } };
+  const parsed = parseDraft(result.data, input.now);
+  if (parsed === null) return { kind: 'failed', error: { kind: 'invalid_schema' } };
 
+  const { draft, windowIssue } = parsed;
   const missing = missingOf(draft);
   if (draft.window !== null && draft.areaName !== null) {
     return { kind: 'complete', draft: { ...draft, window: draft.window, areaName: draft.areaName } };
   }
-  return { kind: 'incomplete', missing, question: questionFor(missing), draft };
+  return { kind: 'incomplete', missing, question: questionFor(missing, windowIssue), draft };
 }
