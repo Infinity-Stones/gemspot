@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_GEMINI_MODEL, geminiApiKey, geminiModel, naverApiKey, tmapAppKey } from './env';
+import {
+  openaiApiKey,
+  openaiBaseUrl,
+  openaiModel,
+  naverApiKey,
+  tmapAppKey,
+} from './env';
 
 /**
  * 환경 변수 리더는 "반쯤 설정된 값"을 한 곳에서 null로 접는 것이 존재 이유다.
@@ -14,7 +20,9 @@ describe('env 리더', () => {
 
   it.each([
     ['TMAP_APP_KEY', tmapAppKey],
-    ['GEMINI_API_KEY', geminiApiKey],
+    ['OPENAI_API_KEY', openaiApiKey],
+    ['OPENAI_BASE_URL', openaiBaseUrl],
+    ['OPENAI_MODEL', openaiModel],
   ])('%s: 미설정·빈 문자열·공백은 전부 null', (name, read) => {
     vi.stubEnv(name, undefined);
     expect(read()).toBeNull();
@@ -42,10 +50,13 @@ describe('env 리더', () => {
     });
   });
 
-  it('geminiModel은 비어 있으면 기본값, 있으면 그 값', () => {
-    vi.stubEnv('GEMINI_MODEL', '');
-    expect(geminiModel()).toBe(DEFAULT_GEMINI_MODEL);
-    vi.stubEnv('GEMINI_MODEL', 'gemini-x');
-    expect(geminiModel()).toBe('gemini-x');
+  it('주소와 모델은 공백을 제거하고 기존 Google 키는 읽지 않는다', () => {
+    vi.stubEnv('OPENAI_BASE_URL', ' https://provider.example/v1 ');
+    vi.stubEnv('OPENAI_MODEL', ' gemini-custom ');
+    vi.stubEnv('OPENAI_API_KEY', undefined);
+    vi.stubEnv('GEMINI_API_KEY', 'old-key');
+    expect(openaiBaseUrl()).toBe('https://provider.example/v1');
+    expect(openaiModel()).toBe('gemini-custom');
+    expect(openaiApiKey()).toBeNull();
   });
 });
