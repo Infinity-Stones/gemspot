@@ -6,6 +6,10 @@ import { CANDIDATES_SESSION_KEY } from '@/app/upload/extractState';
 import { UPLOAD_PATH } from '@/shared/routes';
 import type { SpotCandidate } from '@/shared/spot';
 import { ExtractionResults } from './ExtractionResults';
+import type {
+  ExtractionResultCandidate,
+  UploadImage,
+} from './ExtractionResults';
 import Link from 'next/link';
 
 /**
@@ -92,7 +96,9 @@ export function ExtractionResultsFromSession() {
  * 바깥에서 온 값처럼 다룬다 — 사용자가 개발자 도구로 고칠 수 있고, 앞 버전이
  * 남긴 다른 모양일 수도 있다. 캐스팅으로 넘기면 화면이 렌더 도중에 터진다.
  */
-function parseCandidates(raw: string | null): readonly SpotCandidate[] {
+function parseCandidates(
+  raw: string | null,
+): readonly ExtractionResultCandidate[] {
   if (raw === null) return [];
 
   let parsed: unknown;
@@ -101,18 +107,37 @@ function parseCandidates(raw: string | null): readonly SpotCandidate[] {
   } catch {
     return [];
   }
-  if (!Array.isArray(parsed)) return [];
+  if (!isRecord(parsed)) return [];
+  const uploadImage = parsed['uploadImage'];
+  if (!isUploadImage(uploadImage)) return [];
+  const candidates = parsed['candidates'];
+  if (!Array.isArray(candidates)) return [];
 
-  return parsed.filter(isSpotCandidate);
+  return candidates
+    .filter(isSpotCandidate)
+    .map(candidate => ({ ...candidate, uploadImage }));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 function isSpotCandidate(value: unknown): value is SpotCandidate {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
+  const row = value;
   return (
     typeof row['id'] === 'string' &&
     typeof row['name'] === 'string' &&
     (row['roadAddress'] === null || typeof row['roadAddress'] === 'string') &&
     (row['origin'] === 'ocr' || row['origin'] === 'manual')
+  );
+}
+
+function isUploadImage(value: unknown): value is UploadImage {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value['id'] === 'string' &&
+    typeof value['src'] === 'string' &&
+    typeof value['alt'] === 'string'
   );
 }

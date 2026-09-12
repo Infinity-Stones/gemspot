@@ -14,6 +14,7 @@ import type {
   ExtractFailureReason,
   UploadRejection,
 } from '@/domain/extraction';
+import type { UploadImage } from './ExtractionResults';
 
 /**
  * 업로드할 이미지를 고르는 수단.
@@ -292,16 +293,21 @@ export function UploadForm() {
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
   const imageRef = useRef<PickedImage | null>(null);
+  // 결과 화면으로 넘긴 URL은 그 화면이 계속 써야 하므로 업로드 화면이
+  // 언마운트될 때 해제하지 않는다. 문서를 닫으면 브라우저가 정리한다.
+  const handedOffPreviewUrlRef = useRef<string | null>(null);
   useEffect(() => {
     imageRef.current = image;
   }, [image]);
 
   useEffect(
     () => () => {
-      // 화면을 떠날 때 남은 URL을 해제한다. 안 하면 문서가 사는 동안 원본
-      // 파일이 메모리에서 풀리지 않는다.
+      // 화면을 떠날 때 남은 URL을 해제한다. 단, 결과 화면에 넘긴 URL은 그
+      // 화면이 원본을 표시해야 하므로 소유권도 함께 넘기고 여기서 해제하지 않는다.
       const left = imageRef.current;
-      if (left !== null) URL.revokeObjectURL(left.previewUrl);
+      if (left !== null && left.previewUrl !== handedOffPreviewUrlRef.current) {
+        URL.revokeObjectURL(left.previewUrl);
+      }
     },
     [],
   );
@@ -352,11 +358,20 @@ export function UploadForm() {
   useEffect(() => {
     if (state.status !== 'done') return;
 
+    const uploaded = imageRef.current;
+    if (uploaded === null) return;
+    const uploadImage: UploadImage = {
+      id: uploaded.fingerprint,
+      src: uploaded.previewUrl,
+      alt: uploaded.file.name,
+    };
+
     try {
       sessionStorage.setItem(
         CANDIDATES_SESSION_KEY,
-        JSON.stringify(state.candidates),
+        JSON.stringify({ candidates: state.candidates, uploadImage }),
       );
+      handedOffPreviewUrlRef.current = uploaded.previewUrl;
     } catch {
       // 저장소가 막혀 있으면 결과 화면이 빈 상태를 보여준다. 여기서 이동을
       // 막으면 사용자는 아무 일도 일어나지 않은 화면만 보게 된다.
