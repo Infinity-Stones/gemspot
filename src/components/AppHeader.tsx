@@ -34,11 +34,14 @@ const uploadLink = css({
   minHeight: '11',
   px: '5',
   rounded: 'full',
-  bg: 'slate.900',
+  // 프라이머리는 퍼플이다. 흰 글자를 얹으므로 500이 아니라 600에서 시작한다 —
+  // 500 위에서는 대비가 4.5:1을 넘지 못한다.
+  bg: 'violet.600',
   color: 'white',
   textStyle: 'sm',
   fontWeight: 'medium',
-  _dark: { bg: 'slate.100', color: 'slate.900' },
+  _hover: { bg: 'violet.700' },
+  _dark: { bg: 'violet.500', color: 'slate.950', _hover: { bg: 'violet.400' } },
 });
 
 export function AppHeader() {
