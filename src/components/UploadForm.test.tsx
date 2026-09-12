@@ -1,9 +1,18 @@
 import { StrictMode } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ExtractState } from '@/app/upload/extractState';
 import { IDLE_EXTRACT_STATE } from '@/app/upload/extractState';
+import type { ExtractFailureReason } from '@/domain/extraction';
 import { MAX_IMAGE_BYTES, MAX_IMAGE_COUNT } from '@/domain/extraction';
+import { SPOT_NEW_PATH } from '@/shared/routes';
 /**
  * `useRouter`는 앱 라우터 컨텍스트를 요구한다 — jsdom에는 없어서 'invariant
  * expected app router to be mounted'로 죽는다. 이 컴포넌트가 라우터를 쓰는 것은
@@ -23,6 +32,12 @@ function idleAction(): ExtractAction {
   return vi.fn(() => Promise.resolve(IDLE_EXTRACT_STATE));
 }
 
+/** 제출할 때마다 같은 실패를 돌려주는 액션. */
+function failingAction(reason: ExtractFailureReason): ExtractAction {
+  const failed: ExtractState = { status: 'failed', reason };
+  return vi.fn(() => Promise.resolve(failed));
+}
+
 function screenshot(name: string, lastModified = 1_757_289_600_000) {
   return new File(['x'], name, { type: 'image/png', lastModified });
 }
@@ -36,7 +51,7 @@ function sized(name: string, bytes: number) {
 }
 
 function picker() {
-  return screen.getByLabelText('스크린샷 파일 선택');
+  return screen.getByLabelText<HTMLInputElement>('스크린샷 파일 선택');
 }
 
 /**
@@ -257,5 +272,104 @@ describe('UploadForm — 가드', () => {
       'accept',
       'image/png,image/jpeg,image/webp',
     );
+  });
+});
+
+/**
+ * 한 장을 고르고 보내 실패를 받은 자리까지 간다. 폴백은 그 뒤의 이야기다.
+ */
+async function failOnce(
+  user: ReturnType<typeof userEvent.setup>,
+  name = 'pirouettes.png',
+) {
+  await user.upload(picker(), [screenshot(name)]);
+  await user.click(screen.getByRole('button', { name: '주소 읽기' }));
+  await waitFor(() => {
+    expect(screen.getByText('추출하지 못했습니다')).toBeInTheDocument();
+  });
+}
+
+/**
+ * 읽지 못했을 때 사용자가 할 수 있는 일은 둘이다 — 다시 보내거나, 주소를 알면
+ * 직접 핀을 찍거나. 문구만 남기고 끝내면 사용자는 막다른 화면에 선다.
+ */
+describe('UploadForm — 실패 폴백', () => {
+  it('읽지 못하면 다시 시도와 직접 입력을 함께 내민다', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm action={failingAction('network')} />);
+
+    await failOnce(user);
+
+    expect(
+      screen.getByRole('button', { name: '다시 시도' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /직접 핀 찍기/ })).toHaveAttribute(
+      'href',
+      SPOT_NEW_PATH,
+    );
+  });
+
+  it('다시 시도는 고른 장을 그대로 다시 보낸다', async () => {
+    const user = userEvent.setup();
+    const action = failingAction('timeout');
+    render(<UploadForm action={action} />);
+
+    await failOnce(user, 'fabri.png');
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledTimes(2);
+    });
+
+    // 사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던 적은 없다.
+    // 액션이 받은 FormData가 아니라 입력을 보는 이유: jsdom의 FormData는
+    // user-event가 넣은 파일을 보지 못해(내부 파일 목록이 아니라 JS 속성만
+    // 덮인다) 어느 폼이든 빈 File을 담는다.
+    expect(picker().files?.[0]?.name).toBe('fabri.png');
+    expect(screen.getByAltText('fabri.png')).toBeInTheDocument();
+  });
+
+  it('재시도를 내미는 동안 같은 일을 하는 아래 제출 버튼은 감춘다', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm action={failingAction('parse')} />);
+
+    await failOnce(user);
+
+    expect(
+      screen.queryByRole('button', { name: '주소 읽기' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('키가 없으면 재시도 대신 직접 입력만 내민다', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm action={failingAction('no_api_key')} />);
+
+    await failOnce(user);
+
+    // 배포 환경의 상태라 몇 번을 눌러도 같은 답이 온다. 되지 않을 일을 해
+    // 보라고 말하면 사용자는 자기가 무언가를 잘못한 줄 안다.
+    expect(
+      screen.queryByRole('button', { name: '다시 시도' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /직접 핀 찍기/ }),
+    ).toBeInTheDocument();
+    // 대신 아래의 제출 버튼은 남긴다. 다른 장을 골라 보낼 길까지 막지 않는다.
+    expect(
+      screen.getByRole('button', { name: '주소 읽기' }),
+    ).toBeInTheDocument();
+  });
+
+  it('실패를 읽어 주는 영역에 누를 것을 섞지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<UploadForm action={failingAction('parse')} />);
+
+    await failOnce(user);
+
+    // role="alert"는 내용이 바뀔 때마다 통째로 읽힌다. 버튼과 링크가 그 안에
+    // 있으면 누를 것이 낭독에 섞여 되풀이된다.
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('추출 결과를 읽지 못했습니다');
+    expect(within(alert).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(alert).queryByRole('link')).not.toBeInTheDocument();
   });
 });

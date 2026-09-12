@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
 import type { ExtractState } from '@/app/upload/extractState';
@@ -8,8 +9,12 @@ import {
   CANDIDATES_SESSION_KEY,
   IDLE_EXTRACT_STATE,
 } from '@/app/upload/extractState';
-import { ACCEPTED_IMAGE_TYPES, screenUploads } from '@/domain/extraction';
-import { UPLOAD_RESULTS_PATH } from '@/shared/routes';
+import {
+  ACCEPTED_IMAGE_TYPES,
+  isRetryable,
+  screenUploads,
+} from '@/domain/extraction';
+import { SPOT_NEW_PATH, UPLOAD_RESULTS_PATH } from '@/shared/routes';
 import type {
   ExtractFailureReason,
   UploadRejection,
@@ -212,6 +217,60 @@ const warningList = css({
 });
 
 /**
+ * 실패했을 때 내미는 길 — 재시도와 직접 입력.
+ *
+ * 경고 상자 **안**에 두는 이유는 이것이 그 실패에 대한 답이기 때문이다. 화면
+ * 아래 어딘가에 두면 무엇에 대한 선택지인지가 사라진다.
+ */
+const fallbackActions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: '4',
+  mt: '3',
+});
+
+/**
+ * 붉은 바탕 위에 서는 버튼이라 폼의 제출 버튼(slate)과 색이 다르다. 경고
+ * 상자의 바탕이 라이트에서 `red.50`, 다크에서 `red.950`이므로 명암을 뒤집어
+ * 든다 — 한쪽만 맞추면 반대 테마에서 글자가 바탕에 묻는다.
+ */
+const retryButton = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  px: '3',
+  py: '2',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'red.700',
+  bg: 'red.700',
+  color: 'white',
+  cursor: 'pointer',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  transition: 'colors',
+  _hover: { bg: 'red.800', borderColor: 'red.800' },
+  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
+  _dark: {
+    borderColor: 'red.300',
+    bg: 'red.300',
+    color: 'red.950',
+    _hover: { bg: 'red.200', borderColor: 'red.200' },
+  },
+});
+
+/** 상자의 글자색을 그대로 쓰고 밑줄로만 링크임을 드러낸다. */
+const fallbackLink = css({
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  color: 'red.900',
+  textDecoration: 'underline',
+  _hover: { color: 'red.700' },
+  _dark: { color: 'red.100', _hover: { color: 'white' } },
+});
+
+/**
  * 선택창에 보일 형식. 가드가 받는 것과 같은 목록이어야 한다 — 선택창에서는
  * 보이는데 고르면 막히는 파일이 있으면 사용자는 앱이 고장난 줄 안다.
  *
@@ -298,6 +357,16 @@ export function UploadForm({ action }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
+
+  /**
+   * 경고 상자가 재시도 버튼을 들고 있는가.
+   *
+   * 들고 있으면 아래의 제출 버튼은 같은 폼을 같은 값으로 보내는 **두 번째**
+   * 버튼이 된다. 설명 바로 옆에 있는 쪽을 남기고 아래를 감춘다 — 실패를 읽은
+   * 자리에서 다음 행동이 끝나야 한다.
+   */
+  const retryInWarning =
+    state.status === 'failed' && isRetryable(state.reason) && image !== null;
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
@@ -425,15 +494,49 @@ export function UploadForm({ action }: Props) {
       )}
 
       {(state.status === 'failed' || state.status === 'invalid') && (
-        <div className={warning} role="alert">
-          <p className={warningTitle}>추출하지 못했습니다</p>
-          <ul className={warningList}>
-            <li>
-              {state.status === 'failed'
-                ? explainFailure(state.reason)
-                : state.message}
-            </li>
-          </ul>
+        <div className={warning}>
+          {/*
+            role="alert"를 상자가 아니라 문구에만 준다. 이 역할은
+            aria-live="assertive"라 내용이 바뀔 때마다 통째로 읽히는데, 폴백
+            버튼까지 그 안에 있으면 누를 것이 낭독에 섞여 되풀이된다.
+          */}
+          <div role="alert">
+            <p className={warningTitle}>추출하지 못했습니다</p>
+            <ul className={warningList}>
+              <li>
+                {state.status === 'failed'
+                  ? explainFailure(state.reason)
+                  : state.message}
+              </li>
+            </ul>
+          </div>
+
+          {state.status === 'failed' && (
+            <div className={fallbackActions}>
+              {retryInWarning && (
+                /*
+                  같은 폼을 그대로 다시 보낸다. 고른 장이 입력에 남아 있으므로
+                  사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던
+                  적은 없다.
+                */
+                <button
+                  type="submit"
+                  className={retryButton}
+                  disabled={pending}
+                  aria-busy={pending}
+                >
+                  {pending ? '읽는 중…' : '다시 시도'}
+                </button>
+              )}
+              {/*
+                읽지 못한 장소도 주소를 알면 스팟이 된다. 재시도가 통하지 않는
+                실패(키 없음)에서는 이것이 유일한 길이다.
+              */}
+              <Link className={fallbackLink} href={SPOT_NEW_PATH}>
+                주소로 직접 핀 찍기 →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -462,14 +565,16 @@ export function UploadForm({ action }: Props) {
               ×
             </button>
           </div>
-          <button
-            type="submit"
-            className={submitButton}
-            disabled={pending}
-            aria-busy={pending}
-          >
-            {pending ? '읽는 중…' : '주소 읽기'}
-          </button>
+          {!retryInWarning && (
+            <button
+              type="submit"
+              className={submitButton}
+              disabled={pending}
+              aria-busy={pending}
+            >
+              {pending ? '읽는 중…' : '주소 읽기'}
+            </button>
+          )}
         </>
       )}
     </form>
