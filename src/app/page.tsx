@@ -3,7 +3,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
 import { PinFab } from '@/components/spot/PinFab';
-import { DEMO_SPOTS, findSpot } from '@/domain/spot';
+import { findSpot, loadSpots } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 
 /**
@@ -18,15 +18,6 @@ import { HOME_PATH } from '@/shared/routes';
  * 파라미터가 그 둘을 함께 만족하는 유일한 자리다 — 닫기는 `/`로 돌아가는
  * 링크 하나로 끝난다(T28).
  */
-// 저장소 조회(T29 · #41)가 붙기 전까지 시연용 스팟을 그대로 쓴다. 지도는
-// 도메인 모양을 모르므로 좌표와 이름만 넘긴다.
-const MARKERS = DEMO_SPOTS.map(spot => ({
-  id: spot.id,
-  name: spot.name,
-  latitude: spot.coordinates.latitude,
-  longitude: spot.coordinates.longitude,
-}));
-
 const SAMPLE_SPOT = {
   placeName: '피롤츠 커피하우스',
   roadAddress: '서울 용산구 한강대로 56-1, 2층',
@@ -47,6 +38,24 @@ const screen = css({
 // 지도와 그 위에 뜨는 것(플로팅 버튼)의 기준 상자. minHeight 0은 grid 자식이
 // 내용 높이만큼 늘어나 지도가 화면을 넘치는 것을 막는다.
 const mapArea = css({ position: 'relative', minHeight: '0' });
+
+const dataNotice = css({
+  position: 'absolute',
+  top: '3',
+  left: '[50%]',
+  zIndex: 'overlay',
+  maxWidth: '[calc(100% - token(spacing.6))]',
+  transform: 'translateX(-50%)',
+  px: '4',
+  py: '2',
+  rounded: 'full',
+  bg: 'white',
+  color: 'slate.700',
+  boxShadow: 'md',
+  textAlign: 'center',
+  textStyle: 'sm',
+  _dark: { bg: 'slate.800', color: 'slate.200' },
+});
 
 interface Props {
   // 이 화면이 읽는 것은 `result` · `spot` 둘이지만, 파라미터는 앞으로 더 늘어난다
@@ -75,6 +84,9 @@ function readOne(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function HomePage({ searchParams }: Props) {
+  // 목록과 URL 해석은 서로 독립이다. 검색 파라미터를 기다리는 동안 저장소
+  // 조회를 먼저 시작해 홈 진입 시간을 직렬로 늘리지 않는다.
+  const spotsPromise = loadSpots();
   const params = await searchParams;
   const result = readOne(params['result']);
   // 핀을 골라서 보는 상태다. 저장 직후(`result`)와 나누는 이유는 같은 화면이
@@ -84,20 +96,43 @@ export default async function HomePage({ searchParams }: Props) {
 
   // 결과 id로 저장된 스팟을 읽는다(T51). `sample`은 저장소 없이 화면을 볼 수
   // 있게 남긴 데모 값이다. 없는 id면 패널 없는 홈으로 — 지도를 빈 핀으로 채우지 않는다.
-  const spot =
+  const spotPromise =
     result === 'sample'
-      ? SAMPLE_SPOT
+      ? Promise.resolve(SAMPLE_SPOT)
       : result !== undefined
-        ? await resolveSavedSpot(result)
+        ? resolveSavedSpot(result)
         : selected !== undefined
-          ? await resolveSavedSpot(selected)
-          : null;
+          ? resolveSavedSpot(selected)
+          : Promise.resolve(null);
+
+  const [{ spots, source, storeError }, spot] = await Promise.all([
+    spotsPromise,
+    spotPromise,
+  ]);
+  // 지도는 저장소나 도메인 모양을 알지 않는다. 필요한 식별자·이름·좌표만
+  // 서버에서 직렬화해 클라이언트 경계로 넘긴다.
+  const markers = spots.map(saved => ({
+    id: saved.id,
+    name: saved.name,
+    latitude: saved.coordinates.latitude,
+    longitude: saved.coordinates.longitude,
+  }));
 
   return (
     <main className={screen}>
       <AppHeader />
       <div className={mapArea}>
-        <HomeMap spot={spot} markers={MARKERS} />
+        <HomeMap spot={spot} markers={markers} />
+        {source === 'seed' && (
+          <p
+            className={dataNotice}
+            role={storeError === null ? 'status' : 'alert'}
+          >
+            {storeError === null
+              ? '예시 스팟을 표시하고 있습니다.'
+              : '저장한 스팟을 불러오지 못해 예시 스팟을 표시합니다.'}
+          </p>
+        )}
         <PinFab />
       </div>
       {spot !== null && (

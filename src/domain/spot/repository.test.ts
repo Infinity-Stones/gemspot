@@ -7,7 +7,6 @@ import type {
 } from '@/lib/platform/spotStorage';
 import type { SavedSpot } from '@/shared/spot';
 import { deleteSpot, findSpot, insertSpot, loadSpots } from './repository';
-import { DEMO_SPOTS } from './demoSpots';
 import { SEED_SPOTS } from './seed';
 
 const SPOT: SavedSpot = {
@@ -84,12 +83,10 @@ describe('findSpot', () => {
     });
   });
 
-  it('저장소에 행이 없어도 지도 데모 스팟을 이어서 찾는다', async () => {
+  it('저장소에 행이 없으면 null이다', async () => {
     const missing = (): Promise<ReadStoredSpotResult> =>
       Promise.resolve({ ok: true, spot: null });
-    await expect(
-      findSpot(DEMO_SPOTS[0].id, { read: missing }),
-    ).resolves.toEqual(DEMO_SPOTS[0]);
+    await expect(findSpot('missing', { read: missing })).resolves.toBeNull();
   });
 });
 

@@ -12,7 +12,6 @@ import {
   writeStoredSpot,
 } from '@/lib/platform/spotStorage';
 import type { SavedSpot } from '@/shared/spot';
-import { DEMO_SPOTS } from './demoSpots';
 import { SEED_SPOTS } from './seed';
 
 /**
@@ -71,18 +70,9 @@ export interface FindSpotOptions {
   readonly read?: (id: string) => Promise<ReadStoredSpotResult>;
 }
 
-/** 저장소 없이 화면을 시연하는 두 번들 목록에서 id를 찾는다. */
-function findBundledSpot(id: string): SavedSpot | null {
-  return (
-    SEED_SPOTS.find(spot => spot.id === id) ??
-    DEMO_SPOTS.find(spot => spot.id === id) ??
-    null
-  );
-}
-
 /**
- * id로 활성 스팟 하나. 저장소가 없거나 아직 번들 스팟을 저장소로 옮기지 않은
- * 상태라면 시드·지도 데모 목록을 이어서 찾는다.
+ * id로 스팟 하나. 저장소가 없으면 시드에서 찾는다 — 시드 결과 화면이
+ * 저장소 없이도 돌아야 한다. 저장소에 행이 없거나 읽기 오류면 `null`.
  */
 export async function findSpot(
   id: string,
@@ -90,9 +80,11 @@ export async function findSpot(
 ): Promise<SavedSpot | null> {
   const result = await (options.read ?? readStoredSpot)(id);
   if (!result.ok) {
-    return result.error.kind === 'unconfigured' ? findBundledSpot(id) : null;
+    return result.error.kind === 'unconfigured'
+      ? (SEED_SPOTS.find(spot => spot.id === id) ?? null)
+      : null;
   }
-  return result.spot ?? findBundledSpot(id);
+  return result.spot;
 }
 
 export type DeleteSpotResult = DeleteStoredSpotResult;
