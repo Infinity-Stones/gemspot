@@ -216,7 +216,7 @@ export default defineConfig([
                 '**/domain/*/*[rR]epository.*',
               ],
               message:
-                'repository는 인프라 레이어입니다. domain/<x>의 공개 배럴(예: @/domain/example)을 통해 접근하세요.',
+                'repository는 인프라 레이어입니다. domain/<x>의 공개 배럴(index.ts)을 통해 접근하세요.',
             },
           ],
         },
@@ -360,7 +360,6 @@ export default defineConfig([
         { type: 'design-system', pattern: 'styled-system' },
         { type: 'shared', pattern: 'src/shared' },
         { type: 'platform', pattern: 'src/lib/platform' },
-        { type: 'example', pattern: 'src/domain/example' },
         // 레이어 부모 폴더 직속(src/lib·src/domain 바로 아래)에 떨어진 파일의
         // 격리 element. 어떤 policy에도 없으므로, 이 자리에 파일이 생기면
         // 그것이 무언가를 import하거나 import되는 순간 에러가 난다 —
@@ -421,17 +420,6 @@ export default defineConfig([
               ],
             },
             {
-              // 도메인은 순수 규칙 + 어댑터 조립이다. 외부 패키지는 화이트리스트
-              // 없이 열지 않는다 — 도메인이 특정 SDK 모양에 묶이면 그게 곧
-              // platform 레이어를 우회한 것이다.
-              from: { element: { type: 'example' } },
-              allow: [
-                {
-                  to: { element: { types: { anyOf: ['shared', 'platform'] } } },
-                },
-              ],
-            },
-            {
               // app은 platform을 직접 만지지 않는다 — 데이터 접근은 전부 도메인
               // 배럴 경유다. node 코어도 열지 않는다(클라이언트 번들 누수 예방).
               from: { element: { type: 'app' } },
@@ -440,7 +428,7 @@ export default defineConfig([
                   to: {
                     element: {
                       types: {
-                        anyOf: ['shared', 'example', 'design-system'],
+                        anyOf: ['shared', 'design-system'],
                       },
                     },
                   },
