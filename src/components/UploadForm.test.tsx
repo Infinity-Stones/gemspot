@@ -102,102 +102,75 @@ describe('UploadForm', () => {
     expect(screen.queryAllByRole('img')).toHaveLength(0);
   });
 
-  it('여러 장을 한 번에 받고 장수와 썸네일을 보여준다', async () => {
+  it('고른 한 장의 썸네일과 파일명을 보여준다', async () => {
     const user = userEvent.setup();
     render(<UploadForm />);
 
-    await user.upload(picker(), [
-      screenshot('pirouettes.png'),
-      screenshot('fabri.png'),
-    ]);
+    await user.upload(picker(), [screenshot('pirouettes.png')]);
 
-    expect(screen.getByText('2장 선택됨')).toBeInTheDocument();
-    expect(screen.getAllByRole('img')).toHaveLength(2);
+    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
     // alt는 파일명이다 — 썸네일만으로는 어느 스크린샷인지 소리로 알 수 없다.
     expect(screen.getByAltText('pirouettes.png')).toBeInTheDocument();
   });
 
-  it('올리기 전에 개별로 뺄 수 있고, 뺀 장의 URL을 해제한다', async () => {
+  it('올리기 전에 뺄 수 있고, 뺀 장의 URL을 해제한다', async () => {
     const user = userEvent.setup();
     render(<UploadForm />);
 
-    await user.upload(picker(), [
-      screenshot('pirouettes.png'),
-      screenshot('fabri.png'),
-    ]);
+    await user.upload(picker(), [screenshot('pirouettes.png')]);
     await user.click(
       screen.getByRole('button', { name: 'pirouettes.png 빼기' }),
     );
 
-    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
-    expect(screen.queryByAltText('pirouettes.png')).not.toBeInTheDocument();
-    expect(screen.getByAltText('fabri.png')).toBeInTheDocument();
+    expect(screen.queryByText(/장 선택됨/)).not.toBeInTheDocument();
     expect(revoke).toHaveBeenCalledWith(created[0]);
   });
 
-  it('두 번에 나눠 고르면 앞에 고른 장이 남는다', async () => {
+  it('새로 고르면 앞의 장을 갈아 끼우고 그 URL을 해제한다', async () => {
     const user = userEvent.setup();
     render(<UploadForm />);
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
     await user.upload(picker(), [screenshot('fabri.png')]);
 
-    expect(screen.getByText('2장 선택됨')).toBeInTheDocument();
-  });
-
-  it('같은 파일을 두 번 고르면 한 장으로 본다', async () => {
-    const user = userEvent.setup();
-    render(<UploadForm />);
-
-    // 같은 스크린샷을 또 고르는 일은 흔하다. 중복을 두면 OCR을 두 번 부르고
-    // STEP 3에 같은 건이 두 줄로 뜬다.
-    await user.upload(picker(), [screenshot('pirouettes.png')]);
-    await user.upload(picker(), [screenshot('pirouettes.png')]);
-
+    // 명세가 여러 장 선택을 두지 않으므로 쌓이지 않는다.
     expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
+    expect(screen.getByAltText('fabri.png')).toBeInTheDocument();
+    expect(screen.queryByAltText('pirouettes.png')).not.toBeInTheDocument();
+    // 갈아 끼우면서 앞의 URL을 놓치면 화면에 아무 증상 없이 새어 나간다.
+    expect(revoke).toHaveBeenCalledWith(created[0]);
   });
 
-  it('이름이 같아도 수정 시각이 다르면 다른 파일로 본다', async () => {
-    const user = userEvent.setup();
+  it('한 장만 받도록 선택창이 열려 있다', () => {
     render(<UploadForm />);
 
-    await user.upload(picker(), [screenshot('IMG_0001.png', 1)]);
-    await user.upload(picker(), [screenshot('IMG_0001.png', 2)]);
-
-    expect(screen.getByText('2장 선택됨')).toBeInTheDocument();
+    expect(picker()).not.toHaveAttribute('multiple');
   });
 
-  it('StrictMode에서도 장마다 URL을 한 번만 만든다', async () => {
+  it('StrictMode에서도 URL을 한 번만 만든다', async () => {
     const user = userEvent.setup();
     // `reactStrictMode: true`가 켜져 있어 개발 중 state 업데이터가 두 번
-    // 호출된다. 업데이터 안에서 createObjectURL을 부르면 장마다 URL이 하나씩
-    // 새고, 그 누수는 화면에 아무 증상도 남기지 않는다.
+    // 호출된다. 업데이터 안에서 createObjectURL을 부르면 URL이 새고, 그 누수는
+    // 화면에 아무 증상도 남기지 않는다.
     render(
       <StrictMode>
         <UploadForm />
       </StrictMode>,
     );
 
-    await user.upload(picker(), [
-      screenshot('pirouettes.png'),
-      screenshot('fabri.png'),
-    ]);
+    await user.upload(picker(), [screenshot('pirouettes.png')]);
 
-    expect(create).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
-  it('화면을 떠날 때 남은 URL을 전부 해제한다', async () => {
+  it('화면을 떠날 때 남은 URL을 해제한다', async () => {
     const user = userEvent.setup();
     const view = render(<UploadForm />);
 
-    await user.upload(picker(), [
-      screenshot('pirouettes.png'),
-      screenshot('fabri.png'),
-    ]);
+    await user.upload(picker(), [screenshot('pirouettes.png')]);
     view.unmount();
 
     expect(revoke).toHaveBeenCalledWith(created[0]);
-    expect(revoke).toHaveBeenCalledWith(created[1]);
   });
 });
 
@@ -230,20 +203,14 @@ describe('UploadForm — 가드', () => {
     expect(screen.queryByText(/장 선택됨/)).not.toBeInTheDocument();
   });
 
-  it('장수 상한을 넘으면 넘은 장을 이유와 함께 막는다', async () => {
-    const user = userEvent.setup();
+  it('한 장을 넘겨 고르면 넘은 장을 이유와 함께 막는다', () => {
     render(<UploadForm />);
 
-    await user.upload(
-      picker(),
-      Array.from({ length: MAX_IMAGE_COUNT + 1 }, (_, index) =>
-        screenshot(`s${String(index)}.png`, index),
-      ),
-    );
+    // 선택창에서 multiple을 뺐어도 드래그 앤 드롭이나 공유하기로 여러 장이
+    // 들어올 수 있다. 그때 조용히 버리지 않아야 한다.
+    chooseIgnoringAccept([screenshot('a.png', 1), screenshot('b.png', 2)]);
 
-    expect(
-      screen.getByText(`${String(MAX_IMAGE_COUNT)}장 선택됨`),
-    ).toBeInTheDocument();
+    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent(
       `한 번에 ${String(MAX_IMAGE_COUNT)}장까지 올릴 수 있습니다`,
     );

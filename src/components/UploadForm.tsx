@@ -15,6 +15,11 @@ import type { UploadRejection } from '@/domain/extraction';
  *
  * 클라이언트 컴포넌트인 것은 고른 파일을 들고 있어야 해서다. 파일은 서버로
  * 직렬화되지 않으므로 이 상태는 브라우저에만 있다.
+ *
+ * **한 장만 든다.** 명세(커밋 484684e)가 여러 장 선택을 두지 않기로 정했다 —
+ * 여러 장을 받으면 결과 목록의 단위와 실패 처리가 장수만큼 갈라진다. 새로
+ * 고르면 앞의 장을 갈아 끼운다. 한 장 안에 가게가 여러 곳인 경우는 그와
+ * 별개로 남고(T12 · #16), 그쪽은 VLM이 배열로 돌려준다.
  */
 
 /**
@@ -94,18 +99,12 @@ const count = css({
   _dark: { color: 'slate.400' },
 });
 
-const grid = css({
-  display: 'grid',
-  gridTemplateColumns: '[repeat(auto-fill, minmax(7rem, 1fr))]',
-  gap: '3',
-  width: 'full',
-  listStyle: 'none',
-  p: '0',
-  m: '0',
-});
-
 const cell = css({
   position: 'relative',
+  // 한 장이라 격자가 필요 없다. 세로로 긴 스크린샷이 화면을 다 먹지 않게
+  // 폭만 제한한다.
+  width: 'full',
+  maxWidth: 'xs',
   rounded: 'md',
   overflow: 'hidden',
   borderWidth: '1px',
@@ -226,69 +225,65 @@ function explain(rejection: UploadRejection): string {
 
 export function UploadForm() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<readonly PickedImage[]>([]);
+  const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
-  const imagesRef = useRef<readonly PickedImage[]>([]);
+  const imageRef = useRef<PickedImage | null>(null);
   useEffect(() => {
-    imagesRef.current = images;
-  }, [images]);
+    imageRef.current = image;
+  }, [image]);
 
   useEffect(
     () => () => {
-      // 화면을 떠날 때 남은 URL을 전부 해제한다. 안 하면 문서가 사는 동안
-      // 원본 파일이 메모리에서 풀리지 않는다 — 스크린샷 수십 장이면 눈에 띈다.
-      for (const image of imagesRef.current)
-        URL.revokeObjectURL(image.previewUrl);
+      // 화면을 떠날 때 남은 URL을 해제한다. 안 하면 문서가 사는 동안 원본
+      // 파일이 메모리에서 풀리지 않는다.
+      const left = imageRef.current;
+      if (left !== null) URL.revokeObjectURL(left.previewUrl);
     },
     [],
   );
 
   // URL을 만들고 해제하는 일은 **업데이터 밖에서** 한다. `reactStrictMode`가
   // 켜져 있어 개발 중 state 업데이터가 두 번 호출되는데(불순한 업데이터를
-  // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 장마다
-  // URL이 하나씩 새고 revokeObjectURL은 두 번 불린다. 업데이터는 앞의 배열에서
-  // 뒤의 배열을 계산하는 일만 한다.
-  function add(picked: readonly File[]) {
-    // 중복을 먼저 걷어낸다. 이미 담긴 장이 장수 상한의 자리를 두 번 차지하면,
-    // 통과할 수 있었던 새 장이 엉뚱하게 막힌다.
-    const seen = new Set(images.map(image => image.fingerprint));
-    const fresh: File[] = [];
-
-    for (const file of picked) {
-      const fingerprint = fingerprintOf(file);
-      if (seen.has(fingerprint)) continue;
-      seen.add(fingerprint);
-      fresh.push(file);
-    }
-
+  // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 URL이
+  // 하나씩 새고 revokeObjectURL은 두 번 불린다.
+  function choose(picked: readonly File[]) {
     // `File`이 `UploadCandidate`(이름·형식·크기)를 만족하므로 그대로 넘긴다.
-    const { accepted, rejected } = screenUploads(fresh, images.length);
+    // 이미 한 장을 들고 있어도 `alreadyAccepted`는 0이다 — 새로 고른 장이 앞의
+    // 장을 갈아 끼우기 때문이고, 1을 넘기면 갈아 끼우는 일 자체가 상한에 걸린다.
+    const { accepted, rejected } = screenUploads(picked, 0);
 
     // 이번 선택의 결과만 보여준다. 앞선 선택의 경고를 쌓아 두면 방금 고친 것도
     // 여전히 문제인 것처럼 남는다.
     setRejections(rejected);
 
-    const added = accepted.map(file => ({
+    const [file] = accepted;
+    if (file === undefined) return;
+
+    const next = {
       fingerprint: fingerprintOf(file),
       file,
       previewUrl: URL.createObjectURL(file),
-    }));
+    };
 
-    if (added.length === 0) return;
-    setImages(previous => [...previous, ...added]);
+    // 앞의 장을 버리기 전에 그 URL을 해제한다. 갈아 끼우면서 놓치면 화면에
+    // 아무 증상 없이 원본 파일이 메모리에 남는다.
+    const previous = imageRef.current;
+    if (previous !== null && previous.fingerprint !== next.fingerprint) {
+      URL.revokeObjectURL(previous.previewUrl);
+    }
+
+    setImage(next);
   }
 
-  function remove(fingerprint: string) {
-    const going = images.find(image => image.fingerprint === fingerprint);
-    if (going === undefined) return;
+  function clear() {
+    const going = imageRef.current;
+    if (going === null) return;
 
     URL.revokeObjectURL(going.previewUrl);
-    setImages(previous =>
-      previous.filter(image => image.fingerprint !== fingerprint),
-    );
+    setImage(null);
   }
 
   return (
@@ -306,9 +301,8 @@ export function UploadForm() {
         // 버튼의 이름이고, 이 입력의 이름이 되어 주지 않는다.
         aria-label="스크린샷 파일 선택"
         accept={ACCEPT}
-        multiple
         onChange={event => {
-          add(Array.from(event.target.files ?? []));
+          choose(Array.from(event.target.files ?? []));
           // 값을 비워야 같은 파일을 다시 고를 때 change가 또 뜬다. 안 비우면
           // 실수로 뺀 장을 되돌릴 방법이 "다른 파일을 하나 고르기"가 된다.
           event.target.value = '';
@@ -341,37 +335,31 @@ export function UploadForm() {
         </div>
       )}
 
-      {images.length > 0 && (
+      {image !== null && (
         <>
-          <p className={count}>{images.length}장 선택됨</p>
-          <ul className={grid}>
-            {images.map(image => (
-              <li key={image.fingerprint} className={cell}>
-                {/*
-                  blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수
-                  없는 주소다). 크기도 모르므로 next/image가 요구하는 width·
-                  height를 줄 수 없다. 그래서 순수 img를 쓴다 — 그 예외는
-                  eslint.config.mts에 스코프로 적어 두었다.
-                */}
-                <img
-                  className={thumb}
-                  src={image.previewUrl}
-                  alt={image.file.name}
-                />
-                <p className={fileName}>{image.file.name}</p>
-                <button
-                  type="button"
-                  className={removeButton}
-                  onClick={() => {
-                    remove(image.fingerprint);
-                  }}
-                  aria-label={`${image.file.name} 빼기`}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
-          </ul>
+          <p className={count}>1장 선택됨</p>
+          <div className={cell}>
+            {/*
+              blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수 없는
+              주소다). 크기도 모르므로 next/image가 요구하는 width·height를 줄 수
+              없다. 그래서 순수 img를 쓴다 — 그 예외는 eslint.config.mts에
+              스코프로 적어 두었다.
+            */}
+            <img
+              className={thumb}
+              src={image.previewUrl}
+              alt={image.file.name}
+            />
+            <p className={fileName}>{image.file.name}</p>
+            <button
+              type="button"
+              className={removeButton}
+              onClick={clear}
+              aria-label={`${image.file.name} 빼기`}
+            >
+              ×
+            </button>
+          </div>
         </>
       )}
     </div>
