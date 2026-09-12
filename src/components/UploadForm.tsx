@@ -1,15 +1,20 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
-import { extractAction } from '@/app/upload/actions';
+import type { ExtractState } from '@/app/upload/extractState';
 import {
   CANDIDATES_SESSION_KEY,
   IDLE_EXTRACT_STATE,
 } from '@/app/upload/extractState';
-import { ACCEPTED_IMAGE_TYPES, screenUploads } from '@/domain/extraction';
-import { UPLOAD_RESULTS_PATH } from '@/shared/routes';
+import {
+  ACCEPTED_IMAGE_TYPES,
+  isRetryable,
+  screenUploads,
+} from '@/domain/extraction';
+import { SPOT_NEW_PATH, UPLOAD_RESULTS_PATH } from '@/shared/routes';
 import type {
   ExtractFailureReason,
   UploadRejection,
@@ -27,11 +32,24 @@ import type { UploadImage } from './ExtractionResults';
  * 클라이언트 컴포넌트인 것은 고른 파일을 들고 있어야 해서다. 파일은 서버로
  * 직렬화되지 않으므로 이 상태는 브라우저에만 있다.
  *
+ * `action`을 prop으로 받는 이유는 테스트다. 서버 액션은 jsdom에서 돌지
+ * 않으므로, 화면이 실제 액션을 꽂고 테스트는 가짜를 꽂는다 —
+ * `RouteComposer` · `PinByAddressForm`과 같은 모양이다.
+ *
  * **한 장만 든다.** 명세(커밋 484684e)가 여러 장 선택을 두지 않기로 정했다 —
  * 여러 장을 받으면 결과 목록의 단위와 실패 처리가 장수만큼 갈라진다. 새로
  * 고르면 앞의 장을 갈아 끼운다. 한 장 안에 가게가 여러 곳인 경우는 그와
  * 별개로 남고(T12 · #16), 그쪽은 VLM이 배열로 돌려준다.
  */
+
+export type ExtractAction = (
+  state: ExtractState,
+  formData: FormData,
+) => Promise<ExtractState>;
+
+interface Props {
+  readonly action: ExtractAction;
+}
 
 /**
  * 고른 이미지 한 장.
@@ -200,6 +218,60 @@ const warningList = css({
 });
 
 /**
+ * 실패했을 때 내미는 길 — 재시도와 직접 입력.
+ *
+ * 경고 상자 **안**에 두는 이유는 이것이 그 실패에 대한 답이기 때문이다. 화면
+ * 아래 어딘가에 두면 무엇에 대한 선택지인지가 사라진다.
+ */
+const fallbackActions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'center',
+  gap: '4',
+  mt: '3',
+});
+
+/**
+ * 붉은 바탕 위에 서는 버튼이라 폼의 제출 버튼(slate)과 색이 다르다. 경고
+ * 상자의 바탕이 라이트에서 `red.50`, 다크에서 `red.950`이므로 명암을 뒤집어
+ * 든다 — 한쪽만 맞추면 반대 테마에서 글자가 바탕에 묻는다.
+ */
+const retryButton = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  px: '3',
+  py: '2',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'red.700',
+  bg: 'red.700',
+  color: 'white',
+  cursor: 'pointer',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  transition: 'colors',
+  _hover: { bg: 'red.800', borderColor: 'red.800' },
+  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
+  _dark: {
+    borderColor: 'red.300',
+    bg: 'red.300',
+    color: 'red.950',
+    _hover: { bg: 'red.200', borderColor: 'red.200' },
+  },
+});
+
+/** 상자의 글자색을 그대로 쓰고 밑줄로만 링크임을 드러낸다. */
+const fallbackLink = css({
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  color: 'red.900',
+  textDecoration: 'underline',
+  _hover: { color: 'red.700' },
+  _dark: { color: 'red.100', _hover: { color: 'white' } },
+});
+
+/**
  * 선택창에 보일 형식. 가드가 받는 것과 같은 목록이어야 한다 — 선택창에서는
  * 보이는데 고르면 막히는 파일이 있으면 사용자는 앱이 고장난 줄 안다.
  *
@@ -280,15 +352,22 @@ const submitButton = css({
   },
 });
 
-export function UploadForm() {
+export function UploadForm({ action }: Props) {
   const router = useRouter();
-  const [state, submit, pending] = useActionState(
-    extractAction,
-    IDLE_EXTRACT_STATE,
-  );
+  const [state, submit, pending] = useActionState(action, IDLE_EXTRACT_STATE);
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
+
+  /**
+   * 경고 상자가 재시도 버튼을 들고 있는가.
+   *
+   * 들고 있으면 아래의 제출 버튼은 같은 폼을 같은 값으로 보내는 **두 번째**
+   * 버튼이 된다. 설명 바로 옆에 있는 쪽을 남기고 아래를 감춘다 — 실패를 읽은
+   * 자리에서 다음 행동이 끝나야 한다.
+   */
+  const retryInWarning =
+    state.status === 'failed' && isRetryable(state.reason) && image !== null;
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
@@ -345,6 +424,24 @@ export function UploadForm() {
     setImage(next);
   }
 
+  /**
+   * 고른 장을 액션에 넘긴다.
+   *
+   * 폼 액션이 받은 FormData를 쓰지 않고 상태의 `File`로 새로 만든다. **React는
+   * 폼 액션이 끝나면 폼을 초기화한다** — 그때 파일 입력이 비워지므로 두 번째
+   * 제출부터는 서버에 빈 폼이 가고 "스크린샷을 먼저 골라 주세요"가 돌아온다.
+   * 실패 뒤의 "다시 시도"가 정확히 그 두 번째 제출이다.
+   *
+   * 고른 장은 이미 React 상태에 있으니 그쪽을 진실로 삼는다. 화면이 "1장
+   * 선택됨"이라고 말하는 근거와 실제로 보내는 것이 같아진다 — 입력을 읽으면
+   * 그 둘이 갈라질 수 있고, 갈라진 자리가 이 버그였다.
+   */
+  function sendPickedImage() {
+    const formData = new FormData();
+    if (image !== null) formData.append('image', image.file);
+    submit(formData);
+  }
+
   function clear() {
     const going = imageRef.current;
     if (going === null) return;
@@ -380,7 +477,7 @@ export function UploadForm() {
   }, [state, router]);
 
   return (
-    <form className={shell} action={submit}>
+    <form className={shell} action={sendPickedImage}>
       {/*
         버튼이 입력을 대신 누른다. label로 감싸는 방법도 되지만, 감춰진 입력이
         포커스를 받으면 포커스 링이 화면 밖에 그려진다. 버튼은 그 자리에서
@@ -397,9 +494,9 @@ export function UploadForm() {
         name="image"
         onChange={event => {
           choose(Array.from(event.target.files ?? []));
-          // 값을 비우지 않는다. 이 입력이 폼의 필드라 제출할 때 FormData가
-          // 여기서 파일을 가져간다 — 비우면 서버에 빈 폼이 간다. 대신 장을
-          // 뺄 때 비워서 같은 파일을 다시 고를 수 있게 한다.
+          // 여기서 값을 비우지 않아도 된다. 보내는 것은 이 입력이 아니라
+          // 상태에 담긴 File이고(`sendPickedImage`), 장을 뺄 때는 `clear`가
+          // 비워 같은 파일을 다시 고를 수 있게 한다.
         }}
       />
       <button
@@ -430,15 +527,49 @@ export function UploadForm() {
       )}
 
       {(state.status === 'failed' || state.status === 'invalid') && (
-        <div className={warning} role="alert">
-          <p className={warningTitle}>추출하지 못했습니다</p>
-          <ul className={warningList}>
-            <li>
-              {state.status === 'failed'
-                ? explainFailure(state.reason)
-                : state.message}
-            </li>
-          </ul>
+        <div className={warning}>
+          {/*
+            role="alert"를 상자가 아니라 문구에만 준다. 이 역할은
+            aria-live="assertive"라 내용이 바뀔 때마다 통째로 읽히는데, 폴백
+            버튼까지 그 안에 있으면 누를 것이 낭독에 섞여 되풀이된다.
+          */}
+          <div role="alert">
+            <p className={warningTitle}>추출하지 못했습니다</p>
+            <ul className={warningList}>
+              <li>
+                {state.status === 'failed'
+                  ? explainFailure(state.reason)
+                  : state.message}
+              </li>
+            </ul>
+          </div>
+
+          {state.status === 'failed' && (
+            <div className={fallbackActions}>
+              {retryInWarning && (
+                /*
+                  같은 폼을 그대로 다시 보낸다. 고른 장이 입력에 남아 있으므로
+                  사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던
+                  적은 없다.
+                */
+                <button
+                  type="submit"
+                  className={retryButton}
+                  disabled={pending}
+                  aria-busy={pending}
+                >
+                  {pending ? '읽는 중…' : '다시 시도'}
+                </button>
+              )}
+              {/*
+                읽지 못한 장소도 주소를 알면 스팟이 된다. 재시도가 통하지 않는
+                실패(키 없음)에서는 이것이 유일한 길이다.
+              */}
+              <Link className={fallbackLink} href={SPOT_NEW_PATH}>
+                주소로 직접 핀 찍기 →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -467,14 +598,16 @@ export function UploadForm() {
               ×
             </button>
           </div>
-          <button
-            type="submit"
-            className={submitButton}
-            disabled={pending}
-            aria-busy={pending}
-          >
-            {pending ? '읽는 중…' : '주소 읽기'}
-          </button>
+          {!retryInWarning && (
+            <button
+              type="submit"
+              className={submitButton}
+              disabled={pending}
+              aria-busy={pending}
+            >
+              {pending ? '읽는 중…' : '주소 읽기'}
+            </button>
+          )}
         </>
       )}
     </form>

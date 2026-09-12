@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { SpotCandidate } from '@/shared/spot';
-import type { KeyboardEvent } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 
 export interface UploadImage {
   /** 업로드 한 장의 식별자. 후보 id와 달리 한 이미지에서 나온 후보들이 공유한다. */
@@ -220,10 +220,71 @@ const albumDetails = css({
 const failureNames = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '1',
+  gap: '4',
+  width: 'full',
   m: '0',
   p: '0',
   listStyle: 'none',
+});
+
+const manualForm = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3',
+  width: 'full',
+});
+
+const field = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+  width: 'full',
+});
+
+const fieldLabel = css({
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  color: 'slate.700',
+  _dark: { color: 'slate.300' },
+});
+
+const input = css({
+  width: 'full',
+  minHeight: '11',
+  px: '3',
+  rounded: 'md',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.300',
+  bg: 'white',
+  color: 'slate.900',
+  textStyle: 'sm',
+  _dark: {
+    borderColor: 'slate.700',
+    bg: 'slate.950',
+    color: 'slate.100',
+  },
+});
+
+const addButton = css({
+  alignSelf: 'flex-start',
+  px: '4',
+  py: '2',
+  rounded: 'md',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'violet.600',
+  bg: 'violet.600',
+  color: 'white',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _hover: { borderColor: 'violet.700', bg: 'violet.700' },
+  _dark: {
+    borderColor: 'violet.500',
+    bg: 'violet.500',
+    _hover: { borderColor: 'violet.400', bg: 'violet.400' },
+  },
 });
 
 const deleteButton = css({
@@ -346,6 +407,12 @@ const address = css({
   _dark: { color: 'slate.400' },
 });
 
+const manualOrigin = css({
+  textStyle: 'xs',
+  color: 'violet.700',
+  _dark: { color: 'violet.300' },
+});
+
 const failureHint = css({
   textStyle: 'sm',
   color: 'red.700',
@@ -407,18 +474,83 @@ function failureAlbumOf(
 
 type CandidateDecision = 'save' | 'delete';
 
+interface ManualCandidateFormProps {
+  readonly candidate: ExtractionResultCandidate;
+  readonly onConfirm: (
+    candidate: ExtractionResultCandidate,
+    name: string,
+    roadAddress: string,
+  ) => void;
+}
+
+/**
+ * 입력값은 이 폼 안의 초안으로만 둔다. 타이핑만으로 부모 후보를 바꾸면 주소의
+ * 첫 글자를 적는 순간 실패 목록에서 사라져 버리고, 아직 확정하지 않은 값이
+ * 저장 대상으로 섞인다.
+ */
+function ManualCandidateForm({
+  candidate,
+  onConfirm,
+}: ManualCandidateFormProps) {
+  const [name, setName] = useState(candidate.name);
+  const [roadAddress, setRoadAddress] = useState('');
+
+  function confirm(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const confirmedName = name.trim();
+    const confirmedAddress = roadAddress.trim();
+    if (confirmedName.length === 0 || confirmedAddress.length === 0) return;
+    onConfirm(candidate, confirmedName, confirmedAddress);
+  }
+
+  return (
+    <form className={manualForm} onSubmit={confirm}>
+      <label className={field}>
+        <span className={fieldLabel}>상호명</span>
+        <input
+          className={input}
+          type="text"
+          value={name}
+          onChange={event => {
+            setName(event.target.value);
+          }}
+          required
+        />
+      </label>
+      <label className={field}>
+        <span className={fieldLabel}>주소</span>
+        <input
+          className={input}
+          type="text"
+          value={roadAddress}
+          onChange={event => {
+            setRoadAddress(event.target.value);
+          }}
+          required
+        />
+      </label>
+      <button className={addButton} type="submit">
+        저장 대상에 추가
+      </button>
+    </form>
+  );
+}
+
 function receiptKey(candidates: readonly ExtractionResultCandidate[]): string {
   return JSON.stringify(candidates);
 }
 
 function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
-  const successes = candidates.filter(isSuccessfulCandidate);
+  // OCR 후보와 사용자가 확정한 수동 입력 후보가 함께 사는 STEP 3의 목록 상태.
+  // 서버 저장은 T15의 명시적인 저장 선택 뒤에만 일어나며 여기서는 호출하지 않는다.
+  const [reviewCandidates, setReviewCandidates] = useState(candidates);
+  const successes = reviewCandidates.filter(isSuccessfulCandidate);
   const initialFailureCount = candidatesOf(candidates, 'failure').length;
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
   const [deletedFailureImageIds, setDeletedFailureImageIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
-  const failures = candidatesOf(candidates, 'failure').filter(
+  const failures = candidatesOf(reviewCandidates, 'failure').filter(
     candidate => !deletedFailureImageIds.has(candidate.uploadImage.id),
   );
   const failureAlbum = failureAlbumOf(failures);
@@ -463,6 +595,26 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
 
   function decide(candidateId: string, decision: CandidateDecision) {
     setDecisions(current => ({ ...current, [candidateId]: decision }));
+  }
+
+  function confirmManualCandidate(
+    candidate: ExtractionResultCandidate,
+    name: string,
+    roadAddress: string,
+  ) {
+    const confirmed: ExtractionResultCandidate = {
+      ...candidate,
+      name,
+      roadAddress,
+      origin: 'manual',
+    };
+    setReviewCandidates(current =>
+      current.map(item => (item.id === candidate.id ? confirmed : item)),
+    );
+    // 이 버튼은 단순히 주소를 고치는 동작이 아니라 저장 대상 편입까지
+    // 확정한다(T17). T15의 선택 상태에도 같은 id를 저장으로 표시하되,
+    // 실제 STEP 4 전달은 아래 "선택 완료"를 눌러야만 일어난다.
+    decide(candidate.id, 'save');
   }
 
   function selectAndFocus(kind: ResultKind) {
@@ -581,6 +733,9 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
               <li className={card} key={candidate.id}>
                 <h2 className={candidateName}>{candidate.name}</h2>
                 <p className={address}>{candidate.roadAddress}</p>
+                {candidate.origin === 'manual' ? (
+                  <p className={manualOrigin}>직접 입력</p>
+                ) : null}
                 <div
                   className={choices}
                   role="group"
@@ -616,14 +771,18 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
               <li className={albumCard} key={image.id}>
                 <img className={failureImage} src={image.src} alt={image.alt} />
                 <div className={albumDetails}>
+                  <p className={failureHint}>도로명 주소를 찾지 못했습니다.</p>
                   <ul className={failureNames}>
                     {failedCandidates.map(candidate => (
                       <li key={candidate.id}>
                         <h2 className={candidateName}>{candidate.name}</h2>
+                        <ManualCandidateForm
+                          candidate={candidate}
+                          onConfirm={confirmManualCandidate}
+                        />
                       </li>
                     ))}
                   </ul>
-                  <p className={failureHint}>도로명 주소를 찾지 못했습니다.</p>
                   <button
                     type="button"
                     className={deleteButton}
