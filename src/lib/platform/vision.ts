@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
-import { GoogleGenAI } from '@google/genai';
-import { geminiApiKey, geminiModel } from './env';
+import { openaiApiKey, openaiBaseUrl, openaiModel } from './env';
+import { callChatCompletion, completionFailure } from './openaiCompatible';
 import type { HttpFailure } from './httpClient';
 import { httpFailure } from './httpClient';
 
@@ -12,9 +12,9 @@ import { httpFailure } from './httpClient';
  * 것이 주소인지 해시태그인지 가게 이름인지 가르는 일은 결국 문맥 판단이고,
  * 글자만 읽으면 그 판단이 후처리로 밀린다.
  *
- * 제공자를 아는 파일은 **이것 하나**다. 노출하는 것은 제공자 중립 함수
+ * 호환 통신 형식은 `openaiCompatible.ts`에서 처리한다. 노출하는 것은 제공자 중립 함수
  * `readSpotsFromImage` 하나 — "이미지를 넣어 가게 목록을 받는다"만 안다.
- * 제공자를 바꾸면 이 파일만 바뀐다.
+ * 호환 제공자는 환경 변수로 교체한다.
  *
  * 출력 타입을 여기서 선언하는 이유는 레이어 규칙이다. platform은 shared만 열 수
  * 있어 도메인의 타입을 가져올 수 없다. 도메인 쪽 입력 타입(`ReadSpot`)과 필드가
@@ -100,7 +100,7 @@ const EXTRACT_PROMPT = [
   '- 가게가 하나도 보이지 않으면 빈 목록을 돌려준다.',
 ].join('\n');
 
-/** SDK 호출 한 번의 최소 면. 테스트와 실측에서 이것만 갈아 끼운다. */
+/** API 호출 한 번의 최소 면. 테스트와 실측에서 이것만 갈아 끼운다. */
 export type VisionCaller = (params: {
   readonly model: string;
   readonly mimeType: string;
@@ -110,25 +110,28 @@ export type VisionCaller = (params: {
   readonly signal: AbortSignal;
 }) => Promise<string | undefined>;
 
-function sdkCaller(apiKey: string): VisionCaller {
-  const ai = new GoogleGenAI({ apiKey });
-  return async ({ model, mimeType, dataBase64, prompt, schema, signal }) => {
-    const response = await ai.models.generateContent({
+function apiCaller(apiKey: string, baseUrl: string | null): VisionCaller {
+  return ({ model, mimeType, dataBase64, prompt, schema, signal }) =>
+    callChatCompletion({
+      apiKey,
+      baseUrl,
       model,
-      contents: [
-        { inlineData: { mimeType, data: dataBase64 } },
-        { text: prompt },
+      schema,
+      signal,
+      temperature: 0,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${mimeType};base64,${dataBase64}` },
+            },
+            { type: 'text', text: prompt },
+          ],
+        },
       ],
-      config: {
-        responseMimeType: 'application/json',
-        responseJsonSchema: schema,
-        // 읽어 적기에 창의성은 오답이다. 같은 이미지가 같은 결과를 내야 한다.
-        temperature: 0,
-        abortSignal: signal,
-      },
     });
-    return response.text;
-  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -172,12 +175,13 @@ export function parseVisionSpots(raw: unknown): readonly VisionSpot[] {
 
 export interface CreateReadSpotsOptions {
   readonly apiKey?: string | null;
+  readonly baseUrl?: string | null;
   readonly model?: string;
   readonly caller?: VisionCaller;
 }
 
 /**
- * `readSpotsFromImage`를 만든다. 기본은 env의 키·모델과 실제 SDK.
+ * `readSpotsFromImage`를 만든다. 기본은 env의 키·모델과 실제 API.
  *
  * 키가 없으면 매 호출이 `no_api_key`로 끝난다 — 만들 때 던지지 않는 이유는 키
  * 없이도 앱이 떠야 하기 때문이다(`llm.ts`와 같은 판단).
@@ -190,9 +194,12 @@ export interface CreateReadSpotsOptions {
 export function createReadSpotsFromImage(
   options: CreateReadSpotsOptions = {},
 ): ReadSpotsFromImage {
-  const apiKey = options.apiKey === undefined ? geminiApiKey() : options.apiKey;
-  const model = options.model ?? geminiModel();
-  const caller = options.caller ?? (apiKey === null ? null : sdkCaller(apiKey));
+  const apiKey = options.apiKey === undefined ? openaiApiKey() : options.apiKey;
+  const model = options.model ?? openaiModel() ?? '';
+  const baseUrl =
+    options.baseUrl === undefined ? openaiBaseUrl() : options.baseUrl;
+  const caller =
+    options.caller ?? (apiKey === null ? null : apiCaller(apiKey, baseUrl));
 
   return async ({ bytes, mimeType, timeoutMs = DEFAULT_TIMEOUT_MS }) => {
     if (caller === null) return { ok: false, error: { kind: 'no_api_key' } };
@@ -208,13 +215,7 @@ export function createReadSpotsFromImage(
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (cause) {
-      const isTimeout =
-        cause instanceof Error &&
-        (cause.name === 'TimeoutError' || cause.name === 'AbortError');
-      return {
-        ok: false,
-        error: httpFailure(isTimeout ? 'timeout' : 'network', cause),
-      };
+      return { ok: false, error: completionFailure(cause) };
     }
 
     if (text === undefined || text.length === 0) {

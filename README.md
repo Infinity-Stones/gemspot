@@ -22,6 +22,29 @@ pnpm dev       # http://localhost:3000
 `styled-system/`(Panda 생성 트리)은 커밋하지 않는다. clone 직후엔 없고
 `pnpm install`이 만든다 — 없으면 타입 검사가 `styled-system/css`를 못 찾는다.
 
+## 모델 호출 설정
+
+이미지에서 가게를 읽는 기능과 자연어 동선 가이드는 OpenAI 호환 Chat Completions
+API를 사용한다. `.env` 또는 `.env.local`에 다음 서버 환경 변수를 설정한다.
+
+```dotenv
+OPENAI_BASE_URL=https://provider.example/v1
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=your-vision-model
+```
+
+`OPENAI_BASE_URL`은 `/chat/completions` 앞까지의 주소다. 필요한 버전 경로(예: `/v1`)도
+포함한다. 호출 주소는 `<OPENAI_BASE_URL>/chat/completions`이며, 키는 Bearer 인증으로
+전달한다. 이미지는 base64 data URL로 기존 프롬프트와 함께 전송한다.
+모델은 이미지 입력과 `response_format: json_schema`를 지원해야 한다.
+이 형식은 [공식 이미지 입력 문서](https://developers.openai.com/api/docs/guides/images-vision)와
+[구조화 응답 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 따른다.
+
+기존 `GEMINI_API_KEY`와 `GEMINI_MODEL`은 더 이상 사용하지 않는다.
+세 값을 모두 설정한 뒤 서버를 재시작한다. 키가 없으면 기존 키 누락 오류로,
+주소·모델이 없거나 주소 형식이 잘못되면 설정 오류로 처리하며 외부 요청은 보내지 않는다.
+비밀 키를 저장소에 커밋하거나 `NEXT_PUBLIC_` 접두사로 공개하지 않는다.
+
 ## 스크립트
 
 | 명령                 | 하는 일                                                         |
