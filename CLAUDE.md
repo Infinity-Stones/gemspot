@@ -11,12 +11,13 @@ CI(`.github/workflows/ci.yml`)가 같은 넷을 각각 돌린다.
 pnpm lint          # --max-warnings=0 — 경고도 실패다
 pnpm check-types   # next typegen + tsconfig.json + tsconfig.test.json
 pnpm test          # vitest (node · jsdom 두 프로젝트)
-pnpm build         # next build
+pnpm build         # panda codegen + next build
 ```
 
 고칠 때마다 가장 가까운 게이트를, 커밋을 마무리하기 전에 넷 전부를 돌린다.
 
-`styled-system/`은 `panda codegen`이 만드는 생성 트리다(`prepare` 훅). **고치지도
+`styled-system/`은 `panda codegen`이 만드는 생성 트리다(`prepare` 훅, 그리고
+`pnpm build` 앞단 — 캐시된 node_modules 위에서는 prepare가 돌지 않는다). **고치지도
 커밋하지도 않는다** — 거기서 타입 오류가 나면 원인은 `panda.config.ts`에 있다.
 
 ## 커밋

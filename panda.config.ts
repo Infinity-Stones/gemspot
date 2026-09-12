@@ -15,6 +15,10 @@ import { defineConfig } from '@pandacss/dev';
  * `outdir`(styled-system/)은 커밋하지 않는다. `pnpm install`의 prepare 훅이
  * `panda codegen`을 돌려 만들고, tsconfig의 `styled-system/*` path와
  * .gitignore가 그 전제를 함께 잡고 있다.
+ *
+ * `pnpm build`도 codegen을 앞에 한 번 더 돈다. Vercel처럼 node_modules를
+ * 캐시에서 복원하는 환경에서는 pnpm이 "Already up to date"로 설치를 통째로
+ * 건너뛰고, 그러면 prepare 훅도 돌지 않아 이 트리가 없는 채로 빌드가 시작된다.
  */
 export default defineConfig({
   presets: ['@pandacss/dev/presets'],
