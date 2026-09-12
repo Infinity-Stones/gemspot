@@ -66,6 +66,27 @@ describe('geocodeAddress', () => {
     expect(init.headers).toMatchObject({ 'x-ncp-apigw-api-key': 'secret' });
   });
 
+  it('count · coordinate 옵션을 쿼리로 싣고, coordinate는 경도,위도 순으로 뒤집는다', async () => {
+    const fetchImpl = respondWith(NAVER_RESPONSE);
+    await geocodeAddress('성수동', {
+      fetchImpl,
+      apiKey: 'secret',
+      count: 10,
+      coordinate: { latitude: 37.5447, longitude: 127.0557 },
+    });
+    const [url] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
+    const params = new URL(url).searchParams;
+    expect(params.get('count')).toBe('10');
+    expect(params.get('coordinate')).toBe('127.0557,37.5447');
+  });
+
+  it('count는 1~100으로 자른다', async () => {
+    const fetchImpl = respondWith(NAVER_RESPONSE);
+    await geocodeAddress('성수동', { fetchImpl, apiKey: 'secret', count: 500 });
+    const [url] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
+    expect(new URL(url).searchParams.get('count')).toBe('100');
+  });
+
   it('totalCount 0은 성공이되 hits가 빈 — "그런 주소가 없다"', async () => {
     const result = await geocodeAddress('없는동', {
       fetchImpl: respondWith({ meta: { totalCount: 0 }, addresses: [] }),

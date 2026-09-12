@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { GeocodeOutcome } from '@/lib/platform/naverGeocoding';
 import type { InsertRowResult } from '@/lib/platform/supabase';
-import { locateAddress, saveSpot } from './save';
+import { ADDRESS_SEARCH_COUNT, locateAddress, saveSpot, searchAddress } from './save';
 
 const HIT = {
   coord: { latitude: 37.5299, longitude: 126.9648 },
@@ -41,6 +41,32 @@ describe('locateAddress', () => {
       kind: 'unavailable',
       reason: 'no_api_key',
     });
+  });
+});
+
+describe('searchAddress — 후보를 여러 건 받아 고르게 한다', () => {
+  const second = { ...HIT, roadAddress: '서울특별시 용산구 한강대로 56-2', jibunAddress: '' };
+  const dupJibun = { ...HIT, roadAddress: '' }; // 같은 곳이 지번으로 한 번 더
+
+  it('count를 넘겨 부르고, 좌표 있는 후보 전부를 순서대로 돌려준다', async () => {
+    const geocode = vi.fn(() => Promise.resolve({ ok: true, data: { totalCount: 2, hits: [HIT, second] } } as GeocodeOutcome));
+    const result = await searchAddress('한강대로 56', { geocode });
+    expect(geocode).toHaveBeenCalledWith('한강대로 56', { count: ADDRESS_SEARCH_COUNT });
+    expect(result.kind).toBe('results');
+    if (result.kind === 'results') expect(result.candidates.map(c => c.roadAddress)).toEqual([HIT.roadAddress, second.roadAddress]);
+  });
+
+  it('같은 주소가 도로명 · 지번으로 겹치면 하나로 접는다', async () => {
+    const result = await searchAddress('x', {
+      geocode: () => Promise.resolve({ ok: true, data: { totalCount: 2, hits: [HIT, { ...dupJibun, jibunAddress: HIT.roadAddress }] } }),
+    });
+    if (result.kind === 'results') expect(result.candidates).toHaveLength(1);
+    else throw new Error('expected results');
+  });
+
+  it('0건은 not_found, 키 없음은 unavailable', async () => {
+    await expect(searchAddress('x', { geocode: () => Promise.resolve(notFound) })).resolves.toEqual({ kind: 'not_found' });
+    await expect(searchAddress('x', { geocode: () => Promise.resolve(noKey) })).resolves.toMatchObject({ kind: 'unavailable' });
   });
 });
 

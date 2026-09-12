@@ -2,7 +2,7 @@ import type { GeocodeOutcome } from '@/lib/platform/naverGeocoding';
 import { geocodeAddress as defaultGeocode } from '@/lib/platform/naverGeocoding';
 import type { SavedSpot, SpotAddressOrigin, SpotCategory } from '@/shared/spot';
 import type { GeocodedSpotLocation } from './geocoding';
-import { prepareGeocodedLocation } from './geocoding';
+import { prepareGeocodedLocation, prepareGeocodedLocations } from './geocoding';
 import type { InsertSpotOptions } from './repository';
 import { insertSpot } from './repository';
 
@@ -20,7 +20,30 @@ import { insertSpot } from './repository';
  * 좌표가 달라질 일은 없지만, 달라지더라도 저장된 값이 진실이다.
  */
 
-export type GeocodeFn = (address: string) => Promise<GeocodeOutcome>;
+export type GeocodeFn = (address: string, options?: { readonly count?: number }) => Promise<GeocodeOutcome>;
+
+/** 후보 목록 크기. 화면에서 고를 수 있는 만큼만 — 열 줄이 넘으면 검색어를 더 적는 게 빠르다. */
+export const ADDRESS_SEARCH_COUNT = 10;
+
+export type SearchAddressResult =
+  | { readonly kind: 'results'; readonly candidates: readonly GeocodedSpotLocation[] }
+  | { readonly kind: 'not_found' }
+  | { readonly kind: 'unavailable'; readonly reason: 'no_api_key' | 'http' };
+
+/**
+ * 주소 검색 — 네이버 Maps Geocoding("주소 검색")으로 후보를 여러 건 받아 사용자가
+ * 고르게 한다. 첫 건만 쓰는 locateAddress와 달리, 동 이름이나 건물명처럼 여러
+ * 곳에 걸치는 검색어에서 엉뚱한 첫 건이 저장되는 것을 막는다.
+ */
+export async function searchAddress(query: string, deps: LocateDeps = {}): Promise<SearchAddressResult> {
+  const geocode = deps.geocode ?? defaultGeocode;
+  const outcome = await geocode(query, { count: ADDRESS_SEARCH_COUNT });
+  if (!outcome.ok) {
+    return { kind: 'unavailable', reason: outcome.error.kind === 'no_api_key' ? 'no_api_key' : 'http' };
+  }
+  const candidates = prepareGeocodedLocations(outcome.data);
+  return candidates.length === 0 ? { kind: 'not_found' } : { kind: 'results', candidates };
+}
 
 export type LocateAddressResult =
   | { readonly kind: 'ready'; readonly location: GeocodedSpotLocation }
