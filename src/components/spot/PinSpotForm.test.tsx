@@ -174,7 +174,7 @@ describe('PinSpotForm', () => {
     render(<PinSpotForm action={recording({ status: 'idle' }, seen)} />);
 
     await user.type(screen.getByLabelText('가게 이름'), '피롤츠 커피하우스');
-    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+    await user.click(screen.getByRole('button', { name: '검색' }));
 
     await waitFor(() => {
       expect(seen).toHaveLength(1);
@@ -209,7 +209,9 @@ describe('PinSpotForm', () => {
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
-      expect(screen.getByText('저장하려면 위에 가게 이름을 적어 주세요')).toBeInTheDocument();
+      expect(
+        screen.getByText('저장하려면 위에 가게 이름을 적어 주세요'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -221,14 +223,20 @@ describe('PinSpotForm', () => {
     await fill(user);
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: '이 위치로 저장' }),
+      ).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
 
     await waitFor(() => {
       expect(seen).toHaveLength(2);
     });
-    expect(seen[1]).toMatchObject({ intent: 'save', name: DRAFT.name, address: DRAFT.address });
+    expect(seen[1]).toMatchObject({
+      intent: 'save',
+      name: DRAFT.name,
+      address: DRAFT.address,
+    });
   });
 
   it('처음에는 위치 찾기만 있고 저장 버튼은 없다 — 미리보기를 건너뛰고 저장할 수 없다', () => {

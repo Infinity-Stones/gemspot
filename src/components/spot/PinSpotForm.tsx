@@ -243,12 +243,13 @@ function failureMessage(failure: PinFailure): string {
 export function PinSpotForm({ action }: Props) {
   const [state, submit, pending] = useActionState(action, IDLE_PIN_STATE);
 
-  // 이름과 주소가 다 차야 검색이 열린다. 빈 칸으로 눌러 실패를 받아 보게 하는
-  // 대신, 무엇이 더 필요한지를 버튼 상태로 먼저 말한다. 카테고리는 기본값이
-  // 있어 고르지 않아도 된다.
+  // 각 검색은 자기 칸만 있으면 열린다. 이름으로 찾는 길과 주소로 찾는 길은
+  // 서로를 요구하지 않는다 — 이름이 애매해도 주소를 알면 찾을 수 있어야 한다.
+  // 빈 칸으로 눌러 실패를 받아 보게 하는 대신 버튼 상태로 먼저 말한다.
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
-  const hasRequiredFields = name.trim().length > 0 && address.trim().length > 0;
+  const hasName = name.trim().length > 0;
+  const hasAddress = address.trim().length > 0;
 
   const draft = state.status === 'idle' ? null : state.draft;
   const located = state.status === 'located' ? state : null;
@@ -282,7 +283,7 @@ export function PinSpotForm({ action }: Props) {
             name="intent"
             value="search_place"
             className={`${secondary} ${inlineAction}`}
-            disabled={pending || name.trim().length === 0}
+            disabled={pending || !hasName}
           >
             검색
           </button>
@@ -431,7 +432,9 @@ export function PinSpotForm({ action }: Props) {
             {/* 주소부터 찾은 사람은 아직 이름이 없다. 저장이 막히는 이유를
                 여기서 미리 말한다 — 눌러 보고 알게 하지 않는다. */}
             <p className={label}>
-              {located.draft.name.length > 0 ? located.draft.name : '저장하려면 위에 가게 이름을 적어 주세요'}
+              {located.draft.name.length > 0
+                ? located.draft.name
+                : '저장하려면 위에 가게 이름을 적어 주세요'}
             </p>
             <p className={hint}>
               {located.location.roadAddress.length > 0
@@ -461,7 +464,7 @@ export function PinSpotForm({ action }: Props) {
           // 주소 검색은 이 화면을 앞으로 미는 동작이라 면을 채운다. 미리보기가
           // 열린 뒤의 "다시 검색"은 되돌리는 쪽이라 한 단 물러난다.
           className={`${located === null ? primary : secondary} ${blockAction}`}
-          disabled={pending || !hasRequiredFields}
+          disabled={pending || !hasAddress}
         >
           {pending ? '처리 중…' : located === null ? '주소 검색' : '다시 검색'}
         </button>
