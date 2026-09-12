@@ -20,6 +20,12 @@ pnpm build         # panda codegen + next build
 `pnpm build` 앞단 — 캐시된 node_modules 위에서는 prepare가 돌지 않는다). **고치지도
 커밋하지도 않는다** — 거기서 타입 오류가 나면 원인은 `panda.config.ts`에 있다.
 
+`pnpm-lock.yaml`의 `packageManagerDependencies`는 package.json의 `packageManager`
+필드 때문에 생긴다 — pnpm이 자기 버전을 관리한 기록이다. 그 블록에 **`@pnpm/exe`가
+다시 나타나면 pnpm 11 이하로 install한 것이다.** 12는 `pnpm` 하나만 적는다.
+되살리지 말고 `pnpm install`로 다시 만들 것. `packageManager` 필드를 지우면
+락파일이 더 깔끔해지지만 CI의 `pnpm/action-setup`이 버전을 못 찾아 깨진다.
+
 ## 커밋
 
 - **`Co-Authored-By`를 비롯한 AI 표기 트레일러를 절대 넣지 않는다.** 이 규칙이
