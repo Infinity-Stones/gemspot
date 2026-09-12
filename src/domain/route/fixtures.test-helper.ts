@@ -6,9 +6,10 @@ import type { Leg } from './types';
 /**
  * 도메인 테스트 공통 픽스처 — 명세의 성수동 예시.
  *
- * `14:00 출발 → 14:08 편집숍 A(20분) → 14:34 카페 B(40분) → 15:19 서점 C → 끝`
- * 계약의 카테고리가 6종이라 서점은 `shop`(20분)이고, 그래서 종료는 명세의
- * 15:49가 아니라 15:39다. 구간 시간은 8:00 · 6:20 · 5:20(초 단위 합 1,180초 →
+ * `14:00 출발 → 14:08 편집숍 A(30분) → 14:44 카페 B(40분) → 15:29 서점 C → 15:59 끝`
+ * 편집숍 · 서점 · 공원은 D07(#27)이 좁힌 카테고리 목록에 대응하는 행이 없어
+ * `other`(30분)다. 그래서 종료는 명세의 15:49도, 옛 `shop`(20분) 기준의
+ * 15:39도 아닌 15:59다. 구간 시간은 8:00 · 6:20 · 5:20(초 단위 합 1,180초 →
  * 올림 20분, 1.6 km).
  */
 
@@ -17,7 +18,7 @@ export const START = { latitude: 37.5447, longitude: 127.0557 };
 export const SHOP_A: RouteCandidate = {
   id: 'a',
   name: '편집숍 A',
-  category: 'shop',
+  category: 'other',
   coord: { latitude: 37.5424, longitude: 127.056 },
 };
 export const CAFE_B: RouteCandidate = {
@@ -29,13 +30,13 @@ export const CAFE_B: RouteCandidate = {
 export const BOOK_C: RouteCandidate = {
   id: 'c',
   name: '서점 C',
-  category: 'shop',
+  category: 'other',
   coord: { latitude: 37.547, longitude: 127.05 },
 };
 export const FOOD_D: RouteCandidate = {
   id: 'd',
   name: '밥집 D',
-  category: 'restaurant',
+  category: 'meal',
   coord: { latitude: 37.5435, longitude: 127.0575 },
 };
 export const DESSERT_E: RouteCandidate = {
@@ -47,7 +48,7 @@ export const DESSERT_E: RouteCandidate = {
 export const PARK_F: RouteCandidate = {
   id: 'f',
   name: '공원 F',
-  category: 'sight',
+  category: 'other',
   coord: { latitude: 37.5443, longitude: 127.033 },
 };
 

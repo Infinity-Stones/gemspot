@@ -70,6 +70,10 @@ export default defineConfig([
       'styled-system/**',
       // vitest --coverage의 HTML 리포터가 뱉는 번들된 벤더 JS. 소스가 아니다.
       'coverage/**',
+      // 에이전트가 만드는 git worktree. 같은 레포의 다른 브랜치를 체크아웃한
+      // 사본이라 여기서 린트하면 남의 브랜치 상태로 이 게이트가 빨개진다 —
+      // 그 코드는 자기 워크트리에서 자기 게이트로 검사받는다.
+      '.claude/worktrees/**',
       'next-env.d.ts',
     ],
   },

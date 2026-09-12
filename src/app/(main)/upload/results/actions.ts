@@ -36,9 +36,9 @@ export async function registerSpotsAction(
     const outcome = await saveSpot({
       name: request.name,
       address: request.address,
-      // 카테고리를 고르는 자리가 STEP 3에 아직 없다(D07 · #27 미결). 표의
-      // 어느 행에도 없는 값을 넣는 것보다 "분류하지 않음"이 정직하다.
-      category: 'other',
+      // 사용자가 STEP 3에서 고른 값을 그대로 쓴다. 고르지 않았으면 화면이
+      // 'other'를 실어 보낸다 — 여기서 이름을 보고 추측하지 않는다.
+      category: request.category,
       // 이 주소가 어디서 왔는지는 이 진입점이 안다. 폼에서 읽으면 클라이언트가
       // 기록을 정하게 된다.
       origin: 'ocr',

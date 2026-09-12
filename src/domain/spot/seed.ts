@@ -7,6 +7,9 @@ import type { SavedSpot } from '@/shared/spot';
  * 명세의 성수동 예시(편집숍 A · 카페 B · 서점 C · 밥집 D)를 실제 좌표로
  * 만들었다. 이름은 가명이지만 좌표는 성수동 도로 위라 TMAP 실측이 붙는다.
  *
+ * D07(#27)이 카테고리 목록을 다시 짜면서 편집숍 · 서점 · 공원은 대응하는
+ * 행이 없어져 '기타'가 됐다. 이름은 명세 예시 그대로 둔다.
+ *
  * 각 건이 무엇을 시연하는지:
  * - 밥집 D — 14~16시 요청에서 시간대 밖(`outside_window`)으로 빠진다
  * - 디저트 E — 반경 안. 시간이 부족할 때 뒤에서 빠지는 것(`over_time`)을 보여 준다
@@ -24,7 +27,7 @@ export const SEED_SPOTS: readonly SavedSpot[] = [
     jibunAddress: null,
     coordinates: { latitude: 37.5424, longitude: 127.056 },
     region: SEONGDONG,
-    category: 'shop',
+    category: 'other',
     origin: 'manual',
   },
   {
@@ -44,7 +47,7 @@ export const SEED_SPOTS: readonly SavedSpot[] = [
     jibunAddress: null,
     coordinates: { latitude: 37.547, longitude: 127.05 },
     region: SEONGDONG,
-    category: 'shop',
+    category: 'other',
     origin: 'manual',
   },
   {
@@ -54,7 +57,7 @@ export const SEED_SPOTS: readonly SavedSpot[] = [
     jibunAddress: null,
     coordinates: { latitude: 37.5435, longitude: 127.0575 },
     region: SEONGDONG,
-    category: 'restaurant',
+    category: 'meal',
     origin: 'manual',
   },
   {
@@ -74,7 +77,7 @@ export const SEED_SPOTS: readonly SavedSpot[] = [
     jibunAddress: null,
     coordinates: { latitude: 37.5443, longitude: 127.033 },
     region: SEONGDONG,
-    category: 'sight',
+    category: 'other',
     origin: 'manual',
   },
 ];

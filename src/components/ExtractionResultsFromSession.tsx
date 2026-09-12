@@ -8,9 +8,9 @@ import {
   useTransition,
 } from 'react';
 import { css } from 'styled-system/css';
-import { CANDIDATES_SESSION_KEY } from '@/app/upload/extractState';
-import { registerSpotsAction } from '@/app/upload/results/actions';
-import type { RegisterSpotsResult } from '@/app/upload/results/registerState';
+import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
+import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
+import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { UPLOAD_PATH } from '@/shared/routes';
 import type { SpotCandidate } from '@/shared/spot';
 import { ExtractionResults } from './ExtractionResults';
@@ -117,6 +117,7 @@ export function ExtractionResultsFromSession() {
             candidateId: candidate.id,
             name: candidate.name,
             address: candidate.roadAddress,
+            category: candidate.category,
           })),
         );
         setResult(outcome);

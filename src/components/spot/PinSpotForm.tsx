@@ -1,12 +1,13 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { css } from 'styled-system/css';
-import type { PinFormState } from '@/app/spots/new/pinState';
-import { IDLE_PIN_STATE } from '@/app/spots/new/pinState';
-import type { PinFailure } from '@/app/spots/new/pinState';
+import type { PinFormState } from '@/app/(main)/spots/new/pinState';
+import { IDLE_PIN_STATE } from '@/app/(main)/spots/new/pinState';
+import type { PinFailure } from '@/app/(main)/spots/new/pinState';
 import { SPOT_CATEGORIES } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
+import { FloatingActionBar } from '../FloatingActionBar';
 import { SpotMap } from '../SpotMap';
 import { saveFailureMessage } from './saveFailureMessage';
 
@@ -28,17 +29,30 @@ import { saveFailureMessage } from './saveFailureMessage';
  * `action`을 prop으로 받는 이유는 테스트다. 서버 액션은 jsdom에서 돌지 않는다.
  */
 
-export type PinSpotAction = (state: PinFormState, formData: FormData) => Promise<PinFormState>;
+export type PinSpotAction = (
+  state: PinFormState,
+  formData: FormData,
+) => Promise<PinFormState>;
 
 interface Props {
   readonly action: PinSpotAction;
 }
 
-const form = css({ display: 'flex', flexDirection: 'column', gap: '5', width: 'full' });
+const form = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '5',
+  width: 'full',
+});
 
 const field = css({ display: 'flex', flexDirection: 'column', gap: '2' });
 
-const label = css({ textStyle: 'sm', fontWeight: 'medium', color: 'slate.700', _dark: { color: 'slate.300' } });
+const label = css({
+  textStyle: 'sm',
+  fontWeight: 'medium',
+  color: 'slate.700',
+  _dark: { color: 'slate.300' },
+});
 
 const control = css({
   width: 'full',
@@ -52,12 +66,26 @@ const control = css({
   color: 'slate.900',
   textStyle: 'md',
   _placeholder: { color: 'slate.400' },
-  _dark: { borderColor: 'slate.700', bg: 'slate.900', color: 'slate.100', _placeholder: { color: 'slate.500' } },
+  _dark: {
+    borderColor: 'slate.700',
+    bg: 'slate.900',
+    color: 'slate.100',
+    _placeholder: { color: 'slate.500' },
+  },
 });
 
-const hint = css({ textStyle: 'sm', color: 'slate.500', _dark: { color: 'slate.400' } });
+const hint = css({
+  textStyle: 'sm',
+  color: 'slate.500',
+  _dark: { color: 'slate.400' },
+});
 
-const row = css({ display: 'flex', flexWrap: 'wrap', gap: '3' });
+// 플로팅 자리의 버튼은 줄을 꽉 채운다 — 화면 아래에서 좌우로 흔들리지 않는다.
+const blockAction = css({
+  justifyContent: 'center',
+  width: 'full',
+  minHeight: '12',
+});
 
 const primary = css({
   display: 'inline-flex',
@@ -75,25 +103,38 @@ const primary = css({
   fontWeight: 'semibold',
   _hover: { bg: 'violet.700', borderColor: 'violet.700' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: { borderColor: 'violet.500', bg: 'violet.500', _hover: { bg: 'violet.400', borderColor: 'violet.400' } },
+  _dark: {
+    borderColor: 'violet.500',
+    bg: 'violet.500',
+    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
+  },
 });
 
+/**
+ * 화면 안에서 후보를 불러오는 동작 — 검색. 저장과 같은 무게로 두면 무엇을
+ * 먼저 눌러야 하는지가 사라지므로 면을 채우지 않는다.
+ */
 const secondary = css({
   display: 'inline-flex',
   alignItems: 'center',
   px: '5',
   py: '3',
   rounded: 'lg',
-  borderWidth: '1px',
+  borderWidth: '[1.5px]',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.800',
+  borderColor: 'violet.600',
+  bg: 'transparent',
+  color: 'violet.700',
   cursor: 'pointer',
   textStyle: 'md',
   fontWeight: 'medium',
+  _hover: { bg: 'violet.50' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: { borderColor: 'slate.700', bg: 'slate.900', color: 'slate.100' },
+  _dark: {
+    borderColor: 'violet.400',
+    color: 'violet.300',
+    _hover: { bg: 'violet.950' },
+  },
 });
 
 const preview = css({
@@ -110,11 +151,44 @@ const preview = css({
 
 const mapFrame = css({ height: '64', width: 'full' });
 
-const previewText = css({ px: '4', pb: '4', display: 'flex', flexDirection: 'column', gap: '1' });
+const previewText = css({
+  px: '4',
+  pb: '4',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+});
 
-const inline = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2' });
+// 이름 칸과 찾기 버튼은 한 줄에 둔다. 버튼이 아래로 내려가면 이름과 떨어져
+// 무엇을 찾는 버튼인지 한눈에 붙지 않는다.
+const inline = css({ display: 'flex', alignItems: 'center', gap: '2' });
 
-const candidateList = css({ display: 'flex', flexDirection: 'column', gap: '2', listStyle: 'none', p: '0', m: '0' });
+// control이 width:full이라 그대로 두면 버튼을 줄 밖으로 밀어낸다. 남는 만큼만
+// 차지하게 되돌린다.
+const inlineField = css({
+  flexGrow: '1',
+  flexBasis: '0',
+  width: '[auto]',
+  minWidth: '0',
+});
+
+const inlineAction = css({
+  flexShrink: '0',
+  justifyContent: 'center',
+  // 입력 칸과 높이를 맞추고, 글자가 접히지 않을 만큼은 넓힌다.
+  minWidth: '24',
+  minHeight: '12',
+  whiteSpace: 'nowrap',
+});
+
+const candidateList = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+  listStyle: 'none',
+  p: '0',
+  m: '0',
+});
 
 const candidateButton = css({
   display: 'flex',
@@ -133,7 +207,12 @@ const candidateButton = css({
   textAlign: 'left',
   cursor: 'pointer',
   _hover: { borderColor: 'violet.500', bg: 'violet.50' },
-  _dark: { borderColor: 'slate.800', bg: 'slate.900', color: 'slate.100', _hover: { bg: 'violet.950', borderColor: 'violet.400' } },
+  _dark: {
+    borderColor: 'slate.800',
+    bg: 'slate.900',
+    color: 'slate.100',
+    _hover: { bg: 'violet.950', borderColor: 'violet.400' },
+  },
 });
 
 const alert = css({
@@ -164,6 +243,14 @@ function failureMessage(failure: PinFailure): string {
 export function PinSpotForm({ action }: Props) {
   const [state, submit, pending] = useActionState(action, IDLE_PIN_STATE);
 
+  // 각 검색은 자기 칸만 있으면 열린다. 이름으로 찾는 길과 주소로 찾는 길은
+  // 서로를 요구하지 않는다 — 이름이 애매해도 주소를 알면 찾을 수 있어야 한다.
+  // 빈 칸으로 눌러 실패를 받아 보게 하는 대신 버튼 상태로 먼저 말한다.
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const hasName = name.trim().length > 0;
+  const hasAddress = address.trim().length > 0;
+
   const draft = state.status === 'idle' ? null : state.draft;
   const located = state.status === 'located' ? state : null;
   const searched = state.status === 'searched' ? state : null;
@@ -182,18 +269,28 @@ export function PinSpotForm({ action }: Props) {
             key={`name-${draft?.name ?? ''}`}
             id="spot-name"
             name="name"
-            className={control}
+            className={`${control} ${inlineField}`}
             defaultValue={draft?.name ?? ''}
+            onChange={event => {
+              setName(event.target.value);
+            }}
             placeholder="피롤츠 커피하우스"
             maxLength={200}
             disabled={pending}
           />
-          <button type="submit" name="intent" value="search_place" className={secondary} disabled={pending}>
-            이 이름으로 찾기
+          <button
+            type="submit"
+            name="intent"
+            value="search_place"
+            className={`${secondary} ${inlineAction}`}
+            disabled={pending || !hasName}
+          >
+            검색
           </button>
         </div>
         <p className={hint}>
-          네이버에 등록된 가게를 이름으로 찾습니다. 안 나오면 아래에 주소를 직접 넣어 주세요.
+          네이버에 등록된 가게를 이름으로 찾습니다. 안 나오면 아래에 주소를 직접
+          넣어 주세요.
         </p>
       </div>
 
@@ -207,12 +304,16 @@ export function PinSpotForm({ action }: Props) {
           name="address"
           className={control}
           defaultValue={draft?.address ?? ''}
+          onChange={event => {
+            setAddress(event.target.value);
+          }}
           placeholder="서울 용산구 한강대로 56-1"
           disabled={pending}
         />
         <p className={hint}>
-          주소로 찾습니다 — 가게 이름은 위 칸에서 찾아 주세요. 동 이름만으로는 위치를 특정할 수 없으니
-          도로명이나 번지까지 적어 주세요. 여러 곳이 나오면 골라 주세요.
+          주소로 찾습니다 — 가게 이름은 위 칸에서 찾아 주세요. 동 이름만으로는
+          위치를 특정할 수 없으니 도로명이나 번지까지 적어 주세요. 여러 곳이
+          나오면 골라 주세요.
         </p>
       </div>
 
@@ -220,7 +321,13 @@ export function PinSpotForm({ action }: Props) {
         <label className={label} htmlFor="spot-category">
           카테고리
         </label>
-        <select id="spot-category" name="category" className={control} defaultValue={draft?.category ?? 'other'} disabled={pending}>
+        <select
+          id="spot-category"
+          name="category"
+          className={control}
+          defaultValue={draft?.category ?? 'other'}
+          disabled={pending}
+        >
           {SPOT_CATEGORIES.map(code => (
             <option key={code} value={code}>
               {labelOf(code)}
@@ -243,7 +350,8 @@ export function PinSpotForm({ action }: Props) {
       {placeSearched !== null && (
         <section className={field} aria-label="가게 검색 결과">
           <p className={label}>
-            {String(placeSearched.places.length)}곳이 나왔어요. 맞는 가게를 골라 주세요.
+            {String(placeSearched.places.length)}곳이 나왔어요. 맞는 가게를 골라
+            주세요.
           </p>
           <ul className={candidateList}>
             {placeSearched.places.map((place, index) => (
@@ -266,24 +374,43 @@ export function PinSpotForm({ action }: Props) {
           </ul>
           {/* display 최댓값이 5이고 start도 1이라 더 볼 방법이 없다. 화면이 그 사실을
               숨기면 사용자는 "다음"을 찾다 만다. */}
-          <p className={hint}>한 번에 최대 5곳까지 보여 줍니다. 없으면 이름을 더 정확히 적어 주세요.</p>
+          <p className={hint}>
+            한 번에 최대 5곳까지 보여 줍니다. 없으면 이름을 더 정확히 적어
+            주세요.
+          </p>
         </section>
       )}
 
       {searched !== null && (
         <section className={field} aria-label="주소 검색 결과">
           <p className={label}>
-            {String(searched.candidates.length)}곳이 나왔어요. 맞는 곳을 골라 주세요.
+            {String(searched.candidates.length)}곳이 나왔어요. 맞는 곳을 골라
+            주세요.
           </p>
           <ul className={candidateList}>
             {searched.candidates.map(candidate => {
-              const primary = candidate.roadAddress.length > 0 ? candidate.roadAddress : candidate.jibunAddress;
-              const secondary = candidate.roadAddress.length > 0 && candidate.jibunAddress.length > 0 ? candidate.jibunAddress : null;
+              const primary =
+                candidate.roadAddress.length > 0
+                  ? candidate.roadAddress
+                  : candidate.jibunAddress;
+              const secondary =
+                candidate.roadAddress.length > 0 &&
+                candidate.jibunAddress.length > 0
+                  ? candidate.jibunAddress
+                  : null;
               return (
                 <li key={primary}>
-                  <button type="submit" name="pick" value={primary} className={candidateButton} disabled={pending}>
+                  <button
+                    type="submit"
+                    name="pick"
+                    value={primary}
+                    className={candidateButton}
+                    disabled={pending}
+                  >
                     <span>{primary}</span>
-                    {secondary !== null && <span className={hint}>{secondary}</span>}
+                    {secondary !== null && (
+                      <span className={hint}>{secondary}</span>
+                    )}
                   </button>
                 </li>
               );
@@ -305,25 +432,43 @@ export function PinSpotForm({ action }: Props) {
             {/* 주소부터 찾은 사람은 아직 이름이 없다. 저장이 막히는 이유를
                 여기서 미리 말한다 — 눌러 보고 알게 하지 않는다. */}
             <p className={label}>
-              {located.draft.name.length > 0 ? located.draft.name : '저장하려면 위에 가게 이름을 적어 주세요'}
+              {located.draft.name.length > 0
+                ? located.draft.name
+                : '저장하려면 위에 가게 이름을 적어 주세요'}
             </p>
             <p className={hint}>
-              {located.location.roadAddress.length > 0 ? located.location.roadAddress : located.location.jibunAddress}
+              {located.location.roadAddress.length > 0
+                ? located.location.roadAddress
+                : located.location.jibunAddress}
             </p>
           </div>
         </section>
       )}
 
-      <div className={row}>
-        <button type="submit" name="intent" value="search" className={located === null ? primary : secondary} disabled={pending}>
-          {pending ? '처리 중…' : located === null ? '주소 검색' : '다시 검색'}
-        </button>
+      <FloatingActionBar>
         {located !== null && (
-          <button type="submit" name="intent" value="save" className={primary} disabled={pending}>
+          <button
+            type="submit"
+            name="intent"
+            value="save"
+            className={`${primary} ${blockAction}`}
+            disabled={pending}
+          >
             이 위치로 저장
           </button>
         )}
-      </div>
+        <button
+          type="submit"
+          name="intent"
+          value="search"
+          // 주소 검색은 이 화면을 앞으로 미는 동작이라 면을 채운다. 미리보기가
+          // 열린 뒤의 "다시 검색"은 되돌리는 쪽이라 한 단 물러난다.
+          className={`${located === null ? primary : secondary} ${blockAction}`}
+          disabled={pending || !hasAddress}
+        >
+          {pending ? '처리 중…' : located === null ? '주소 검색' : '다시 검색'}
+        </button>
+      </FloatingActionBar>
     </form>
   );
 }

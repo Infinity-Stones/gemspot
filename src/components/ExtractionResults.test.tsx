@@ -200,6 +200,10 @@ describe('ExtractionResults', () => {
       name: '파브리키친 처리 방법',
     });
     await user.click(within(pirouettes).getByRole('button', { name: '저장' }));
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: '피롤츠 커피하우스 카테고리' }),
+      'cafe',
+    );
     await user.click(within(fabri).getByRole('button', { name: '삭제' }));
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
@@ -217,6 +221,7 @@ describe('ExtractionResults', () => {
         name: '피롤츠 커피하우스',
         roadAddress: '서울 용산구 한강대로 56-1, 2층',
         origin: 'ocr',
+        category: 'cafe',
       },
     ]);
   });
@@ -282,6 +287,7 @@ describe('ExtractionResults', () => {
         name: '에그 앤 플라워',
         roadAddress: '서울 용산구 신흥로 26길 35',
         origin: 'manual',
+        category: 'other',
       },
     ]);
   });

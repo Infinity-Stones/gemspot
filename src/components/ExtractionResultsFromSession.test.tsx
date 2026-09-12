@@ -1,14 +1,14 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CANDIDATES_SESSION_KEY } from '@/app/upload/extractState';
-import { registerSpotsAction } from '@/app/upload/results/actions';
+import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
+import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
 
 /**
  * 서버 액션은 jsdom에서 돌지 않는다. 이 화면이 지는 책임은 "고른 건을 그
  * 액션에 어떤 모양으로 넘기는가"와 "돌아온 결과를 보여주는가" 둘이다.
  */
-vi.mock('@/app/upload/results/actions', () => ({
+vi.mock('@/app/(main)/upload/results/actions', () => ({
   registerSpotsAction: vi.fn(),
 }));
 
@@ -133,6 +133,7 @@ describe('ExtractionResultsFromSession', () => {
         candidateId: 'c1',
         name: '피롤츠 커피하우스',
         address: '서울 용산구 한강대로 56-1',
+        category: 'other',
       },
     ]);
   });

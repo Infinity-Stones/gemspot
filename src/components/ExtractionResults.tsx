@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
-import type { SpotCandidate } from '@/shared/spot';
+import type { SpotCandidate, SpotCategory } from '@/shared/spot';
+import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
+import { labelOf } from '@/shared/spotCategory';
 import type { FormEvent, KeyboardEvent } from 'react';
 
 export interface UploadImage {
@@ -20,6 +22,13 @@ export interface ExtractionResultCandidate extends SpotCandidate {
 
 export interface SuccessfulSpotCandidate extends SpotCandidate {
   readonly roadAddress: string;
+  /**
+   * 사용자가 이 화면에서 고른 카테고리.
+   *
+   * `SpotCandidate`에 없는 값이다 — 후보는 OCR이 읽어낸 것이고 분류는 읽어낼
+   * 수 있는 것이 아니다. 저장을 확정하는 이 경계에서 붙는다.
+   */
+  readonly category: SpotCategory;
 }
 
 /**
@@ -44,6 +53,13 @@ interface Props {
 }
 
 type ResultKind = 'success' | 'failure';
+
+/**
+ * 고르지 않고 넘어간 건이 받는 값. '기타'는 적합 시간대가 없는 카테고리라
+ * 동선 가이드가 시간대로 거르지 않는다 — 모르는 것을 아는 척 분류해 엉뚱한
+ * 시간대의 후보로 만드는 것보다 낫다.
+ */
+const DEFAULT_CATEGORY: SpotCategory = 'other';
 
 const shell = css({
   display: 'flex',
@@ -562,6 +578,12 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   const [decisions, setDecisions] = useState<
     Readonly<Record<string, CandidateDecision>>
   >({});
+  // 고르지 않은 건은 여기 없다. 기본값을 상태로 미리 채우지 않는 이유는 그
+  // 순간 "사용자가 기타를 골랐다"와 "아직 안 골랐다"가 같은 모양이 되기
+  // 때문이다 — 읽는 자리에서 한 번만 'other'로 접는다.
+  const [categories, setCategories] = useState<
+    Readonly<Record<string, SpotCategory>>
+  >({});
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
   const successTabRef = useRef<HTMLButtonElement>(null);
   const failureTabRef = useRef<HTMLButtonElement>(null);
@@ -587,6 +609,7 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
       name,
       roadAddress,
       origin,
+      category: categories[id] ?? DEFAULT_CATEGORY,
     }));
   const canContinue =
     successes.length > 0 &&
@@ -595,6 +618,16 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
 
   function decide(candidateId: string, decision: CandidateDecision) {
     setDecisions(current => ({ ...current, [candidateId]: decision }));
+  }
+
+  /**
+   * `select`가 주는 값은 문자열이다. 좁히지 않고 넣으면 목록에 없는 값이
+   * 카테고리인 척 저장까지 흘러가고, 그 스팟은 시간대 표의 어느 행에도
+   * 걸리지 않아 동선 후보에서 조용히 사라진다.
+   */
+  function chooseCategory(candidateId: string, value: string) {
+    if (!isSpotCategory(value)) return;
+    setCategories(current => ({ ...current, [candidateId]: value }));
   }
 
   function confirmManualCandidate(
@@ -736,6 +769,26 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
                 {candidate.origin === 'manual' ? (
                   <p className={manualOrigin}>직접 입력</p>
                 ) : null}
+                <label className={field}>
+                  <span className={fieldLabel}>카테고리</span>
+                  <select
+                    className={input}
+                    // 카드마다 보이는 글자가 같아서 이름만으로는 어느 가게의
+                    // 것인지 읽히지 않는다. 보이는 "카테고리"를 접근명에
+                    // 그대로 품어 음성 제어도 같은 말로 집을 수 있게 둔다.
+                    aria-label={`${candidate.name} 카테고리`}
+                    value={categories[candidate.id] ?? DEFAULT_CATEGORY}
+                    onChange={event => {
+                      chooseCategory(candidate.id, event.target.value);
+                    }}
+                  >
+                    {SPOT_CATEGORIES.map(code => (
+                      <option key={code} value={code}>
+                        {labelOf(code)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div
                   className={choices}
                   role="group"

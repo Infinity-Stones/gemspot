@@ -7,11 +7,11 @@ describe('SPOT_CATEGORIES', () => {
   // 조용히 사라진다. 그 순간을 이 테스트가 깨져서 알린다.
   it('시간대 표와 짝인 여섯 값을 고정한다', () => {
     expect(SPOT_CATEGORIES).toEqual([
+      'meal',
       'cafe',
-      'restaurant',
-      'bar',
-      'shop',
-      'sight',
+      'movie',
+      'amusement',
+      'sports',
       'other',
     ]);
   });
