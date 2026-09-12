@@ -155,7 +155,6 @@ describe('UploadForm', () => {
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
 
-    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
     // alt는 파일명이다 — 썸네일만으로는 어느 스크린샷인지 소리로 알 수 없다.
     expect(screen.getByAltText('pirouettes.png')).toBeInTheDocument();
   });
@@ -181,7 +180,6 @@ describe('UploadForm', () => {
     await user.upload(picker(), [screenshot('fabri.png')]);
 
     // 명세가 여러 장 선택을 두지 않으므로 쌓이지 않는다.
-    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
     expect(screen.getByAltText('fabri.png')).toBeInTheDocument();
     expect(screen.queryByAltText('pirouettes.png')).not.toBeInTheDocument();
     // 갈아 끼우면서 앞의 URL을 놓치면 화면에 아무 증상 없이 새어 나간다.
@@ -255,7 +253,6 @@ describe('UploadForm — 가드', () => {
     // 들어올 수 있다. 뒤쪽 장은 보지 않는다.
     chooseIgnoringAccept([screenshot('a.png', 1), screenshot('b.png', 2)]);
 
-    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
     expect(screen.getByAltText('a.png')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
+import { FloatingActionBar } from './FloatingActionBar';
 import type { ExtractState } from '@/app/upload/extractState';
 import {
   CANDIDATES_SESSION_KEY,
@@ -86,27 +87,36 @@ const shell = css({
   width: 'full',
 });
 
+/**
+ * 화면 안에서 끝나는 동작 — 파일 선택. 눌러도 이 화면에 그대로 남는다.
+ *
+ * 제출 버튼과 같은 무게로 두면 무엇을 먼저 눌러야 하는지가 사라진다. 색은
+ * 같은 프라이머리를 쓰되 면을 채우지 않아 한 단 뒤로 물러난다.
+ */
 const button = css({
   display: 'inline-flex',
   alignItems: 'center',
+  justifyContent: 'center',
   gap: '2',
+  minHeight: '11',
   px: '5',
-  py: '3',
   rounded: 'lg',
-  borderWidth: '1px',
+  // 1px은 이 크기에서 묻힌다.
+  borderWidth: '[1.5px]',
   borderStyle: 'solid',
   borderColor: 'violet.600',
-  bg: 'violet.600',
-  color: 'white',
+  // 면을 채우지 않는다. 상자 바탕이 그대로 비쳐 제출 버튼보다 한 단 뒤로 간다.
+  bg: 'transparent',
+  color: 'violet.700',
   cursor: 'pointer',
   textStyle: 'md',
   fontWeight: 'semibold',
   transition: 'colors',
-  _hover: { bg: 'violet.700', borderColor: 'violet.700' },
+  _hover: { bg: 'violet.50' },
   _dark: {
-    borderColor: 'violet.500',
-    bg: 'violet.500',
-    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
+    borderColor: 'violet.400',
+    color: 'violet.300',
+    _hover: { bg: 'violet.950' },
   },
 });
 
@@ -121,19 +131,46 @@ const button = css({
  */
 const visuallyHidden = css({ srOnly: true });
 
-const count = css({
-  textStyle: 'sm',
-  color: 'slate.600',
-  fontFamily: 'mono',
-  _dark: { color: 'slate.400' },
+// 고르기 전의 자리. 버튼만 덩그러니 두면 무엇을 놓는 자리인지 드러나지
+// 않는다 — 테두리로 영역을 보이고 그 안에 버튼을 둔다.
+//
+// 테두리를 CSS `dashed`가 아니라 SVG로 그리는 이유: `dashed`는 점과 간격을
+// 정할 수 없고 두께에 따라 알아서 정해진다. 여기서는 간격을 넓게 두고 싶다.
+const dropZone = css({
+  position: 'relative',
+  // 폼은 왼쪽 정렬이지만 이 상자는 화면 가운데에 둔다 — 고르는 자리가
+  // 화면의 중심이고, 미리보기도 같은 자리에서 열린다.
+  alignSelf: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 'full',
+  maxWidth: 'sm',
+  // 고른 뒤의 미리보기와 같은 크기다. 상자 크기가 달라지면 고르는 순간
+  // 화면이 한 번 튄다.
+  aspectRatio: 'square',
+  px: '6',
+  rounded: 'md',
+  bg: 'slate.50',
+  color: 'slate.300',
+  _dark: { bg: 'slate.900', color: 'slate.700' },
+});
+
+const dropZoneEdge = css({
+  position: 'absolute',
+  inset: '0',
+  width: 'full',
+  height: 'full',
+  pointerEvents: 'none',
 });
 
 const cell = css({
   position: 'relative',
+  alignSelf: 'center',
   // 한 장이라 격자가 필요 없다. 세로로 긴 스크린샷이 화면을 다 먹지 않게
   // 폭만 제한한다.
   width: 'full',
-  maxWidth: 'xs',
+  maxWidth: 'sm',
   rounded: 'md',
   overflow: 'hidden',
   borderWidth: '1px',
@@ -146,8 +183,7 @@ const cell = css({
 const thumb = css({
   display: 'block',
   width: 'full',
-  // 스크린샷은 세로로 길다. 비율을 고정하고 잘라 담아야 격자가 들쭉날쭉해지지
-  // 않는다 — 미리보기의 목적은 "어느 사진인지 알아보는 것"이라 잘려도 된다.
+  // 비율을 고정해 고르는 순간 화면이 튀지 않게 한다.
   aspectRatio: 'square',
   objectFit: 'cover',
 });
@@ -324,29 +360,36 @@ function explainFailure(reason: ExtractFailureReason): string {
   }
 }
 
+/**
+ * 이 화면을 끝내고 다음으로 넘기는 동작 — 제출. 화면에서 가장 강하다.
+ */
 const submitButton = css({
   display: 'inline-flex',
   alignItems: 'center',
+  justifyContent: 'center',
   gap: '2',
+  // 고른 뒤 눌러야 하는 유일한 버튼이다. 미리보기 폭에 맞춰 크게 둔다.
+  width: 'full',
+  boxShadow: 'lg',
+  minHeight: '12',
   px: '5',
-  py: '3',
   rounded: 'lg',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.900',
-  bg: 'slate.900',
+  borderColor: 'violet.600',
+  bg: 'violet.600',
   color: 'white',
   cursor: 'pointer',
   textStyle: 'md',
   fontWeight: 'semibold',
   transition: 'colors',
-  _hover: { bg: 'slate.700', borderColor: 'slate.700' },
+  _hover: { bg: 'violet.700', borderColor: 'violet.700' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
   _dark: {
-    borderColor: 'slate.100',
-    bg: 'slate.100',
-    color: 'slate.900',
-    _hover: { bg: 'white', borderColor: 'white' },
+    borderColor: 'violet.500',
+    bg: 'violet.500',
+    color: 'slate.950',
+    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
   },
 });
 
@@ -354,6 +397,10 @@ export function UploadForm({ action }: Props) {
   const router = useRouter();
   const [state, submit, pending] = useActionState(action, IDLE_EXTRACT_STATE);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const openPicker = () => {
+    inputRef.current?.click();
+  };
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejection, setRejection] = useState<UploadRejection | null>(null);
 
@@ -497,15 +544,26 @@ export function UploadForm({ action }: Props) {
           // 비워 같은 파일을 다시 고를 수 있게 한다.
         }}
       />
-      <button
-        type="button"
-        className={button}
-        onClick={() => {
-          inputRef.current?.click();
-        }}
-      >
-        스크린샷 고르기
-      </button>
+      {image === null && (
+        <div className={dropZone}>
+          <svg className={dropZoneEdge} aria-hidden="true">
+            <rect
+              x="1"
+              y="1"
+              width="calc(100% - 2px)"
+              height="calc(100% - 2px)"
+              rx="8"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray="10 9"
+            />
+          </svg>
+          <button type="button" className={button} onClick={openPicker}>
+            스크린샷 고르기
+          </button>
+        </div>
+      )}
 
       {rejection !== null && (
         // role="alert"로 두는 이유: 사용자가 방금 한 행동의 결과라 그 자리에서
@@ -569,7 +627,6 @@ export function UploadForm({ action }: Props) {
 
       {image !== null && (
         <>
-          <p className={count}>1장 선택됨</p>
           <div className={cell}>
             {/*
               blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수 없는
@@ -593,14 +650,16 @@ export function UploadForm({ action }: Props) {
             </button>
           </div>
           {!retryInWarning && (
-            <button
-              type="submit"
-              className={submitButton}
-              disabled={pending}
-              aria-busy={pending}
-            >
-              {pending ? '읽는 중…' : '주소 읽기'}
-            </button>
+            <FloatingActionBar>
+              <button
+                type="submit"
+                className={submitButton}
+                disabled={pending}
+                aria-busy={pending}
+              >
+                {pending ? '읽는 중…' : '주소 읽기'}
+              </button>
+            </FloatingActionBar>
           )}
         </>
       )}

@@ -13,6 +13,9 @@ import { css } from 'styled-system/css';
  * 첫 페인트부터 그린다. 붙은 뒤에 띄우면 그 사이 빈 화면이 한 번 스치는데,
  * 그건 인트로가 없는 것과 같다.
  */
+// 한 번 보고 나면 다시 뜨지 않는다. 홈을 오갈 때마다 나오면 인트로가 아니라
+// 길을 막는 화면이 된다. 탭을 닫으면 지워지므로 다음에 켤 때 다시 보인다.
+const SESSION_KEY = 'gemspot.intro.shown';
 const MINIMUM_VISIBLE_MS = 1600;
 const FADE_MS = 420;
 
@@ -67,12 +70,27 @@ export function IntroSplash({ isReady }: Props) {
   const [isDone, setIsDone] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // 렌더 중에 상태를 바꾸지 않으려고 한 틱 뒤에 본다. 이미 본 세션이면
+    // 그대로 걷는다.
+    const seenTimer = setTimeout(() => {
+      try {
+        if (window.sessionStorage.getItem(SESSION_KEY) === 'true') {
+          setIsDone(true);
+          return;
+        }
+        window.sessionStorage.setItem(SESSION_KEY, 'true');
+      } catch {
+        // 저장소를 막아 둔 브라우저에서는 매번 보여 준다 — 안 뜨는 것보다 낫다.
+      }
+    }, 0);
+
+    const holdTimer = setTimeout(() => {
       setIsHeld(false);
     }, MINIMUM_VISIBLE_MS);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(seenTimer);
+      clearTimeout(holdTimer);
     };
   }, []);
 

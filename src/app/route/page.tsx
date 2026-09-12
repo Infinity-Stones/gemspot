@@ -1,9 +1,7 @@
 import type { Metadata } from 'next';
 import { css } from 'styled-system/css';
-import { BackLink } from '@/components/BackLink';
 import { RouteComposer } from '@/components/route/RouteComposer';
 import { loadSpots } from '@/domain/spot';
-import { HOME_PATH } from '@/shared/routes';
 import { planRouteAction } from './actions';
 
 /**
@@ -49,15 +47,18 @@ export default async function RoutePage() {
 
   return (
     <main className={shell}>
-      <BackLink href={HOME_PATH} label="홈으로 돌아가기" />
       <div>
         <h1 className={title}>동선 만들기</h1>
       </div>
       <p className={lede}>
-        언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 말해 주세요. 저장한 스팟
-        중 그 조건에 맞는 곳을 골라 도보 시간에 맞는 순서로 제안합니다.
+        언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 말해 주세요. 저장한 스팟 중
+        그 조건에 맞는 곳을 골라 도보 시간에 맞는 순서로 제안합니다.
       </p>
-      <RouteComposer action={planRouteAction} spotCount={spots.length} spotSource={source} />
+      <RouteComposer
+        action={planRouteAction}
+        spotCount={spots.length}
+        spotSource={source}
+      />
     </main>
   );
 }
