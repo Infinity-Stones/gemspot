@@ -68,18 +68,18 @@ describe('ExtractionResults', () => {
     );
   });
 
-  it('주소가 없는 건은 원본 이미지와 함께 보여준다', async () => {
+  it('주소를 못 찾았다는 안내는 토스트로 한 번만 지나간다', async () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '도로명 주소를 찾지 못했습니다.',
+    );
     expect(
-      screen.getByText('도로명 주소를 찾지 못했습니다.'),
+      screen.getByRole('button', { name: '에그앤플라워 스크린샷 이미지 보기' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: '에그앤플라워 스크린샷' }),
-    ).toHaveAttribute('src', 'blob:egg-and-flower');
   });
 
   it('성공 건이 없으면 실패 목록만 남는다', async () => {
@@ -181,7 +181,7 @@ describe('ExtractionResults', () => {
     expect(screen.getByRole('button', { name: '선택 완료' })).toBeDisabled();
   });
 
-  it('실패 건의 상호명과 주소를 고쳐 저장 대상에 추가한다', async () => {
+  it('실패 건의 상호명과 주소를 고쳐 성공 데이터로 옮긴다', async () => {
     const user = userEvent.setup();
     const onContinue = vi.fn();
     render(
@@ -206,7 +206,9 @@ describe('ExtractionResults', () => {
     ).not.toBeInTheDocument();
     expect(onContinue).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: '저장 대상에 추가' }));
+    await user.click(
+      screen.getByRole('button', { name: '성공 데이터로 추가' }),
+    );
 
     expect(onContinue).not.toHaveBeenCalled();
     expect(screen.getByText('에그 앤 플라워')).toBeInTheDocument();
@@ -248,7 +250,9 @@ describe('ExtractionResults', () => {
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(
-      screen.getAllByRole('img', { name: '가게 둘이 담긴 스크린샷' }),
+      screen.getAllByRole('button', {
+        name: '가게 둘이 담긴 스크린샷 이미지 보기',
+      }),
     ).toHaveLength(1);
     // 한 장에서 나온 후보는 각자 자기 입력 칸을 갖는다.
     const names = screen.getAllByRole('textbox', { name: '상호명' });
@@ -258,30 +262,39 @@ describe('ExtractionResults', () => {
     ]);
   });
 
-  it('실패 이미지를 목록에서 개별 삭제한다', async () => {
+  it('한 장에서 나온 후보를 하나씩 지운다 — 옆 후보는 남는다', async () => {
     const user = userEvent.setup();
-    const otherFailure: ExtractionResultCandidate = {
-      ...CANDIDATES[1],
-      id: 'other-failure',
-      name: '남은 가게',
-      uploadImage: {
-        id: 'upload-other',
-        src: 'blob:other',
-        alt: '남은 스크린샷',
-      },
+    const sharedImage = {
+      id: 'upload-shared',
+      src: 'blob:shared',
+      alt: '가게 둘이 담긴 스크린샷',
     };
-    render(<ExtractionResults candidates={[CANDIDATES[1], otherFailure]} />);
-
-    await user.click(screen.getByRole('button', { name: '목록 보기' }));
-    await user.click(
-      screen.getByRole('button', { name: '에그앤플라워 스크린샷 삭제' }),
+    render(
+      <ExtractionResults
+        candidates={[
+          { ...CANDIDATES[1], id: 'first', uploadImage: sharedImage },
+          {
+            ...CANDIDATES[1],
+            id: 'second',
+            name: '남은 가게',
+            uploadImage: sharedImage,
+          },
+        ]}
+      />,
     );
 
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
+    await user.click(screen.getByRole('button', { name: '에그앤플라워 삭제' }));
+
+    const names = screen.getAllByRole('textbox', { name: '상호명' });
+    expect(names.map(field => (field as HTMLInputElement).value)).toEqual([
+      '남은 가게',
+    ]);
+    // 한 건을 지웠다고 그 장에서 나온 다른 건까지 사라지지 않는다.
     expect(
-      screen.queryByRole('img', { name: '에그앤플라워 스크린샷' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: '남은 스크린샷' }),
+      screen.getByRole('button', {
+        name: '가게 둘이 담긴 스크린샷 이미지 보기',
+      }),
     ).toBeInTheDocument();
   });
 

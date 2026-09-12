@@ -71,11 +71,12 @@ describe('ExtractionResultsFromSession', () => {
     render(<ExtractionResultsFromSession />);
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
-    expect(screen.getByRole('img', { name: 'egg.png' })).toHaveAttribute(
-      'src',
-      'blob:upload-42',
-    );
-    expect(screen.getByRole('button', { name: 'egg.png 삭제' })).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: 'egg.png 이미지 보기' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '에그앤플라워 삭제' }),
+    ).toBeVisible();
   });
 
   it('업로드 이미지 속성이 없는 이전 세션 값은 안전하게 거른다', () => {

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
+import { FloatingActionBar } from './FloatingActionBar';
+import { Toast } from './Toast';
 import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
@@ -74,7 +76,7 @@ const alertBackdrop = css({
   display: 'grid',
   placeItems: 'center',
   p: '6',
-  bg: 'slate.950',
+  bg: 'slate.950/60',
 });
 
 const alertCard = css({
@@ -153,8 +155,8 @@ const list = css({
 });
 
 const album = css({
-  display: 'grid',
-  gridTemplateColumns: { base: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+  display: 'flex',
+  flexDirection: 'column',
   gap: '4',
   m: '0',
   p: '0',
@@ -177,13 +179,73 @@ const albumCard = css({
   },
 });
 
-const failureImage = css({
+// 원본은 주소를 옮겨 적을 때만 필요하다. 카드마다 큰 사진을 펼쳐 두면
+// 정작 채워야 할 입력칸이 화면 밖으로 밀린다.
+const previewButton = css({
+  minHeight: '11',
+  px: '3',
+  rounded: 'md',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.300',
+  color: 'slate.700',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _hover: { borderColor: 'slate.500', bg: 'slate.50' },
+  _dark: {
+    borderColor: 'slate.700',
+    color: 'slate.200',
+    _hover: { borderColor: 'slate.500', bg: 'slate.800' },
+  },
+});
+
+const previewDialog = css({
+  // 네이티브 dialog는 inset과 margin으로 자리를 잡는다. auto 마진이 양축을
+  // 모두 가운데로 민다.
+  inset: '0',
+  m: 'auto',
+  width: 'full',
+  maxWidth: 'lg',
+  p: '0',
+  rounded: 'xl',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'white',
+  overflow: 'hidden',
+  _dark: { borderColor: 'slate.800', bg: 'slate.900' },
+  // 딤은 뒤를 가리는 게 아니라 앞을 띄우는 장치다. 꽉 채우면 원본이 어느
+  // 화면 위에 떠 있는지 사라진다.
+  '&::backdrop': { bg: 'slate.950/60' },
+});
+
+const previewImage = css({
   display: 'block',
   width: 'full',
-  aspectRatio: 'square',
-  objectFit: 'cover',
+  height: 'auto',
+  maxHeight: '[70dvh]',
+  objectFit: 'contain',
   bg: 'slate.100',
   _dark: { bg: 'slate.950' },
+});
+
+const previewFooter = css({
+  display: 'flex',
+  justifyContent: 'flex-end',
+  p: '3',
+});
+
+const previewClose = css({
+  minHeight: '11',
+  px: '4',
+  rounded: 'md',
+  bg: 'slate.900',
+  color: 'white',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _dark: { bg: 'slate.100', color: 'slate.900' },
 });
 
 const albumDetails = css({
@@ -209,6 +271,13 @@ const manualForm = css({
   flexDirection: 'column',
   gap: '3',
   width: 'full',
+  p: '4',
+  rounded: 'lg',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'slate.50',
+  _dark: { borderColor: 'slate.800', bg: 'slate.950' },
 });
 
 const field = css({
@@ -265,22 +334,25 @@ const addButton = css({
   },
 });
 
+// 아이콘은 작지만 누를 자리는 44px을 지킨다. 그 여백이 카드 안에서 빈칸처럼
+// 보이지 않도록, 남는 만큼을 음수 마진으로 되돌린다.
 const deleteButton = css({
-  px: '3',
-  py: '2',
+  alignSelf: 'flex-end',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '11',
+  height: '11',
+  mt: '-2',
+  mb: '-3',
+  mr: '-2',
   rounded: 'md',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'red.300',
-  color: 'red.700',
-  textStyle: 'sm',
-  fontWeight: 'semibold',
+  color: 'red.600',
   cursor: 'pointer',
-  _hover: { borderColor: 'red.600', bg: 'red.50' },
+  _hover: { color: 'red.700', bg: 'red.50' },
   _dark: {
-    borderColor: 'red.800',
-    color: 'red.300',
-    _hover: { borderColor: 'red.400', bg: 'red.950' },
+    color: 'red.400',
+    _hover: { color: 'red.300', bg: 'red.950' },
   },
 });
 
@@ -331,6 +403,32 @@ const countBadge = css({
   _dark: { bg: 'violet.500' },
 });
 
+const failureSectionTitle = css({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2',
+  mb: '3',
+  textStyle: 'md',
+  fontWeight: 'semibold',
+  color: 'red.700',
+  _dark: { color: 'red.300' },
+});
+
+const failureCountBadge = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '6',
+  height: '6',
+  px: '1',
+  rounded: 'full',
+  bg: 'red.600',
+  color: 'white',
+  textStyle: 'xs',
+  fontWeight: 'bold',
+  _dark: { bg: 'red.500' },
+});
+
 const decideRow = css({
   display: 'flex',
   flexDirection: 'column',
@@ -339,14 +437,8 @@ const decideRow = css({
 
 const decideSelect = css({ width: 'full' });
 
-const completion = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2',
-  mt: '4',
-});
-
 const continueButton = css({
+  width: 'full',
   minHeight: '11',
   px: '5',
   rounded: 'lg',
@@ -404,22 +496,6 @@ const manualOrigin = css({
   _dark: { color: 'violet.300' },
 });
 
-const failureHint = css({
-  textStyle: 'sm',
-  color: 'red.700',
-  _dark: { color: 'red.300' },
-});
-
-// 안내와 이미지 삭제는 한 줄에 둔다. 삭제가 입력 아래에 있으면 어느 것을
-// 지우는 버튼인지 — 이 장인지 이 후보인지 — 읽히지 않는다.
-const failureTop = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: '3',
-  width: 'full',
-});
-
 function isSuccessfulCandidate(
   candidate: ExtractionResultCandidate,
 ): candidate is ExtractionResultCandidate & SuccessfulSpotCandidate {
@@ -460,6 +536,45 @@ function failureAlbumOf(
   return [...byImage.values()];
 }
 
+interface ImagePreviewProps {
+  readonly image: UploadImage;
+  readonly onClose: () => void;
+}
+
+/**
+ * 원본 보기. 네이티브 `dialog`를 쓰는 이유는 포커스 가둠과 Esc 닫기를 브라우저가
+ * 이미 들고 있어서다 — 직접 만들면 그 둘을 다시 구현하게 된다.
+ */
+function ImagePreview({ image, onClose }: ImagePreviewProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+
+  return (
+    <dialog
+      className={previewDialog}
+      ref={dialogRef}
+      aria-label={`${image.alt} 원본`}
+      onClose={onClose}
+    >
+      <img className={previewImage} src={image.src} alt={image.alt} />
+      <div className={previewFooter}>
+        <button
+          className={previewClose}
+          type="button"
+          onClick={() => {
+            dialogRef.current?.close();
+          }}
+        >
+          닫기
+        </button>
+      </div>
+    </dialog>
+  );
+}
+
 interface ManualCandidateFormProps {
   readonly candidate: ExtractionResultCandidate;
   readonly onConfirm: (
@@ -467,6 +582,7 @@ interface ManualCandidateFormProps {
     name: string,
     roadAddress: string,
   ) => void;
+  readonly onDelete: (candidate: ExtractionResultCandidate) => void;
 }
 
 /**
@@ -477,6 +593,7 @@ interface ManualCandidateFormProps {
 function ManualCandidateForm({
   candidate,
   onConfirm,
+  onDelete,
 }: ManualCandidateFormProps) {
   const [name, setName] = useState(candidate.name);
   const [roadAddress, setRoadAddress] = useState('');
@@ -491,6 +608,27 @@ function ManualCandidateForm({
 
   return (
     <form className={manualForm} onSubmit={confirm}>
+      <button
+        className={deleteButton}
+        type="button"
+        onClick={() => {
+          onDelete(candidate);
+        }}
+        aria-label={`${candidate.name} 삭제`}
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M4 4l10 10M14 4L4 14" />
+        </svg>
+      </button>
       <label className={field}>
         <span className={fieldLabel}>상호명</span>
         <input
@@ -516,7 +654,7 @@ function ManualCandidateForm({
         />
       </label>
       <button className={addButton} type="submit">
-        저장 대상에 추가
+        성공 데이터로 추가
       </button>
     </form>
   );
@@ -533,13 +671,22 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   const successes = reviewCandidates.filter(isSuccessfulCandidate);
   const initialFailureCount = candidatesOf(candidates, 'failure').length;
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
-  const [deletedFailureImageIds, setDeletedFailureImageIds] = useState<
+  // 한 장에서 가게가 둘 나올 수 있다. 이미지 단위로 지우면 지우려던 것 옆의
+  // 멀쩡한 후보까지 함께 사라진다.
+  const [deletedFailureCandidateIds, setDeletedFailureCandidateIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
   const failures = candidatesOf(reviewCandidates, 'failure').filter(
-    candidate => !deletedFailureImageIds.has(candidate.uploadImage.id),
+    candidate => !deletedFailureCandidateIds.has(candidate.id),
   );
   const failureAlbum = failureAlbumOf(failures);
+  // 건수는 이미지가 아니라 후보로 센다. 한 장에서 두 가게가 나올 수 있어,
+  // 앨범 장수로 세면 사용자가 채워야 할 칸 수와 어긋난다.
+  const failureCount = failures.length;
+  const [previewImage, setPreviewImage] = useState<UploadImage | null>(null);
+  // 실패 안내는 카드마다 되뇌지 않는다. 같은 말이 카드 수만큼 쌓이면 정작
+  // 채워야 할 입력칸을 가린다 — 한 번 지나가고 끝낸다.
+  const [isFailureNoticeVisible, setIsFailureNoticeVisible] = useState(false);
   // 고르지 않은 건은 여기 없다. 기본값을 상태로 미리 채우지 않는 이유는 그
   // 순간 "사용자가 기타를 골랐다"와 "아직 안 골랐다"가 같은 모양이 되기
   // 때문이다 — 읽는 자리에서 한 번만 'other'로 접는다.
@@ -572,6 +719,12 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   function chooseCategory(candidateId: string, value: string) {
     if (!isSpotCategory(value)) return;
     setCategories(current => ({ ...current, [candidateId]: value }));
+  }
+
+  function deleteFailureCandidate(candidate: ExtractionResultCandidate) {
+    setDeletedFailureCandidateIds(
+      current => new Set([...current, candidate.id]),
+    );
   }
 
   function confirmManualCandidate(
@@ -617,6 +770,7 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
             type="button"
             onClick={() => {
               setIsSummaryOpen(false);
+              setIsFailureNoticeVisible(failureCount > 0);
             }}
           >
             목록 보기
@@ -628,6 +782,24 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
 
   return (
     <section className={shell} aria-label="추출 결과">
+      {isFailureNoticeVisible && (
+        <Toast
+          message="도로명 주소를 찾지 못했습니다."
+          onDismiss={() => {
+            setIsFailureNoticeVisible(false);
+          }}
+        />
+      )}
+
+      {previewImage !== null && (
+        <ImagePreview
+          image={previewImage}
+          onClose={() => {
+            setPreviewImage(null);
+          }}
+        />
+      )}
+
       {successes.length > 0 && (
         <section aria-label="주소가 확인된 결과">
           <h2 className={sectionTitle}>
@@ -673,36 +845,33 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
         </section>
       )}
 
-      {failureAlbum.length > 0 && (
+      {failureCount > 0 && (
         <section aria-label="주소 입력이 필요한 결과">
+          <h2 className={failureSectionTitle}>
+            실패 데이터
+            <span className={failureCountBadge}>{failureCount}</span>
+          </h2>
           <ul className={album}>
             {failureAlbum.map(({ image, candidates: failedCandidates }) => (
               <li className={albumCard} key={image.id}>
-                <img className={failureImage} src={image.src} alt={image.alt} />
                 <div className={albumDetails}>
-                  <div className={failureTop}>
-                    <p className={failureHint}>
-                      도로명 주소를 찾지 못했습니다.
-                    </p>
-                    <button
-                      type="button"
-                      className={deleteButton}
-                      onClick={() => {
-                        setDeletedFailureImageIds(
-                          current => new Set([...current, image.id]),
-                        );
-                      }}
-                      aria-label={`${image.alt} 삭제`}
-                    >
-                      삭제
-                    </button>
-                  </div>
+                  <button
+                    className={previewButton}
+                    type="button"
+                    onClick={() => {
+                      setPreviewImage(image);
+                    }}
+                    aria-label={`${image.alt} 이미지 보기`}
+                  >
+                    이미지 보기
+                  </button>
                   <ul className={failureNames}>
                     {failedCandidates.map(candidate => (
                       <li key={candidate.id}>
                         <ManualCandidateForm
                           candidate={candidate}
                           onConfirm={confirmManualCandidate}
+                          onDelete={deleteFailureCandidate}
                         />
                       </li>
                     ))}
@@ -715,7 +884,7 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
       )}
 
       {successes.length > 0 ? (
-        <div className={completion}>
+        <FloatingActionBar>
           <button
             className={continueButton}
             type="button"
@@ -726,7 +895,7 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
           >
             선택 완료
           </button>
-        </div>
+        </FloatingActionBar>
       ) : null}
     </section>
   );
