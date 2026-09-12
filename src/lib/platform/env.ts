@@ -21,14 +21,6 @@ function readOptional(name: string): string | null {
 }
 
 /**
- * 예시 API의 베이스 URL. 설정하지 않으면 `null`이고, 도메인 repository는 그때
- * 번들된 시드로 떨어진다 — 백엔드가 아직 없어도 앱이 뜨게 하기 위한 것이다.
- */
-export function apiBaseUrl(): string | null {
-  return readOptional('GEMSPOT_API_BASE_URL');
-}
-
-/**
  * 네이버 Geocoding 시크릿 키. 설정하지 않으면 `null`이고, 호출하는 쪽이
  * "키가 없다"를 실패로 다룬다 — 여기서 던지면 키 없이 띄워 보는 개발이 막힌다.
  *
