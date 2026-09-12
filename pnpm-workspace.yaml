@@ -5,6 +5,12 @@
 # 통로이고, 대부분의 패키지는 스크립트 없이도 동작한다. 여기 이름을 적는 것은
 # "이 패키지는 스크립트 없이는 못 쓴다"를 확인했다는 뜻이다.
 allowBuilds:
+  # Gemini SDK. `prepare` 스크립트는 git 의존으로 설치할 때만 의미가 있고,
+  # 레지스트리 배포본은 dist가 이미 들어 있다 — 위 원칙대로 거부.
+  '@google/genai': false
+  # @google/genai가 끌고 오는 protobufjs. postinstall은 CLI(pbjs·pbts)용
+  # 보조 설정이라 런타임 직렬화에는 필요 없다 — 거부.
+  protobufjs: false
   # 네이티브 바이너리를 내려받는 postinstall이 없으면 아예 실행되지 않는다.
   # vitest(vite)와 Panda 양쪽이 쓴다.
   esbuild: true
