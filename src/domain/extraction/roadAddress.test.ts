@@ -162,3 +162,57 @@ describe('partitionByRoadAddress', () => {
     expect(unresolved.map(c => c.name)).toEqual(['first', 'second']);
   });
 });
+
+describe('isRoadAddress — 길안내와 잡문', () => {
+  it('숫자 뒤에 영문이 붙으면 건물번호가 아니다', () => {
+    // `바로 200m 앞`의 `바로`가 도로명으로 읽히면 길안내 문구가 주소가 된다.
+    expect(isRoadAddress('바로 200m 앞')).toBe(false);
+  });
+
+  it('호점·연차·분 같은 꼬리표를 건물번호로 보지 않는다', () => {
+    expect(isRoadAddress('테헤란로 2호점')).toBe(false);
+    expect(isRoadAddress('골목길 10년')).toBe(false);
+    expect(isRoadAddress('도보 5분')).toBe(false);
+  });
+
+  it('길 이름이 별칭으로 쓰인 문장을 주소로 보지 않는다', () => {
+    expect(isRoadAddress('신사동 가로수길 맛집 3곳')).toBe(false);
+  });
+});
+
+describe('isRoadAddress — 갈래도로', () => {
+  it('붙여 쓴 갈래도로를 읽는다', () => {
+    expect(isRoadAddress('서울 용산구 한강대로15길 23-6')).toBe(true);
+  });
+
+  it('띄어 쓴 갈래도로도 읽는다', () => {
+    // 공식 표기는 붙여 쓰지만 사람이 적으면 띄운다. 시드 데이터가 그 표기다.
+    expect(isRoadAddress('서울 성동구 성수이로 7길 20')).toBe(true);
+    expect(isRoadAddress('서울 성동구 성수일로 12길 31')).toBe(true);
+  });
+
+  it('번길을 읽는다', () => {
+    expect(isRoadAddress('서울 강남구 봉은사로 68번길 10')).toBe(true);
+  });
+});
+
+describe('isRoadAddress — 지번 주소는 실패다', () => {
+  it('번지가 있어도 도로명이 아니면 실패로 보낸다', () => {
+    // 명세가 기준을 "도로명 주소가 찍혀 있는지 하나"로 못 박았다.
+    // 규칙의 부작용이 아니라 의도다.
+    expect(isRoadAddress('서울 용산구 한강로2가 40-1')).toBe(false);
+    expect(isRoadAddress('을지로2가 100')).toBe(false);
+  });
+});
+
+describe('isRoadAddress — OCR 잡음', () => {
+  it('하이픈이 다른 대시로 읽혀도 도로명으로 본다', () => {
+    // 부번 표기가 깨져도 도로명과 본번은 남는다. 대시 정규화는 좌표로
+    // 바꾸는 쪽(T20 · #29)의 일이다.
+    expect(isRoadAddress('한강대로 56–1')).toBe(true);
+  });
+
+  it('건물번호 뒤에 다른 말이 이어져도 도로명으로 본다', () => {
+    expect(isRoadAddress('세종대로 110 1층')).toBe(true);
+  });
+});
