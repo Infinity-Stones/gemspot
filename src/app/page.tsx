@@ -1,5 +1,4 @@
 import { css } from 'styled-system/css';
-import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
 import { PinFab } from '@/components/spot/PinFab';
@@ -29,10 +28,11 @@ const SAMPLE_SPOT = {
 const screen = css({
   position: 'relative',
   display: 'grid',
-  gridTemplateRows: 'auto 1fr auto',
+  gridTemplateRows: '1fr auto',
   // 모바일 주소창이 접히고 펴져도 지도가 잘리지 않게 dvh를 쓴다 — 프리셋에
   // 대응 토큰이 없어 이스케이프한다.
-  height: '[100dvh]',
+  // 헤더가 레이아웃으로 올라갔으므로 그 높이를 뺀다.
+  height: '[calc(100dvh - 64px)]',
 });
 
 // 지도와 그 위에 뜨는 것(플로팅 버튼)의 기준 상자. minHeight 0은 grid 자식이
@@ -120,7 +120,6 @@ export default async function HomePage({ searchParams }: Props) {
 
   return (
     <main className={screen}>
-      <AppHeader />
       <div className={mapArea}>
         <HomeMap spot={spot} markers={markers} />
         {source === 'seed' && (
