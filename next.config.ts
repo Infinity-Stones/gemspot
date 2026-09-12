@@ -10,6 +10,14 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  experimental: {
+    serverActions: {
+      // 파일 상한은 10MiB다. multipart 경계와 파일 메타데이터도 요청 본문에
+      // 들어가므로 서버 액션에는 그보다 조금 넉넉한 전송 상한을 둔다. 파일
+      // 자체의 10MiB 상한은 uploadGuard와 서버 액션이 따로 강제한다.
+      bodySizeLimit: '11mb',
+    },
+  },
   // 라우트로 인식할 확장자. 기본값에 md/mdx가 없으므로 사실상 동일하지만,
   // `.test.tsx`가 app/ 안에 떨어져도 라우트가 되지 않는 근거를 명시해 둔다.
   pageExtensions: ['js', 'jsx', 'ts', 'tsx'],

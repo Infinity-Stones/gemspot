@@ -1,6 +1,6 @@
 'use server';
 
-import { extractFromImage } from '@/domain/extraction';
+import { extractFromImage, screenUpload } from '@/domain/extraction';
 import type { ExtractState } from './extractState';
 
 /**
@@ -19,6 +19,19 @@ export async function extractAction(
 
   if (!(file instanceof File) || file.size === 0) {
     return { status: 'invalid', message: '스크린샷을 먼저 골라 주세요.' };
+  }
+
+  // 선택 화면의 검사는 빠른 피드백일 뿐이다. 서버 액션은 직접 호출될 수
+  // 있으므로 같은 규칙을 이 신뢰 경계에서도 다시 적용한다.
+  const rejection = screenUpload(file);
+  if (rejection !== null) {
+    return {
+      status: 'invalid',
+      message:
+        rejection.kind === 'size'
+          ? '스크린샷은 장당 최대 10MB까지 올릴 수 있습니다.'
+          : 'PNG, JPEG, WebP 스크린샷만 올릴 수 있습니다.',
+    };
   }
 
   const outcome = await extractFromImage({
