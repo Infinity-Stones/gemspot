@@ -38,22 +38,6 @@ const ACCEPTED_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp'] as const;
  */
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 
-/**
- * 한 번에 올릴 장수 상한. **한 장이다.**
- *
- * 명세(커밋 484684e)가 정한 것이고, 근거는 비용이 아니라 화면의 단위다 —
- * 여러 장을 받으면 결과 목록의 단위와 실패 처리가 장수만큼 갈라진다. 어느
- * 사진의 어느 가게가 실패했는지를 화면이 매번 다시 설명해야 한다.
- *
- * **한 장 안에 가게가 여러 곳인 경우는 그와 별개로 남는다**(T12 · #16).
- * 그쪽은 VLM이 배열로 돌려주고 결과 목록이 건별로 나눈다.
- *
- * 상한을 1로 두고 가드를 남기는 이유: 선택창에서 `multiple`을 뺐어도 드래그
- * 앤 드롭이나 공유하기로 여러 장이 들어올 수 있다. 그때 조용히 버리지 않고
- * "한 장까지"라고 말해야 한다.
- */
-export const MAX_IMAGE_COUNT = 1;
-
 /** 검사에 필요한 최소한의 모양. `File`이 이 구조를 만족한다. */
 export interface UploadCandidate {
   readonly name: string;
@@ -74,13 +58,7 @@ export type UploadRejection =
       readonly name: string;
       readonly size: number;
       readonly limit: number;
-    }
-  | { readonly kind: 'count'; readonly name: string; readonly limit: number };
-
-export interface UploadScreening<T> {
-  readonly accepted: readonly T[];
-  readonly rejected: readonly UploadRejection[];
-}
+    };
 
 function extensionOf(name: string): string {
   const dot = name.lastIndexOf('.');
@@ -105,49 +83,31 @@ function isAcceptedImage(candidate: UploadCandidate): boolean {
 }
 
 /**
- * 올릴 수 있는 것과 막은 것으로 가른다. **버리지 않는다** — 막은 건도 이유와
- * 함께 돌려주므로 화면이 무엇이 왜 막혔는지 보여줄 수 있다.
+ * 올릴 수 있는지. 막을 이유가 없으면 `null`이다.
  *
- * @param candidates 이번에 고른 것들.
- * @param alreadyAccepted 이미 목록에 있는 장수. 장수 상한은 이번 선택이 아니라
- * **합계**에 걸린다 — 한 장씩 스무 번 고르면 통과하는 상한은 상한이 아니다.
+ * **한 장만 받는다.** 여러 장을 검사하던 시절에는 이 함수가 목록을 통과한
+ * 것과 막은 것으로 갈랐고 장수 상한도 함께 봤다. 멀티 업로드를 지원하지
+ * 않기로 하면서 그 축이 사라졌다 — 상한이 한 장인데 목록을 받는 함수는,
+ * 읽는 사람에게 "여러 장을 받을 수도 있다"고 계속 말한다.
+ *
+ * 막은 이유를 **던지지 않고 돌려주는** 것은 그대로다. 화면이 무엇이 왜
+ * 막혔는지 보여줄 수 있어야 한다.
  */
-export function screenUploads<T extends UploadCandidate>(
-  candidates: readonly T[],
-  alreadyAccepted = 0,
-): UploadScreening<T> {
-  const accepted: T[] = [];
-  const rejected: UploadRejection[] = [];
-
-  for (const candidate of candidates) {
-    if (!isAcceptedImage(candidate)) {
-      rejected.push({ kind: 'type', name: candidate.name });
-      continue;
-    }
-
-    if (candidate.size > MAX_IMAGE_BYTES) {
-      rejected.push({
-        kind: 'size',
-        name: candidate.name,
-        size: candidate.size,
-        limit: MAX_IMAGE_BYTES,
-      });
-      continue;
-    }
-
-    // 장수는 마지막에 본다. 형식·용량으로 이미 막힌 건이 자리를 차지하면,
-    // 통과할 수 있었던 뒤쪽 장이 엉뚱하게 상한에 걸린다.
-    if (alreadyAccepted + accepted.length >= MAX_IMAGE_COUNT) {
-      rejected.push({
-        kind: 'count',
-        name: candidate.name,
-        limit: MAX_IMAGE_COUNT,
-      });
-      continue;
-    }
-
-    accepted.push(candidate);
+export function screenUpload(
+  candidate: UploadCandidate,
+): UploadRejection | null {
+  if (!isAcceptedImage(candidate)) {
+    return { kind: 'type', name: candidate.name };
   }
 
-  return { accepted, rejected };
+  if (candidate.size > MAX_IMAGE_BYTES) {
+    return {
+      kind: 'size',
+      name: candidate.name,
+      size: candidate.size,
+      limit: MAX_IMAGE_BYTES,
+    };
+  }
+
+  return null;
 }

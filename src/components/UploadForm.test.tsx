@@ -2,7 +2,7 @@ import { StrictMode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MAX_IMAGE_BYTES, MAX_IMAGE_COUNT } from '@/domain/extraction';
+import { MAX_IMAGE_BYTES } from '@/domain/extraction';
 /**
  * `useRouter`는 앱 라우터 컨텍스트를 요구한다 — jsdom에는 없어서 'invariant
  * expected app router to be mounted'로 죽는다. 이 컴포넌트가 라우터를 쓰는 것은
@@ -188,16 +188,14 @@ describe('UploadForm — 가드', () => {
     render(<UploadForm />);
 
     chooseIgnoringAccept([
-      screenshot('ok.png'),
       new File(['x'], 'note.pdf', { type: 'application/pdf' }),
     ]);
 
     const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent('1장을 올릴 수 없습니다');
+    expect(alert).toHaveTextContent('올릴 수 없는 스크린샷입니다');
     expect(alert).toHaveTextContent('note.pdf');
     expect(alert).toHaveTextContent('읽을 수 없는 형식입니다');
-    // 통과한 장은 그대로 담긴다 — 한 장이 막혀도 나머지를 버리지 않는다.
-    expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
+    expect(screen.queryByText(/장 선택됨/)).not.toBeInTheDocument();
   });
 
   it('용량 상한을 넘으면 실제 크기와 상한을 함께 말한다', async () => {
@@ -212,17 +210,16 @@ describe('UploadForm — 가드', () => {
     expect(screen.queryByText(/장 선택됨/)).not.toBeInTheDocument();
   });
 
-  it('한 장을 넘겨 고르면 넘은 장을 이유와 함께 막는다', () => {
+  it('여러 장이 들어오면 첫 장만 든다 — 멀티 업로드를 지원하지 않는다', () => {
     render(<UploadForm />);
 
     // 선택창에서 multiple을 뺐어도 드래그 앤 드롭이나 공유하기로 여러 장이
-    // 들어올 수 있다. 그때 조용히 버리지 않아야 한다.
+    // 들어올 수 있다. 뒤쪽 장은 보지 않는다.
     chooseIgnoringAccept([screenshot('a.png', 1), screenshot('b.png', 2)]);
 
     expect(screen.getByText('1장 선택됨')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      `한 번에 ${String(MAX_IMAGE_COUNT)}장까지 올릴 수 있습니다`,
-    );
+    expect(screen.getByAltText('a.png')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('다음 선택이 깨끗하면 앞선 경고가 남지 않는다', () => {
