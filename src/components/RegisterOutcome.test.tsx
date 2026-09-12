@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import type { RegisterSpotsResult } from '@/app/upload/results/registerState';
+import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { RegisterOutcome } from './RegisterOutcome';
 
 const REGISTERED = {
