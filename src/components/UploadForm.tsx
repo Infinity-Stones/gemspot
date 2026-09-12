@@ -418,6 +418,24 @@ export function UploadForm({ action }: Props) {
     setImage(next);
   }
 
+  /**
+   * 고른 장을 액션에 넘긴다.
+   *
+   * 폼 액션이 받은 FormData를 쓰지 않고 상태의 `File`로 새로 만든다. **React는
+   * 폼 액션이 끝나면 폼을 초기화한다** — 그때 파일 입력이 비워지므로 두 번째
+   * 제출부터는 서버에 빈 폼이 가고 "스크린샷을 먼저 골라 주세요"가 돌아온다.
+   * 실패 뒤의 "다시 시도"가 정확히 그 두 번째 제출이다.
+   *
+   * 고른 장은 이미 React 상태에 있으니 그쪽을 진실로 삼는다. 화면이 "1장
+   * 선택됨"이라고 말하는 근거와 실제로 보내는 것이 같아진다 — 입력을 읽으면
+   * 그 둘이 갈라질 수 있고, 갈라진 자리가 이 버그였다.
+   */
+  function sendPickedImage() {
+    const formData = new FormData();
+    if (image !== null) formData.append('image', image.file);
+    submit(formData);
+  }
+
   function clear() {
     const going = imageRef.current;
     if (going === null) return;
@@ -444,7 +462,7 @@ export function UploadForm({ action }: Props) {
   }, [state, router]);
 
   return (
-    <form className={shell} action={submit}>
+    <form className={shell} action={sendPickedImage}>
       {/*
         버튼이 입력을 대신 누른다. label로 감싸는 방법도 되지만, 감춰진 입력이
         포커스를 받으면 포커스 링이 화면 밖에 그려진다. 버튼은 그 자리에서
@@ -461,9 +479,9 @@ export function UploadForm({ action }: Props) {
         name="image"
         onChange={event => {
           choose(Array.from(event.target.files ?? []));
-          // 값을 비우지 않는다. 이 입력이 폼의 필드라 제출할 때 FormData가
-          // 여기서 파일을 가져간다 — 비우면 서버에 빈 폼이 간다. 대신 장을
-          // 뺄 때 비워서 같은 파일을 다시 고를 수 있게 한다.
+          // 여기서 값을 비우지 않아도 된다. 보내는 것은 이 입력이 아니라
+          // 상태에 담긴 File이고(`sendPickedImage`), 장을 뺄 때는 `clear`가
+          // 비워 같은 파일을 다시 고를 수 있게 한다.
         }}
       />
       <button

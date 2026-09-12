@@ -38,6 +38,19 @@ function failingAction(reason: ExtractFailureReason): ExtractAction {
   return vi.fn(() => Promise.resolve(failed));
 }
 
+/** 같은 실패를 돌려주되, 제출마다 폼에 실려 온 파일명을 적어 둔다. */
+function recordingFailure(
+  reason: ExtractFailureReason,
+  seen: string[],
+): ExtractAction {
+  const failed: ExtractState = { status: 'failed', reason };
+  return vi.fn((_previous: ExtractState, formData: FormData) => {
+    const file = formData.get('image');
+    seen.push(file instanceof File ? file.name : '(없음)');
+    return Promise.resolve(failed);
+  });
+}
+
 function screenshot(name: string, lastModified = 1_757_289_600_000) {
   return new File(['x'], name, { type: 'image/png', lastModified });
 }
@@ -311,20 +324,19 @@ describe('UploadForm — 실패 폴백', () => {
 
   it('다시 시도는 고른 장을 그대로 다시 보낸다', async () => {
     const user = userEvent.setup();
-    const action = failingAction('timeout');
-    render(<UploadForm action={action} />);
+    const seen: string[] = [];
+    render(<UploadForm action={recordingFailure('timeout', seen)} />);
 
     await failOnce(user, 'fabri.png');
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
     await waitFor(() => {
-      expect(action).toHaveBeenCalledTimes(2);
+      expect(seen).toHaveLength(2);
     });
 
     // 사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던 적은 없다.
-    // 액션이 받은 FormData가 아니라 입력을 보는 이유: jsdom의 FormData는
-    // user-event가 넣은 파일을 보지 못해(내부 파일 목록이 아니라 JS 속성만
-    // 덮인다) 어느 폼이든 빈 File을 담는다.
-    expect(picker().files?.[0]?.name).toBe('fabri.png');
+    // 두 번째가 비면 React가 폼 액션 뒤에 폼을 초기화한 것을 다시 읽고 있다는
+    // 뜻이다. 보낼 것은 입력이 아니라 상태에 담긴 File이어야 한다.
+    expect(seen).toEqual(['fabri.png', 'fabri.png']);
     expect(screen.getByAltText('fabri.png')).toBeInTheDocument();
   });
 
