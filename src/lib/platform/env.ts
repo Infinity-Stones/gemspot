@@ -61,7 +61,7 @@ export function geminiApiKey(): string | null {
  * Gemini 모델 이름. 코드에 박지 않는 이유는 모델이 주기적으로 은퇴하기
  * 때문이다 — 배포 설정만 바꿔 갈아탈 수 있어야 한다.
  */
-export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash-preview';
 
 export function geminiModel(): string {
   return readOptional('GEMINI_MODEL') ?? DEFAULT_GEMINI_MODEL;
