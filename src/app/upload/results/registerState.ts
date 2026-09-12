@@ -1,4 +1,5 @@
 import type { SaveSpotFailure } from '@/domain/spot';
+import type { SpotCategory } from '@/shared/spot';
 
 /**
  * STEP 3이 고른 후보를 스팟으로 저장한 결과 — T23(#32) · T24(#33).
@@ -18,6 +19,14 @@ export interface RegisterSpotRequest {
   readonly name: string;
   /** OCR이 읽은 도로명 주소. 좌표는 서버가 이 주소로 다시 구한다. */
   readonly address: string;
+  /**
+   * 사용자가 STEP 3에서 고른 카테고리.
+   *
+   * 주소와 달리 OCR이 주지 못하는 값이라 화면이 실어 보낸다 — 서버가 이름만
+   * 보고 정하려 들면 "피롤츠"가 카페인지 밥집인지 추측해야 한다. 고르지 않은
+   * 건은 `'other'`로 온다.
+   */
+  readonly category: SpotCategory;
 }
 
 export interface RegisteredSpot {

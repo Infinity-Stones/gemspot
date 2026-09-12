@@ -31,13 +31,15 @@ const PIROUETTES = {
   candidateId: 'c1',
   name: '피롤츠 커피하우스',
   address: '서울 용산구 한강대로 56-1',
-};
+  category: 'cafe',
+} as const;
 
 const TONG = {
   candidateId: 'c2',
   name: '텅 베이커리',
   address: '서울 마포구 와우산로 29길 12',
-};
+  category: 'other',
+} as const;
 
 function lastInput(): SaveSpotInput {
   const call = saveSpotMock.mock.calls.at(-1);
@@ -57,10 +59,10 @@ describe('registerSpotsAction', () => {
     expect(lastInput().origin).toBe('ocr');
   });
 
-  it('카테고리를 고르는 자리가 없으므로 other로 넣는다', async () => {
+  it('화면이 고른 카테고리를 그대로 넘긴다 — 여기서 이름을 보고 추측하지 않는다', async () => {
     await registerSpotsAction([PIROUETTES]);
 
-    expect(lastInput().category).toBe('other');
+    expect(lastInput().category).toBe('cafe');
   });
 
   it('저장한 스팟 id를 후보 id와 짝지어 돌려준다 — 화면이 그것으로 카드를 찾는다', async () => {

@@ -43,7 +43,7 @@ const foundGeocode: GeocodeFn = () =>
   });
 
 describe('planRoute — 명세 예시 해피 패스', () => {
-  it('문장 → 14:00 출발 → 14:08 A → 14:34 B → 15:19 C → 15:39 끝, 밥집 D는 시간대 밖', async () => {
+  it('문장 → 14:00 출발 → 14:08 A → 14:44 B → 15:29 C → 15:59 끝, 밥집 D는 시간대 밖', async () => {
     const outcome = await planRoute({
       sentence: '오늘 2시부터 4시까지 성수동에서 카페 들르면서 걷고 싶어',
       now: NOW,
@@ -61,10 +61,10 @@ describe('planRoute — 명세 예시 해피 패스', () => {
     expect(itinerary.ordering).toBe('llm');
     expect(itinerary.stops.map((s) => `${formatSeoulHourMinute(s.arriveAt)} ${s.candidate.name}`)).toEqual([
       '14:08 편집숍 A',
-      '14:34 카페 B',
-      '15:19 서점 C',
+      '14:44 카페 B',
+      '15:29 서점 C',
     ]);
-    expect(formatSeoulHourMinute(itinerary.endAt)).toBe('15:39');
+    expect(formatSeoulHourMinute(itinerary.endAt)).toBe('15:59');
     expect(itinerary.stops[0]?.reason).toBe('출발점에서 가장 가깝다');
     expect(itinerary.dropped).toEqual(
       expect.arrayContaining([{ candidate: FOOD_D, reason: 'outside_window' }]),
@@ -107,7 +107,9 @@ describe('planRoute — 제안하지 않는 경우(T47)', () => {
     const outcome = await planRoute({
       sentence: 'x',
       now: NOW,
-      spots: ALL_SPOTS,
+      // 시간대를 가진 것만. '기타'는 'always'라 새벽에도 후보로 남으므로
+      // 전부 넣으면 이 경로가 열리지 않는다.
+      spots: [CAFE_B, FOOD_D],
       deps: {
         generate: stubGenerate(
           [{ ...SPEC_INTERPRETATION, window: { start: '2026-09-13T03:00:00+09:00', end: '2026-09-13T05:00:00+09:00' } }],

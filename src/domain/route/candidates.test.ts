@@ -51,8 +51,11 @@ describe('selectCandidates', () => {
       ...REQUEST_14_16,
       window: { start: '2026-09-12T03:00:00+09:00', end: '2026-09-12T05:00:00+09:00' },
     };
-    const { candidates, dropped } = selectCandidates(ALL_SPOTS, dawn);
+    // 시간대를 가진 것만 넣는다. '기타'는 적합 시간대가 'always'라 새벽에도
+    // 남는 것이 맞다 — 분류를 모르는 곳을 시간대로 거르면 근거 없이 빼는 셈이다.
+    const timed = [CAFE_B, FOOD_D];
+    const { candidates, dropped } = selectCandidates(timed, dawn);
     expect(candidates).toHaveLength(0);
-    expect(dropped).toHaveLength(ALL_SPOTS.length);
+    expect(dropped).toHaveLength(timed.length);
   });
 });
