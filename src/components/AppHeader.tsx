@@ -1,10 +1,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { css } from 'styled-system/css';
-import { HOME_PATH, ROUTE_PATH, UPLOAD_PATH } from '@/shared/routes';
+import { HOME_PATH, ROUTE_PATH, SPOT_NEW_PATH, UPLOAD_PATH } from '@/shared/routes';
 
 const header = css({
   display: 'flex',
+  flexWrap: 'wrap',
   alignItems: 'center',
   justifyContent: 'space-between',
   gap: '3',
@@ -53,7 +54,7 @@ const routeLink = css({
   justifyContent: 'center',
   flexShrink: '0',
   minHeight: '11',
-  px: '5',
+  px: '4',
   rounded: 'full',
   borderWidth: 'hairline',
   borderStyle: 'solid',
@@ -65,7 +66,7 @@ const routeLink = css({
   _dark: { borderColor: 'violet.400', color: 'violet.300', _hover: { bg: 'violet.950' } },
 });
 
-const actions = css({ display: 'flex', alignItems: 'center', gap: '2' });
+const actions = css({ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2' });
 
 export function AppHeader() {
   return (
@@ -77,6 +78,11 @@ export function AppHeader() {
       <nav className={actions} aria-label="주요 동작">
         <Link className={routeLink} href={ROUTE_PATH}>
           동선 만들기
+        </Link>
+        {/* 주소로 스팟을 만드는 두 번째 입구(T51). 업로드와 같은 결과(핀)를
+            만들지만 주 행동은 업로드라 윤곽으로 둔다. */}
+        <Link className={routeLink} href={SPOT_NEW_PATH}>
+          핀 찍기
         </Link>
         <Link className={uploadLink} href={UPLOAD_PATH}>
           업로드
