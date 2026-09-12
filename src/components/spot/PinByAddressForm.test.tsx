@@ -33,22 +33,50 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
 describe('PinByAddressForm', () => {
   it('처음에는 위치 찾기만 있고 저장 버튼은 없다 — 미리보기를 건너뛰고 저장할 수 없다', () => {
     render(<PinByAddressForm action={recording({ status: 'idle' }, [])} />);
-    expect(screen.getByRole('button', { name: '위치 찾기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '주소 검색' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
   });
 
-  it('위치 찾기는 intent=locate로 이름 · 주소 · 카테고리를 보낸다', async () => {
+  it('주소 검색은 intent=search로 이름 · 주소 · 카테고리를 보낸다', async () => {
     const user = userEvent.setup();
     const seen: Record<string, string>[] = [];
     render(<PinByAddressForm action={recording(LOCATED, seen)} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '위치 찾기' }));
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
       expect(seen).toHaveLength(1);
     });
-    expect(seen[0]).toMatchObject({ intent: 'locate', name: DRAFT.name, address: DRAFT.address, category: 'cafe' });
+    expect(seen[0]).toMatchObject({ intent: 'search', name: DRAFT.name, address: DRAFT.address, category: 'cafe' });
+  });
+
+  it('후보가 여럿이면 목록을 보이고, 하나를 고르면 pick=<주소>가 실린다', async () => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    const searched: PinFormState = {
+      status: 'searched',
+      draft: DRAFT,
+      candidates: [
+        LOCATED.location,
+        { ...LOCATED.location, roadAddress: '서울특별시 용산구 한강대로 56-2', jibunAddress: '' },
+      ],
+    };
+    render(<PinByAddressForm action={recording(searched, seen)} />);
+
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('region', { name: '주소 검색 결과' })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /한강대로 56-2/ }));
+    await waitFor(() => {
+      expect(seen).toHaveLength(2);
+    });
+    expect(seen[1]?.['pick']).toBe('서울특별시 용산구 한강대로 56-2');
   });
 
   it('좌표가 확인되면 미리보기와 정규화 주소, 저장 버튼이 나타난다', async () => {
@@ -56,14 +84,14 @@ describe('PinByAddressForm', () => {
     render(<PinByAddressForm action={recording(LOCATED, [])} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '위치 찾기' }));
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
       expect(screen.getByRole('region', { name: '찾은 위치 미리보기' })).toBeInTheDocument();
     });
     expect(screen.getByText('서울특별시 용산구 한강대로 56-1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '다시 찾기' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 검색' })).toBeInTheDocument();
   });
 
   it('저장 버튼은 intent=save를 보낸다', async () => {
@@ -73,7 +101,7 @@ describe('PinByAddressForm', () => {
     render(<PinByAddressForm action={recording(LOCATED, seen)} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '위치 찾기' }));
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
     await waitFor(() => {
       expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
     });
@@ -91,7 +119,7 @@ describe('PinByAddressForm', () => {
     render(<PinByAddressForm action={recording(failed, [])} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '위치 찾기' }));
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('위치를 찾지 못했어요');
@@ -105,7 +133,7 @@ describe('PinByAddressForm', () => {
     render(<PinByAddressForm action={recording(failed, [])} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '위치 찾기' }));
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('SUPABASE_URL');

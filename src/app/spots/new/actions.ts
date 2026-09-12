@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { locateAddress, saveSpot } from '@/domain/spot';
+import { locateAddress, saveSpot, searchAddress } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 import type { SpotCategory } from '@/shared/spot';
 import { isSpotCategory } from '@/shared/spot';
@@ -16,14 +16,35 @@ import type { PinDraft, PinFormState } from './pinState';
  * 한다(T22).
  */
 export async function pinSpotAction(_previous: PinFormState, formData: FormData): Promise<PinFormState> {
-  const draft = readDraft(formData);
-  const intent = readText(formData, 'intent') === 'save' ? 'save' : 'locate';
+  // 후보를 고르는 버튼은 name=pick, value=그 후보의 주소다. 고르면 그 주소로
+  // 좌표를 확인한다 — 버튼 하나가 의도와 값을 함께 실어야 해서 intent와 갈랐다.
+  const pick = readText(formData, 'pick');
+  const rawIntent = readText(formData, 'intent');
+  const intent: 'search' | 'locate' | 'save' =
+    pick.length > 0 ? 'locate' : rawIntent === 'save' ? 'save' : rawIntent === 'locate' ? 'locate' : 'search';
+  const typed = readDraft(formData);
+  const draft: PinDraft = pick.length > 0 ? { ...typed, address: pick } : typed;
 
   if (draft.name.length === 0) {
     return { status: 'invalid', field: 'name', message: '장소 이름을 적어 주세요.', draft };
   }
   if (draft.address.length === 0) {
     return { status: 'invalid', field: 'address', message: '주소를 적어 주세요. 도로명 주소면 가장 정확합니다.', draft };
+  }
+
+  if (intent === 'search') {
+    const searched = await searchAddress(draft.address);
+    if (searched.kind === 'results') {
+      // 후보가 하나면 고를 것이 없다 — 바로 미리보기로.
+      const only = searched.candidates.length === 1 ? searched.candidates[0] : undefined;
+      if (only !== undefined) return { status: 'located', draft: { ...draft, address: addressOf(only) }, location: only };
+      return { status: 'searched', draft, candidates: searched.candidates };
+    }
+    return {
+      status: 'failed',
+      draft,
+      failure: searched.kind === 'not_found' ? { kind: 'address_not_found' } : { kind: 'geocoding_unavailable' },
+    };
   }
 
   if (intent === 'locate') {
@@ -42,6 +63,11 @@ export async function pinSpotAction(_previous: PinFormState, formData: FormData)
   // 저장 결과는 홈 지도가 그린다(T26~T28). 성공 상태를 이 화면에 두면 같은
   // 지도를 두 번 만들게 된다.
   redirect(`${HOME_PATH}?result=${encodeURIComponent(outcome.spot.id)}`);
+}
+
+/** 저장 · 재확인에 쓸 주소 문자열. 도로명이 있으면 도로명, 없으면 지번. */
+function addressOf(location: { readonly roadAddress: string; readonly jibunAddress: string }): string {
+  return location.roadAddress.length > 0 ? location.roadAddress : location.jibunAddress;
 }
 
 function readText(formData: FormData, name: string): string {
