@@ -8,6 +8,7 @@ import type { PinFailure } from '@/app/spots/new/pinState';
 import { SPOT_CATEGORIES } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
 import { SpotMap } from '../SpotMap';
+import { saveFailureMessage } from './saveFailureMessage';
 
 /**
  * 이름 · 주소 · 카테고리를 받아 좌표를 확인하고 저장하는 폼 — T51(#108) · T52(#124).
@@ -145,22 +146,18 @@ const alert = css({
   _dark: { bg: 'slate.900', color: 'slate.200' },
 });
 
+/**
+ * 이 화면에만 있는 실패는 여기서 말하고, 저장 경로가 내는 실패는
+ * `saveFailureMessage`에 맡긴다 — 같은 실패를 추출 결과 화면도 설명해야 한다.
+ */
 function failureMessage(failure: PinFailure): string {
   switch (failure.kind) {
     case 'place_not_found':
       return '그 이름으로 등록된 가게를 찾지 못했어요. 아래에 주소를 직접 넣어 찾아 주세요.';
     case 'place_search_unavailable':
       return '지금은 이름으로 찾을 수 없어요. 주소로 찾거나 잠시 후 다시 시도해 주세요.';
-    case 'invalid_input':
-      return failure.field === 'name' ? '장소 이름을 적어 주세요.' : '주소를 적어 주세요.';
-    case 'address_not_found':
-      return '이 주소로는 위치를 찾지 못했어요. 도로명 주소나 번지까지 적어 다시 시도해 주세요.';
-    case 'geocoding_unavailable':
-      return '지금은 주소를 좌표로 바꿀 수 없어요. 잠시 후 다시 시도해 주세요.';
-    case 'store_unconfigured':
-      return '저장소가 연결되지 않아 저장할 수 없어요. 환경 변수(SUPABASE_URL · SUPABASE_SECRET_KEY)를 확인해 주세요.';
-    case 'store_error':
-      return `저장하지 못했어요: ${failure.message}`;
+    default:
+      return saveFailureMessage(failure);
   }
 }
 

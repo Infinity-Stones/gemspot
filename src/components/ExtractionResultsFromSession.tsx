@@ -1,15 +1,25 @@
 'use client';
 
-import { useMemo, useSyncExternalStore } from 'react';
+import {
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  useTransition,
+} from 'react';
 import { css } from 'styled-system/css';
 import { CANDIDATES_SESSION_KEY } from '@/app/upload/extractState';
+import { registerSpotsAction } from '@/app/upload/results/actions';
+import type { RegisterSpotsResult } from '@/app/upload/results/registerState';
 import { UPLOAD_PATH } from '@/shared/routes';
 import type { SpotCandidate } from '@/shared/spot';
 import { ExtractionResults } from './ExtractionResults';
 import type {
   ExtractionResultCandidate,
+  SuccessfulSpotCandidate,
   UploadImage,
 } from './ExtractionResults';
+import { RegisterOutcome } from './RegisterOutcome';
 import Link from 'next/link';
 
 /**
@@ -45,6 +55,12 @@ const empty = css({
   _dark: { borderColor: 'slate.700', color: 'slate.400' },
 });
 
+const savingNote = css({
+  textStyle: 'sm',
+  color: 'slate.600',
+  _dark: { color: 'slate.400' },
+});
+
 const link = css({
   color: 'violet.600',
   textDecoration: 'none',
@@ -75,6 +91,40 @@ function getServerSnapshot(): string | null {
 export function ExtractionResultsFromSession() {
   const raw = useSyncExternalStore(subscribe, readRaw, getServerSnapshot);
   const candidates = useMemo(() => parseCandidates(raw), [raw]);
+  const [saving, startSaving] = useTransition();
+  const [result, setResult] = useState<RegisterSpotsResult | null>(null);
+  // 저장이 도는 동안 같은 요청이 또 들어오는 것을 막는다. `saving`으로는
+  // 못 막는다 — 그 값은 이 렌더의 것이고, 완료 버튼을 빠르게 두 번 누르면
+  // 두 번째 호출이 같은 렌더의 클로저에서 아직 false를 본다. 그러면 같은
+  // 스팟이 저장소에 둘 들어간다.
+  const inFlight = useRef(false);
+
+  /**
+   * STEP 3이 고른 건을 STEP 4로 넘긴다 — T15가 비워 둔 자리다.
+   *
+   * 액션을 이 자리에서 부르는 이유는 `ExtractionResults`가 저장소를 몰라야
+   * 하기 때문이다. 그쪽은 선택 규칙만 알고, 고른 결과를 어디로 보내는지는
+   * 이 어댑터가 정한다.
+   */
+  function register(selected: readonly SuccessfulSpotCandidate[]) {
+    if (inFlight.current) return;
+    inFlight.current = true;
+
+    startSaving(async () => {
+      try {
+        const outcome = await registerSpotsAction(
+          selected.map(candidate => ({
+            candidateId: candidate.id,
+            name: candidate.name,
+            address: candidate.roadAddress,
+          })),
+        );
+        setResult(outcome);
+      } finally {
+        inFlight.current = false;
+      }
+    });
+  }
 
   if (candidates.length === 0) {
     return (
@@ -87,7 +137,13 @@ export function ExtractionResultsFromSession() {
     );
   }
 
-  return <ExtractionResults candidates={candidates} />;
+  return (
+    <>
+      <ExtractionResults candidates={candidates} onContinue={register} />
+      {saving && <p className={savingNote}>지도에 등록하는 중…</p>}
+      {result !== null && !saving && <RegisterOutcome result={result} />}
+    </>
+  );
 }
 
 /**

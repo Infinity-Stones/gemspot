@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { isValidSlug, UPLOAD_PATH, UPLOAD_RESULTS_PATH } from './routes';
+import {
+  isValidSlug,
+  spotResultPath,
+  UPLOAD_PATH,
+  UPLOAD_RESULTS_PATH,
+} from './routes';
 
 describe('upload routes', () => {
   it('추출 결과를 긴 검토 작업에 맞는 독립 페이지로 둔다', () => {
     expect(UPLOAD_PATH).toBe('/upload');
     expect(UPLOAD_RESULTS_PATH).toBe('/upload/results');
+  });
+});
+
+describe('spotResultPath', () => {
+  it('저장한 스팟을 홈 지도의 결과 상태로 연다', () => {
+    expect(spotResultPath('abc123')).toBe('/?result=abc123');
+  });
+
+  it('id에 섞인 문자를 인코딩한다 — 저장소가 준 값의 모양을 이 쪽이 정하지 않는다', () => {
+    expect(spotResultPath('a b&c')).toBe('/?result=a%20b%26c');
   });
 });
 
