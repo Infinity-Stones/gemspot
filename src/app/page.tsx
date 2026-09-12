@@ -1,10 +1,14 @@
-import Link from 'next/link';
 import { css } from 'styled-system/css';
+import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
-import { SpotMap } from '@/components/SpotMap';
+import { HomeMap } from '@/components/HomeMap';
+import { HOME_PATH } from '@/shared/routes';
 
 /**
- * 홈 — 화면을 라우트가 아니라 `?result`로 가른다.
+ * 홈 — 초기 화면이 곧 지도다.
+ *
+ * 들어오면 저장한 장소를 지도로 본다. 저장 결과도 같은 지도이므로 라우트를
+ * 나누지 않고 `?result`로 가른다 — 나누면 같은 지도를 두 번 만들게 된다.
  *
  * 저장 결과는 앱을 다시 열거나 뒤로 가면 사라져야 하는 한 순간의 상태이면서도,
  * 뒤로가기로 빠져나올 수 있어야 한다. 컴포넌트 상태로 들면 뒤로가기가 앱을
@@ -23,41 +27,10 @@ const SAMPLE_SPOT = {
 const screen = css({
   position: 'relative',
   display: 'grid',
-  gridTemplateRows: '1fr auto',
+  gridTemplateRows: 'auto 1fr auto',
   // 모바일 주소창이 접히고 펴져도 지도가 잘리지 않게 dvh를 쓴다 — 프리셋에
   // 대응 토큰이 없어 이스케이프한다.
   height: '[100dvh]',
-});
-
-const placeholder = css({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '4',
-  height: '[100dvh]',
-  px: '6',
-  textAlign: 'center',
-});
-
-const lede = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
-});
-
-const action = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '[44px]',
-  px: '5',
-  rounded: 'full',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'slate.300',
-  textStyle: 'sm',
-  _dark: { borderColor: 'slate.700' },
 });
 
 interface Props {
@@ -72,32 +45,20 @@ export default async function HomePage({ searchParams }: Props) {
   const raw = (await searchParams)['result'];
   const result = typeof raw === 'string' ? raw : undefined;
 
-  // 업로드 화면은 다른 담당의 자리다. 여기서는 결과 화면으로 들어가는 문만
-  // 둔다 — 지도를 확인할 길이 없으면 이 화면을 검증할 수 없다.
-  if (result === undefined) {
-    return (
-      <main className={placeholder}>
-        <p className={lede}>캡처를 올리면 저장한 장소가 지도에 찍힙니다.</p>
-        <Link className={action} href="/?result=sample">
-          저장 결과 화면 보기
-        </Link>
-      </main>
-    );
-  }
+  const spot = result === undefined ? null : SAMPLE_SPOT;
 
   return (
     <main className={screen}>
-      <SpotMap
-        latitude={SAMPLE_SPOT.latitude}
-        longitude={SAMPLE_SPOT.longitude}
-        placeName={SAMPLE_SPOT.placeName}
-      />
-      <SpotDetailPanel
-        placeName={SAMPLE_SPOT.placeName}
-        roadAddress={SAMPLE_SPOT.roadAddress}
-        jibunAddress={SAMPLE_SPOT.jibunAddress}
-        closeHref="/"
-      />
+      <AppHeader />
+      <HomeMap spot={spot} />
+      {spot !== null && (
+        <SpotDetailPanel
+          placeName={spot.placeName}
+          roadAddress={spot.roadAddress}
+          jibunAddress={spot.jibunAddress}
+          closeHref={HOME_PATH}
+        />
+      )}
     </main>
   );
 }

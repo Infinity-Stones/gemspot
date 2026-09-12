@@ -85,6 +85,8 @@ interface Props {
   latitude: number;
   longitude: number;
   placeName: string;
+  /** 그 자리에 마커를 찍을지. 현재 위치처럼 중심만 잡는 경우에는 끈다. */
+  hasMarker?: boolean;
 }
 
 const frame = css({
@@ -115,7 +117,12 @@ const overlay = css({
   _dark: { color: 'slate.400' },
 });
 
-export function SpotMap({ latitude, longitude, placeName }: Props) {
+export function SpotMap({
+  latitude,
+  longitude,
+  placeName,
+  hasMarker = true,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
 
@@ -135,7 +142,7 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
 
         const center = new maps.LatLng(latitude, longitude);
         const map = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
-        new maps.Marker({ position: center, map });
+        if (hasMarker) new maps.Marker({ position: center, map });
         map.setCenter(center);
         setStatus('ready');
       })
@@ -146,7 +153,7 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [hasCoordinate, latitude, longitude]);
+  }, [hasCoordinate, latitude, longitude, hasMarker]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.
