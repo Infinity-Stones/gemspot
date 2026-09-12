@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
-import { extractAction } from '@/app/upload/actions';
+import type { ExtractState } from '@/app/upload/extractState';
 import {
   CANDIDATES_SESSION_KEY,
   IDLE_EXTRACT_STATE,
@@ -26,11 +26,24 @@ import type {
  * 클라이언트 컴포넌트인 것은 고른 파일을 들고 있어야 해서다. 파일은 서버로
  * 직렬화되지 않으므로 이 상태는 브라우저에만 있다.
  *
+ * `action`을 prop으로 받는 이유는 테스트다. 서버 액션은 jsdom에서 돌지
+ * 않으므로, 화면이 실제 액션을 꽂고 테스트는 가짜를 꽂는다 —
+ * `RouteComposer` · `PinByAddressForm`과 같은 모양이다.
+ *
  * **한 장만 든다.** 명세(커밋 484684e)가 여러 장 선택을 두지 않기로 정했다 —
  * 여러 장을 받으면 결과 목록의 단위와 실패 처리가 장수만큼 갈라진다. 새로
  * 고르면 앞의 장을 갈아 끼운다. 한 장 안에 가게가 여러 곳인 경우는 그와
  * 별개로 남고(T12 · #16), 그쪽은 VLM이 배열로 돌려준다.
  */
+
+export type ExtractAction = (
+  state: ExtractState,
+  formData: FormData,
+) => Promise<ExtractState>;
+
+interface Props {
+  readonly action: ExtractAction;
+}
 
 /**
  * 고른 이미지 한 장.
@@ -279,12 +292,9 @@ const submitButton = css({
   },
 });
 
-export function UploadForm() {
+export function UploadForm({ action }: Props) {
   const router = useRouter();
-  const [state, submit, pending] = useActionState(
-    extractAction,
-    IDLE_EXTRACT_STATE,
-  );
+  const [state, submit, pending] = useActionState(action, IDLE_EXTRACT_STATE);
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);

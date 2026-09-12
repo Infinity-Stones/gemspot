@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { IDLE_EXTRACT_STATE } from '@/app/upload/extractState';
 import { MAX_IMAGE_BYTES, MAX_IMAGE_COUNT } from '@/domain/extraction';
 /**
  * `useRouter`는 앱 라우터 컨텍스트를 요구한다 — jsdom에는 없어서 'invariant
@@ -12,6 +13,15 @@ const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 import { UploadForm } from './UploadForm';
+import type { ExtractAction } from './UploadForm';
+
+/**
+ * 제출까지 가지 않는 테스트에 꽂는 액션. 서버 액션은 jsdom에서 돌지 않으므로
+ * 이 컴포넌트는 액션을 prop으로 받는다.
+ */
+function idleAction(): ExtractAction {
+  return vi.fn(() => Promise.resolve(IDLE_EXTRACT_STATE));
+}
 
 function screenshot(name: string, lastModified = 1_757_289_600_000) {
   return new File(['x'], name, { type: 'image/png', lastModified });
@@ -94,7 +104,7 @@ afterEach(() => {
 describe('UploadForm', () => {
   it('버튼이 감춰진 파일 입력을 대신 누른다', async () => {
     const user = userEvent.setup();
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     // 파일 선택창은 jsdom에 없다. 확인할 수 있는 것은 버튼이 입력의 click을
     // 부른다는 것까지고, 그 뒤는 브라우저의 일이다.
@@ -105,7 +115,7 @@ describe('UploadForm', () => {
   });
 
   it('고르기 전에는 아무것도 말하지 않는다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     expect(screen.queryByText(/장 선택됨/)).not.toBeInTheDocument();
     expect(screen.queryAllByRole('img')).toHaveLength(0);
@@ -113,7 +123,7 @@ describe('UploadForm', () => {
 
   it('고른 한 장의 썸네일과 파일명을 보여준다', async () => {
     const user = userEvent.setup();
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
 
@@ -124,7 +134,7 @@ describe('UploadForm', () => {
 
   it('올리기 전에 뺄 수 있고, 뺀 장의 URL을 해제한다', async () => {
     const user = userEvent.setup();
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
     await user.click(
@@ -137,7 +147,7 @@ describe('UploadForm', () => {
 
   it('새로 고르면 앞의 장을 갈아 끼우고 그 URL을 해제한다', async () => {
     const user = userEvent.setup();
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
     await user.upload(picker(), [screenshot('fabri.png')]);
@@ -151,7 +161,7 @@ describe('UploadForm', () => {
   });
 
   it('한 장만 받도록 선택창이 열려 있다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     expect(picker()).not.toHaveAttribute('multiple');
   });
@@ -163,7 +173,7 @@ describe('UploadForm', () => {
     // 화면에 아무 증상도 남기지 않는다.
     render(
       <StrictMode>
-        <UploadForm />
+        <UploadForm action={idleAction()} />
       </StrictMode>,
     );
 
@@ -174,7 +184,7 @@ describe('UploadForm', () => {
 
   it('화면을 떠날 때 남은 URL을 해제한다', async () => {
     const user = userEvent.setup();
-    const view = render(<UploadForm />);
+    const view = render(<UploadForm action={idleAction()} />);
 
     await user.upload(picker(), [screenshot('pirouettes.png')]);
     view.unmount();
@@ -185,7 +195,7 @@ describe('UploadForm', () => {
 
 describe('UploadForm — 가드', () => {
   it('막은 건을 조용히 버리지 않고 무엇이 왜 막혔는지 보여준다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     chooseIgnoringAccept([
       screenshot('ok.png'),
@@ -202,7 +212,7 @@ describe('UploadForm — 가드', () => {
 
   it('용량 상한을 넘으면 실제 크기와 상한을 함께 말한다', async () => {
     const user = userEvent.setup();
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     await user.upload(picker(), [sized('huge.png', MAX_IMAGE_BYTES + 1)]);
 
@@ -213,7 +223,7 @@ describe('UploadForm — 가드', () => {
   });
 
   it('한 장을 넘겨 고르면 넘은 장을 이유와 함께 막는다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     // 선택창에서 multiple을 뺐어도 드래그 앤 드롭이나 공유하기로 여러 장이
     // 들어올 수 있다. 그때 조용히 버리지 않아야 한다.
@@ -226,7 +236,7 @@ describe('UploadForm — 가드', () => {
   });
 
   it('다음 선택이 깨끗하면 앞선 경고가 남지 않는다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     chooseIgnoringAccept([
       new File(['x'], 'note.pdf', { type: 'application/pdf' }),
@@ -240,7 +250,7 @@ describe('UploadForm — 가드', () => {
   });
 
   it('선택창이 가드와 같은 형식만 보여준다', () => {
-    render(<UploadForm />);
+    render(<UploadForm action={idleAction()} />);
 
     // 선택창에서는 보이는데 고르면 막히는 파일이 있으면 앱이 고장난 줄 안다.
     expect(picker()).toHaveAttribute(
