@@ -1,8 +1,13 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { locateAddress, saveSpot, searchAddress, searchPlaces } from '@/domain/spot';
-import { HOME_PATH } from '@/shared/routes';
+import {
+  locateAddress,
+  saveSpot,
+  searchAddress,
+  searchPlaces,
+} from '@/domain/spot';
+import { spotResultPath } from '@/shared/routes';
 import type { SpotCategory } from '@/shared/spot';
 import { isSpotCategory } from '@/shared/spot';
 import type { FoundPlace } from '@/domain/spot';
@@ -89,7 +94,7 @@ export async function pinSpotAction(previous: PinFormState, formData: FormData):
 
   // 저장 결과는 홈 지도가 그린다(T26~T28). 성공 상태를 이 화면에 두면 같은
   // 지도를 두 번 만들게 된다.
-  redirect(`${HOME_PATH}?result=${encodeURIComponent(outcome.spot.id)}`);
+  redirect(spotResultPath(outcome.spot.id));
 }
 
 /**

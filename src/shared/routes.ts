@@ -54,3 +54,17 @@ export const SPOT_NEW_PATH = '/spots/new';
 export function isValidSlug(slug: string): boolean {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
 }
+
+/**
+ * 저장 직후의 홈 — 방금 만든 스팟을 지도에 띄운 상태다(T26~T28).
+ *
+ * 저장하는 자리가 둘(주소로 핀 찍기 · 추출 결과에서 등록)이고 앞으로 더
+ * 늘어난다. 각자 `?result=`를 문자열로 붙이면 파라미터 이름을 바꾸는 일이
+ * 저장 경로 수만큼의 수정이 된다.
+ *
+ * id는 저장소가 부여한 값이라 어떤 문자가 들어올지 이 쪽에서 정하지 못한다 —
+ * 붙이기 전에 인코딩한다.
+ */
+export function spotResultPath(spotId: string): string {
+  return `${HOME_PATH}?result=${encodeURIComponent(spotId)}`;
+}
