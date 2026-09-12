@@ -2,6 +2,7 @@ import { css } from 'styled-system/css';
 import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
+import { findSpot } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 
 /**
@@ -39,13 +40,27 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+async function resolveSavedSpot(id: string): Promise<typeof SAMPLE_SPOT | null> {
+  const saved = await findSpot(id);
+  if (saved === null) return null;
+  return {
+    placeName: saved.name,
+    roadAddress: saved.roadAddress ?? '',
+    jibunAddress: saved.jibunAddress ?? '',
+    latitude: saved.coordinates.latitude,
+    longitude: saved.coordinates.longitude,
+  };
+}
+
 export default async function HomePage({ searchParams }: Props) {
   // `?result=a&result=b`면 배열로 온다. 결과는 하나뿐이므로 그때는 없는 것으로
   // 본다 — 임의로 첫 값을 고르면 주소를 고친 사람이 무엇을 보게 될지 알 수 없다.
   const raw = (await searchParams)['result'];
   const result = typeof raw === 'string' ? raw : undefined;
 
-  const spot = result === undefined ? null : SAMPLE_SPOT;
+  // 결과 id로 저장된 스팟을 읽는다(T51). `sample`은 저장소 없이 화면을 볼 수
+  // 있게 남긴 데모 값이다. 없는 id면 결과 없는 홈으로 — 지도를 빈 핀으로 채우지 않는다.
+  const spot = result === undefined ? null : result === 'sample' ? SAMPLE_SPOT : await resolveSavedSpot(result);
 
   return (
     <main className={screen}>
