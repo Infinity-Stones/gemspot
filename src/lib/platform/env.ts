@@ -28,17 +28,14 @@ function readOptional(name: string): string | null {
  * 네이버 Geocoding 시크릿 키. 설정하지 않으면 `null`이고, 호출하는 쪽이
  * "키가 없다"를 실패로 다룬다 — 여기서 던지면 키 없이 띄워 보는 개발이 막힌다.
  *
- * 값은 Vercel 환경 변수(또는 로컬 `.env.local`)에서 온다. 짝이 되는 클라이언트
- * ID는 감출 수 없는 값이라 `src/shared/naverMap.ts`에 상수로 있다.
- *
- * 이름을 둘 읽는 이유: 배포 프로젝트마다 등록된 이름이 다르다.
- * `juhee200s-projects/gemspot`(현재 프로덕션)에는 `GEMSPOT_NAVER_API_KEY`로,
- * 다른 프로젝트에는 `SECRET_KEY`로 들어가 있다. 한쪽만 읽으면 다른 배포에서
- * 키가 있는데도 Geocoding이 전부 "키 없음"으로 떨어진다. 이름이 하나로
- * 정리되면 남는 쪽 하나만 지우면 된다.
+ * 값은 Vercel 환경 변수(또는 로컬 `.env.local`)에서 온다. 배포 프로젝트
+ * `juhee200s-projects/gemspot`에 **이 이름으로** 등록되어 있다 — 코드가 다른
+ * 이름을 보면 키가 있는데도 Geocoding이 전부 "키 없음"으로 떨어진다.
+ * 짝이 되는 클라이언트 ID는 감출 수 없는 값이라 `src/shared/naverMap.ts`에
+ * 상수로 있다.
  */
 export function naverApiKey(): string | null {
-  return readOptional('GEMSPOT_NAVER_API_KEY') ?? readOptional('SECRET_KEY');
+  return readOptional('GEMSPOT_NAVER_API_KEY');
 }
 
 /**
