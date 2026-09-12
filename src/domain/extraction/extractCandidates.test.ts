@@ -101,3 +101,98 @@ describe('extractCandidates — 짝짓기', () => {
     }
   });
 });
+
+describe('extractCandidates — 한 장에 여러 가게', () => {
+  /** 명세의 그 게시물. 피롤츠와 파브리키친이 한 화면에 들어온다. */
+  const 두_가게 = [
+    '피롤츠 커피하우스',
+    '서울 용산구 한강대로 56-1, 2층',
+    '파브리키친',
+    '서울 용산구 한강대로15길 23-6',
+  ].join('\n');
+
+  it('2건으로 나온다', () => {
+    expect(extractCandidates(두_가게)).toHaveLength(2);
+  });
+
+  it('가게명과 주소가 뒤섞이지 않는다', () => {
+    expect(extractCandidates(두_가게)).toEqual([
+      {
+        name: '피롤츠 커피하우스',
+        addressLine: '서울 용산구 한강대로 56-1, 2층',
+      },
+      { name: '파브리키친', addressLine: '서울 용산구 한강대로15길 23-6' },
+    ]);
+  });
+
+  it('가운뎃점으로 이어 붙인 같은 게시물도 2건이다', () => {
+    expect(
+      extractCandidates(
+        '피롤츠 커피하우스 · 서울 용산구 한강대로 56-1, 2층 · 파브리키친 · 서울 용산구 한강대로15길 23-6',
+      ),
+    ).toHaveLength(2);
+  });
+
+  it('한 이름이 두 후보에 붙지 않는다', () => {
+    // 붙으면 두 가게가 같은 상호로 저장된다.
+    const [first, second] = extractCandidates(
+      '피롤츠 커피하우스\n서울 용산구 한강대로 56-1\n서울 노원구 화랑로 608',
+    );
+
+    expect(first?.name).toBe('피롤츠 커피하우스');
+    expect(second?.name).toBe('');
+  });
+
+  it('세 가게도 셋으로 나온다', () => {
+    expect(
+      extractCandidates(
+        [
+          '피롤츠 커피하우스',
+          '서울 용산구 한강대로 56-1, 2층',
+          '파브리키친',
+          '서울 용산구 한강대로15길 23-6',
+          '익스프레스노원바이미라쥬',
+          '서울 노원구 화랑로 608',
+        ].join('\n'),
+      ).map(c => c.name),
+    ).toEqual(['피롤츠 커피하우스', '파브리키친', '익스프레스노원바이미라쥬']);
+  });
+});
+
+describe('extractCandidates — 줄바꿈으로 끊긴 주소', () => {
+  it('건물번호가 아직 없는 주소 줄은 다음 줄과 이어 붙인다', () => {
+    // OCR은 긴 주소를 자주 끊는다. 끊긴 조각을 따로 세면 한 가게가 두 건이 된다.
+    expect(
+      extractCandidates('피롤츠 커피하우스\n서울 용산구\n한강대로 56-1, 2층'),
+    ).toEqual([
+      {
+        name: '피롤츠 커피하우스',
+        addressLine: '서울 용산구 한강대로 56-1, 2층',
+      },
+    ]);
+  });
+
+  it('세 조각으로 끊겨도 하나로 모은다', () => {
+    const [only] = extractCandidates(
+      '파브리키친\n서울\n용산구\n한강대로15길 23-6',
+    );
+
+    expect(only).toEqual({
+      name: '파브리키친',
+      addressLine: '서울 용산구 한강대로15길 23-6',
+    });
+  });
+
+  it('완성된 주소 뒤의 주소 줄은 이어 붙이지 않는다', () => {
+    // 건물번호가 이미 붙었으면 그 주소는 끝났다. 다음 줄은 다음 가게다.
+    expect(
+      extractCandidates('서울 용산구 한강대로 56-1\n서울 노원구 화랑로 608'),
+    ).toHaveLength(2);
+  });
+
+  it('이어 붙여도 이름은 앞 후보의 것을 지킨다', () => {
+    const [only] = extractCandidates('에그앤플라워\n서울 용산구\n용산동2가');
+
+    expect(only?.name).toBe('에그앤플라워');
+  });
+});

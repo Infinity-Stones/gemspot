@@ -5,12 +5,18 @@
  * 규칙은 돌고, 제공자가 바뀌어도 이 파일은 바뀌지 않는다 — 어댑터(T09)가
  * 무엇을 쓰든 결국 넘겨주는 것은 문자열 한 덩어리다.
  *
- * **여기서는 도로명 주소인지 판단하지 않는다.** 그 판정으로 성공과 실패를
- * 가르는 것은 T11(#15)의 일이다. 이 단계가 하는 일은 "어느 줄이 주소처럼
- * 생겼고, 그 주소는 어느 가게의 것인가"까지다. 둘을 나눠 둔 이유는 뽑는 규칙과
- * 가르는 규칙이 서로 다른 이유로 바뀌기 때문이다 — 뽑는 쪽은 OCR이 주는 줄의
- * 생김새를 따라가고, 가르는 쪽은 지오코딩에 넣을 수 있는지를 따라간다.
+ * **성공과 실패를 가르지는 않는다.** 그 판정은 T11(#15)의 일이다. 이 단계가
+ * 하는 일은 "어느 줄이 주소처럼 생겼고, 그 주소는 어느 가게의 것인가"까지다.
+ * 둘을 나눠 둔 이유는 뽑는 규칙과 가르는 규칙이 서로 다른 이유로 바뀌기
+ * 때문이다 — 뽑는 쪽은 OCR이 주는 줄의 생김새를 따라가고, 가르는 쪽은
+ * 지오코딩에 넣을 수 있는지를 따라간다.
+ *
+ * 다만 **주소가 끝났는지**는 T11의 판별식으로 본다(아래 이어붙이기 규칙).
+ * 그 의존은 한 방향이다 — roadAddress.ts는 이 파일에서 타입만 가져가므로
+ * 런타임 의존이 생기지 않는다.
  */
+
+import { isRoadAddress } from './roadAddress';
 
 /**
  * 뽑아낸 후보 한 건.
@@ -123,9 +129,17 @@ function segmentsOf(text: string): readonly string[] {
  * 텍스트 한 덩어리에서 후보 목록을 만든다.
  *
  * 짝짓는 규칙은 **주소 바로 앞의 이름**이다. 인스타그램 게시물에서 가게명은
- * 위치 줄 바로 위에 오고, 그 사이에 다른 가게 이름이 끼어들 수 없다. 더
- * 똑똑한 규칙(거리 가중치, 글자 크기)은 OCR이 무엇을 주는지 정해진 뒤에
- * 얹는 게 맞다 — 지금 지어내면 실제 입력을 본 적 없는 규칙이 된다.
+ * 위치 줄 바로 위에 오고, 그 사이에 다른 가게 이름이 끼어들 수 없다. 한 번 쓴
+ * 이름은 비우므로 한 이름이 두 후보에 붙지 않는다 — 그랬다면 두 가게가 같은
+ * 상호로 저장된다.
+ *
+ * 주소 줄이 연달아 오면 **앞 주소가 완성되었는지**로 가른다. 건물번호가 아직
+ * 없으면 같은 주소가 줄바꿈으로 끊긴 것이고, 이미 있으면 다음 가게의 주소다.
+ * 한 장에 가게가 둘 담긴 게시물(피롤츠 · 파브리키친)이 그 경우다.
+ *
+ * 가게명이 주소 **아래**에 오는 배치는 다루지 않는다. 더 똑똑한 규칙(거리
+ * 가중치, 글자 크기)은 OCR이 실제로 무엇을 주는지 본 뒤에 얹는 게 맞다 —
+ * 지금 지어내면 입력을 본 적 없는 규칙이 된다.
  *
  * 주소를 끝내 못 찾아도 이름만으로 후보 하나를 낸다. 그래야 그 건이 STEP 3의
  * 실패 목록에 올라 사용자가 주소를 직접 칠 수 있다(T17 · #24) — 여기서
@@ -137,14 +151,37 @@ export function extractCandidates(text: string): readonly ExtractedCandidate[] {
 
   let pendingName: string | null = null;
   let firstName: string | null = null;
+  let previousWasAddress = false;
 
   for (const segment of segments) {
     if (isAddressSegment(segment)) {
-      candidates.push({ name: pendingName ?? '', addressLine: segment });
-      pendingName = null;
+      const open = candidates.at(-1);
+
+      // 앞 세그먼트도 주소였고 그 주소가 **아직 완성되지 않았다면** 같은
+      // 주소가 줄바꿈으로 끊긴 것이다(`서울 용산구` / `한강대로 56-1`).
+      // 앞 주소에 이미 건물번호가 붙어 있으면 그건 끝난 주소이고, 지금 줄은
+      // 다음 가게의 주소다 — 한 장에 가게가 둘 담긴 게시물이 그 경우다.
+      if (
+        previousWasAddress &&
+        open !== undefined &&
+        !isRoadAddress(open.addressLine)
+      ) {
+        candidates[candidates.length - 1] = {
+          name: open.name,
+          addressLine: `${open.addressLine} ${segment}`,
+        };
+      } else {
+        candidates.push({ name: pendingName ?? '', addressLine: segment });
+        // 쓴 이름은 비운다. 한 이름이 두 후보에 붙으면 두 가게가 같은
+        // 상호로 저장된다.
+        pendingName = null;
+      }
+
+      previousWasAddress = true;
       continue;
     }
 
+    previousWasAddress = false;
     pendingName = segment;
     firstName ??= segment;
   }
