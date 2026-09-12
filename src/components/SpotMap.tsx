@@ -131,6 +131,8 @@ interface Props {
   markers?: readonly MapMarker[];
   /** 마커를 고르면 그 id를 올린다. */
   onMarkerSelect?: (id: string) => void;
+  /** 지도를 띄웠거나 띄우지 못한 것이 판가름 났을 때 한 번 부른다. */
+  onSettled?: () => void;
   /** 중심을 현재 위치로 표시할지. 스팟 마커가 아니라 맥동하는 점으로 그린다. */
   hasLocationDot?: boolean;
 }
@@ -244,6 +246,7 @@ export function SpotMap({
   markers = [],
   hasLocationDot = false,
   onMarkerSelect,
+  onSettled,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapsRef = useRef<NaverMaps | null>(null);
@@ -288,6 +291,13 @@ export function SpotMap({
       mapRef.current = null;
     };
   }, [hasCoordinate]);
+
+  // 성공이든 실패든 판가름이 나면 한 번 알린다. 위를 덮고 있는 인트로가
+  // 그때 물러난다 — 실패했는데 인트로가 남아 있으면 화면이 멈춘 것처럼 보인다.
+  useEffect(() => {
+    if (status === 'loading') return;
+    onSettled?.();
+  }, [status, onSettled]);
 
   // 중심 이동은 지도를 다시 만들지 않고 옮기기만 한다.
   useEffect(() => {

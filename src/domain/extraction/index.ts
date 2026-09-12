@@ -12,6 +12,7 @@ export type {
   ExtractFromImageInput,
   ExtractOutcome,
 } from './extractFromImage';
+export { isRetryable } from './failureFallback';
 export {
   isRoadAddress,
   partitionByRoadAddress,
