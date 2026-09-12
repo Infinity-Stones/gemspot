@@ -12,17 +12,57 @@ interface NaverLatLng {
   readonly _brand: 'naverLatLng';
 }
 
+interface NaverBounds {
+  hasLatLng(position: NaverLatLng): boolean;
+}
+
 interface NaverMap {
   setCenter(position: NaverLatLng): void;
+  getBounds(): NaverBounds;
+  destroy(): void;
+}
+
+interface NaverEventListener {
+  readonly _brand: 'naverEventListener';
+}
+
+interface NaverMarker {
+  setMap(map: NaverMap | null): void;
+}
+
+interface NaverPoint {
+  readonly _brand: 'naverPoint';
 }
 
 interface NaverMaps {
   LatLng: new (latitude: number, longitude: number) => NaverLatLng;
+  Point: new (x: number, y: number) => NaverPoint;
   Map: new (
     element: HTMLElement,
     options: { center: NaverLatLng; zoom: number },
   ) => NaverMap;
-  Marker: new (options: { position: NaverLatLng; map: NaverMap }) => unknown;
+  Marker: new (options: {
+    position: NaverLatLng;
+    map: NaverMap;
+    title?: string;
+    icon?: { content: string; anchor: NaverPoint };
+  }) => NaverMarker;
+  Event: {
+    addListener(
+      target: NaverMap | NaverMarker,
+      event: string,
+      handler: () => void,
+    ): NaverEventListener;
+    removeListener(listener: NaverEventListener): void;
+  };
+}
+
+/** 지도에 찍을 한 건. 도메인 모양을 그대로 받지 않는다 — 지도는 좌표와 이름만 안다. */
+export interface MapMarker {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
 }
 
 const SCRIPT_ID = 'naver-maps-sdk';
@@ -85,8 +125,14 @@ interface Props {
   latitude: number;
   longitude: number;
   placeName: string;
-  /** 그 자리에 마커를 찍을지. 현재 위치처럼 중심만 잡는 경우에는 끈다. */
+  /** 중심에 마커를 찍을지. 현재 위치처럼 중심만 잡는 경우에는 끈다. */
   hasMarker?: boolean;
+  /** 저장된 스팟들. 지금 보이는 영역에 드는 것만 그린다. */
+  markers?: readonly MapMarker[];
+  /** 마커를 고르면 그 id를 올린다. */
+  onMarkerSelect?: (id: string) => void;
+  /** 중심을 현재 위치로 표시할지. 스팟 마커가 아니라 맥동하는 점으로 그린다. */
+  hasLocationDot?: boolean;
 }
 
 const frame = css({
@@ -100,6 +146,79 @@ const frame = css({
 const canvas = css({
   width: 'full',
   height: 'full',
+});
+
+const LOCATION_DOT_SIZE = 14;
+
+const locationDot = css({
+  position: 'relative',
+  width: '[14px]',
+  height: '[14px]',
+  rounded: 'full',
+  bg: 'violet.600',
+  boxShadow: 'sm',
+  _dark: { bg: 'violet.400' },
+});
+
+// 흰 선은 안쪽에 넣는다. 바깥 테두리로 두면 점이 그만큼 커져 지도 위에서
+// 마커처럼 읽힌다.
+const locationEdge = css({
+  position: 'absolute',
+  inset: '0',
+  rounded: 'full',
+  // 토큰은 1px(hairline)과 2px(thick)뿐인데, 14px 원에서 1px은 묻히고 2px은
+  // 원을 먹는다. 이 한 자리만 사이 값으로 둔다.
+  borderWidth: '[1.5px]',
+  borderStyle: 'solid',
+  borderColor: 'white',
+  _dark: { borderColor: 'slate.950' },
+});
+
+const SPOT_PIN_WIDTH = 40;
+const SPOT_PIN_HEIGHT = 40;
+
+// 저장된 스팟 핀. 기본 마커는 파란색이라 프라이머리와 어긋나고, 다른 서비스의
+// 지도와 구분되지 않는다. 브랜드 마크가 이미 핀 모양이라 그대로 쓴다.
+const spotPin = css({
+  display: 'block',
+  width: '[40px]',
+  height: '[40px]',
+  // 원본이 512px이라 축소해서 쓴다. 고밀도 화면에서도 뭉개지지 않는다.
+  objectFit: 'contain',
+});
+
+// 스팟 핀은 한 곳에서 만든다. 중심으로 열린 스팟과 목록에서 그린 스팟이 다른
+// 모양이면, 핀을 고르는 순간 같은 자리의 핀이 바뀐 것처럼 보인다.
+function gemPinIcon(maps: NaverMaps) {
+  return {
+    content: `<img class="${spotPin}" src="/brand/gemspot-mark.png" alt="" />`,
+    // 마크의 아래 꼭짓점이 실제 좌표를 가리킨다.
+    anchor: new maps.Point(SPOT_PIN_WIDTH / 2, SPOT_PIN_HEIGHT),
+  };
+}
+
+// 점 뒤에서 번지는 링. 시선을 한 번 끌어 주는 장치라 계속 돈다.
+const locationRing = css({
+  position: 'absolute',
+  top: '[50%]',
+  left: '[50%]',
+  // 점보다 크게 시작해 바깥으로 퍼진다. 점 뒤에 깔아야 원 가장자리를 덮지
+  // 않는다.
+  width: '[24px]',
+  height: '[24px]',
+  marginTop: '[-12px]',
+  marginLeft: '[-12px]',
+  zIndex: '[-1]',
+  rounded: 'full',
+  bg: 'violet.500',
+  opacity: '[0.55]',
+  animationName: 'ping',
+  // 프리셋의 duration은 전환용이라 여기 쓰기엔 짧다. 천천히 번지게 둔다.
+  animationDuration: '[2.4s]',
+  animationTimingFunction: 'out',
+  animationIterationCount: '[infinite]',
+  // 움직임을 줄여 달라고 한 사용자에게는 멈춘 원으로 보인다.
+  _motionReduce: { animationName: '[none]' },
 });
 
 const overlay = css({
@@ -122,14 +241,25 @@ export function SpotMap({
   longitude,
   placeName,
   hasMarker = true,
+  markers = [],
+  hasLocationDot = false,
+  onMarkerSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapsRef = useRef<NaverMaps | null>(null);
+  const mapRef = useRef<NaverMap | null>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
 
   // 계약은 숫자를 약속하지만 NaN도 숫자다. 지도에 넘기기 전에 한 번 거른다 —
   // NaN이 들어가면 핀이 조용히 사라지고 원인이 이 자리에서 멀어진다.
   const hasCoordinate = Number.isFinite(latitude) && Number.isFinite(longitude);
 
+  // 최초 중심은 지도를 만들 때 한 번만 쓴다. 이후 이동은 아래 effect가 맡으므로
+  // 여기 값이 바뀐다고 지도를 다시 만들지 않는다.
+  const initialCenterRef = useRef({ latitude, longitude });
+
+  // 지도는 한 번만 만든다. 좌표나 마커가 바뀔 때마다 새로 만들면 이전 지도와
+  // 그 리스너가 같은 자리에 그대로 남아 겹겹이 쌓인다.
   useEffect(() => {
     if (!hasCoordinate) return;
 
@@ -140,10 +270,12 @@ export function SpotMap({
         const element = containerRef.current;
         if (cancelled || element === null) return;
 
-        const center = new maps.LatLng(latitude, longitude);
-        const map = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
-        if (hasMarker) new maps.Marker({ position: center, map });
-        map.setCenter(center);
+        const { latitude: startLatitude, longitude: startLongitude } =
+          initialCenterRef.current;
+        const center = new maps.LatLng(startLatitude, startLongitude);
+
+        mapsRef.current = maps;
+        mapRef.current = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
         setStatus('ready');
       })
       .catch(() => {
@@ -152,8 +284,100 @@ export function SpotMap({
 
     return () => {
       cancelled = true;
+      mapRef.current?.destroy();
+      mapRef.current = null;
     };
-  }, [hasCoordinate, latitude, longitude, hasMarker]);
+  }, [hasCoordinate]);
+
+  // 중심 이동은 지도를 다시 만들지 않고 옮기기만 한다.
+  useEffect(() => {
+    const maps = mapsRef.current;
+    const map = mapRef.current;
+    if (maps === null || map === null || !hasCoordinate) return;
+
+    map.setCenter(new maps.LatLng(latitude, longitude));
+  }, [status, latitude, longitude, hasCoordinate]);
+
+  // 중심 표시(스팟 마커 · 현재 위치 점).
+  useEffect(() => {
+    const maps = mapsRef.current;
+    const map = mapRef.current;
+    if (maps === null || map === null || !hasCoordinate) return;
+
+    const position = new maps.LatLng(latitude, longitude);
+    const marks: NaverMarker[] = [];
+
+    if (hasMarker) {
+      marks.push(new maps.Marker({ position, map, icon: gemPinIcon(maps) }));
+    }
+    if (hasLocationDot) {
+      marks.push(
+        new maps.Marker({
+          position,
+          map,
+          title: '현재 위치',
+          icon: {
+            content: `<div class="${locationDot}"><span class="${locationRing}"></span><span class="${locationEdge}"></span></div>`,
+            anchor: new maps.Point(
+              LOCATION_DOT_SIZE / 2,
+              LOCATION_DOT_SIZE / 2,
+            ),
+          },
+        }),
+      );
+    }
+
+    return () => {
+      for (const mark of marks) mark.setMap(null);
+    };
+  }, [status, latitude, longitude, hasCoordinate, hasMarker, hasLocationDot]);
+
+  // 저장된 스팟은 보이는 영역에 드는 것만 그린다. 지도를 옮기면 들어온 것을
+  // 만들고 나간 것을 지운다 — 매번 전부 만들면 이전 마커가 그대로 남는다.
+  useEffect(() => {
+    const maps = mapsRef.current;
+    const map = mapRef.current;
+    if (maps === null || map === null) return;
+
+    const drawn = new Map<string, NaverMarker>();
+    const redraw = () => {
+      const bounds = map.getBounds();
+      for (const spot of markers) {
+        const position = new maps.LatLng(spot.latitude, spot.longitude);
+        const isVisible = bounds.hasLatLng(position);
+        const existing = drawn.get(spot.id);
+
+        if (isVisible && existing === undefined) {
+          const marker = new maps.Marker({
+            position,
+            map,
+            title: spot.name,
+            icon: gemPinIcon(maps),
+          });
+          if (onMarkerSelect !== undefined) {
+            maps.Event.addListener(marker, 'click', () => {
+              onMarkerSelect(spot.id);
+            });
+          }
+          drawn.set(spot.id, marker);
+          continue;
+        }
+        if (!isVisible && existing !== undefined) {
+          existing.setMap(null);
+          drawn.delete(spot.id);
+        }
+      }
+    };
+
+    const listener = maps.Event.addListener(map, 'idle', redraw);
+    redraw();
+
+    return () => {
+      maps.Event.removeListener(listener);
+      for (const marker of drawn.values()) marker.setMap(null);
+      drawn.clear();
+    };
+  }, [status, markers, onMarkerSelect]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.

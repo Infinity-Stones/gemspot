@@ -1,0 +1,28 @@
+name: Auto-merge
+
+# PR마다 손으로 auto-merge를 켜는 대신 열릴 때 한 번 켜둔다. 머지할지 말지는
+# 여기서 판단하지 않는다 — main의 브랜치 보호(필수 체크 verify)가 그 판단을 하고,
+# 이 워크플로는 "초록이 되면 머지한다"는 예약만 건다.
+on:
+  pull_request_target:
+    # draft에는 auto-merge를 걸 수 없다. 이 저장소는 PR을 draft로 열고 준비되면
+    # ready로 바꾸므로, 그 전환이 실질적인 시작점이다.
+    types: [opened, reopened, ready_for_review]
+
+# fork에서 온 PR에서도 토큰이 write를 갖도록 pull_request_target을 쓴다. PR의
+# 코드를 체크아웃하지 않으니 그 트리거가 부르는 위험은 여기 해당하지 않는다.
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      # --merge: 이 저장소의 기존 머지가 전부 머지 커밋이다. 방식을 여기서
+      # 바꾸면 히스토리가 PR마다 달라진다.
+      - run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}

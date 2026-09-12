@@ -1,9 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
+import { extractAction } from '@/app/upload/actions';
+import {
+  CANDIDATES_SESSION_KEY,
+  IDLE_EXTRACT_STATE,
+} from '@/app/upload/extractState';
 import { ACCEPTED_IMAGE_TYPES, screenUploads } from '@/domain/extraction';
-import type { UploadRejection } from '@/domain/extraction';
+import { UPLOAD_RESULTS_PATH } from '@/shared/routes';
+import type {
+  ExtractFailureReason,
+  UploadRejection,
+} from '@/domain/extraction';
+import type { UploadImage } from './ExtractionResults';
 
 /**
  * 업로드할 이미지를 고르는 수단.
@@ -15,6 +26,11 @@ import type { UploadRejection } from '@/domain/extraction';
  *
  * 클라이언트 컴포넌트인 것은 고른 파일을 들고 있어야 해서다. 파일은 서버로
  * 직렬화되지 않으므로 이 상태는 브라우저에만 있다.
+ *
+ * **한 장만 든다.** 명세(커밋 484684e)가 여러 장 선택을 두지 않기로 정했다 —
+ * 여러 장을 받으면 결과 목록의 단위와 실패 처리가 장수만큼 갈라진다. 새로
+ * 고르면 앞의 장을 갈아 끼운다. 한 장 안에 가게가 여러 곳인 경우는 그와
+ * 별개로 남고(T12 · #16), 그쪽은 VLM이 배열로 돌려준다.
  */
 
 /**
@@ -94,18 +110,12 @@ const count = css({
   _dark: { color: 'slate.400' },
 });
 
-const grid = css({
-  display: 'grid',
-  gridTemplateColumns: '[repeat(auto-fill, minmax(7rem, 1fr))]',
-  gap: '3',
-  width: 'full',
-  listStyle: 'none',
-  p: '0',
-  m: '0',
-});
-
 const cell = css({
   position: 'relative',
+  // 한 장이라 격자가 필요 없다. 세로로 긴 스크린샷이 화면을 다 먹지 않게
+  // 폭만 제한한다.
+  width: 'full',
+  maxWidth: 'xs',
   rounded: 'md',
   overflow: 'hidden',
   borderWidth: '1px',
@@ -224,75 +234,153 @@ function explain(rejection: UploadRejection): string {
   }
 }
 
+/**
+ * 실패한 이유를 문장으로 바꾼다.
+ *
+ * **빈 목록으로 접지 않는다.** "읽었는데 가게가 없었다"와 "읽지 못했다"는
+ * 사용자가 할 일이 다르다 — 앞은 다른 사진을 고르는 것이고 뒤는 다시 해 보거나
+ * 직접 입력하는 것이다.
+ */
+function explainFailure(reason: ExtractFailureReason): string {
+  switch (reason) {
+    case 'no_api_key':
+      return '추출에 쓰는 키가 설정되지 않았습니다. 배포 환경의 환경 변수를 확인해 주세요.';
+    case 'timeout':
+      return '읽는 데 너무 오래 걸렸습니다. 다시 시도해 주세요.';
+    case 'network':
+      return '추출 서비스에 닿지 못했습니다. 잠시 뒤 다시 시도해 주세요.';
+    case 'parse':
+      return '추출 결과를 읽지 못했습니다. 다시 시도해 주세요.';
+  }
+}
+
+const submitButton = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '2',
+  px: '5',
+  py: '3',
+  rounded: 'lg',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'slate.900',
+  bg: 'slate.900',
+  color: 'white',
+  cursor: 'pointer',
+  textStyle: 'md',
+  fontWeight: 'semibold',
+  transition: 'colors',
+  _hover: { bg: 'slate.700', borderColor: 'slate.700' },
+  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
+  _dark: {
+    borderColor: 'slate.100',
+    bg: 'slate.100',
+    color: 'slate.900',
+    _hover: { bg: 'white', borderColor: 'white' },
+  },
+});
+
 export function UploadForm() {
+  const router = useRouter();
+  const [state, submit, pending] = useActionState(
+    extractAction,
+    IDLE_EXTRACT_STATE,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
-  const [images, setImages] = useState<readonly PickedImage[]>([]);
+  const [image, setImage] = useState<PickedImage | null>(null);
   const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
-  const imagesRef = useRef<readonly PickedImage[]>([]);
+  const imageRef = useRef<PickedImage | null>(null);
+  // 결과 화면으로 넘긴 URL은 그 화면이 계속 써야 하므로 업로드 화면이
+  // 언마운트될 때 해제하지 않는다. 문서를 닫으면 브라우저가 정리한다.
+  const handedOffPreviewUrlRef = useRef<string | null>(null);
   useEffect(() => {
-    imagesRef.current = images;
-  }, [images]);
+    imageRef.current = image;
+  }, [image]);
 
   useEffect(
     () => () => {
-      // 화면을 떠날 때 남은 URL을 전부 해제한다. 안 하면 문서가 사는 동안
-      // 원본 파일이 메모리에서 풀리지 않는다 — 스크린샷 수십 장이면 눈에 띈다.
-      for (const image of imagesRef.current)
-        URL.revokeObjectURL(image.previewUrl);
+      // 화면을 떠날 때 남은 URL을 해제한다. 단, 결과 화면에 넘긴 URL은 그
+      // 화면이 원본을 표시해야 하므로 소유권도 함께 넘기고 여기서 해제하지 않는다.
+      const left = imageRef.current;
+      if (left !== null && left.previewUrl !== handedOffPreviewUrlRef.current) {
+        URL.revokeObjectURL(left.previewUrl);
+      }
     },
     [],
   );
 
   // URL을 만들고 해제하는 일은 **업데이터 밖에서** 한다. `reactStrictMode`가
   // 켜져 있어 개발 중 state 업데이터가 두 번 호출되는데(불순한 업데이터를
-  // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 장마다
-  // URL이 하나씩 새고 revokeObjectURL은 두 번 불린다. 업데이터는 앞의 배열에서
-  // 뒤의 배열을 계산하는 일만 한다.
-  function add(picked: readonly File[]) {
-    // 중복을 먼저 걷어낸다. 이미 담긴 장이 장수 상한의 자리를 두 번 차지하면,
-    // 통과할 수 있었던 새 장이 엉뚱하게 막힌다.
-    const seen = new Set(images.map(image => image.fingerprint));
-    const fresh: File[] = [];
-
-    for (const file of picked) {
-      const fingerprint = fingerprintOf(file);
-      if (seen.has(fingerprint)) continue;
-      seen.add(fingerprint);
-      fresh.push(file);
-    }
-
+  // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 URL이
+  // 하나씩 새고 revokeObjectURL은 두 번 불린다.
+  function choose(picked: readonly File[]) {
     // `File`이 `UploadCandidate`(이름·형식·크기)를 만족하므로 그대로 넘긴다.
-    const { accepted, rejected } = screenUploads(fresh, images.length);
+    // 이미 한 장을 들고 있어도 `alreadyAccepted`는 0이다 — 새로 고른 장이 앞의
+    // 장을 갈아 끼우기 때문이고, 1을 넘기면 갈아 끼우는 일 자체가 상한에 걸린다.
+    const { accepted, rejected } = screenUploads(picked, 0);
 
     // 이번 선택의 결과만 보여준다. 앞선 선택의 경고를 쌓아 두면 방금 고친 것도
     // 여전히 문제인 것처럼 남는다.
     setRejections(rejected);
 
-    const added = accepted.map(file => ({
+    const [file] = accepted;
+    if (file === undefined) return;
+
+    const next = {
       fingerprint: fingerprintOf(file),
       file,
       previewUrl: URL.createObjectURL(file),
-    }));
+    };
 
-    if (added.length === 0) return;
-    setImages(previous => [...previous, ...added]);
+    // 앞의 장을 버리기 전에 그 URL을 해제한다. 갈아 끼우면서 놓치면 화면에
+    // 아무 증상 없이 원본 파일이 메모리에 남는다.
+    const previous = imageRef.current;
+    if (previous !== null && previous.fingerprint !== next.fingerprint) {
+      URL.revokeObjectURL(previous.previewUrl);
+    }
+
+    setImage(next);
   }
 
-  function remove(fingerprint: string) {
-    const going = images.find(image => image.fingerprint === fingerprint);
-    if (going === undefined) return;
+  function clear() {
+    const going = imageRef.current;
+    if (going === null) return;
 
     URL.revokeObjectURL(going.previewUrl);
-    setImages(previous =>
-      previous.filter(image => image.fingerprint !== fingerprint),
-    );
+    setImage(null);
+    // 입력을 비워야 방금 뺀 그 파일을 다시 고를 때 change가 뜬다.
+    if (inputRef.current !== null) inputRef.current.value = '';
   }
 
+  useEffect(() => {
+    if (state.status !== 'done') return;
+
+    const uploaded = imageRef.current;
+    if (uploaded === null) return;
+    const uploadImage: UploadImage = {
+      id: uploaded.fingerprint,
+      src: uploaded.previewUrl,
+      alt: uploaded.file.name,
+    };
+
+    try {
+      sessionStorage.setItem(
+        CANDIDATES_SESSION_KEY,
+        JSON.stringify({ candidates: state.candidates, uploadImage }),
+      );
+      handedOffPreviewUrlRef.current = uploaded.previewUrl;
+    } catch {
+      // 저장소가 막혀 있으면 결과 화면이 빈 상태를 보여준다. 여기서 이동을
+      // 막으면 사용자는 아무 일도 일어나지 않은 화면만 보게 된다.
+    }
+    router.push(UPLOAD_RESULTS_PATH);
+  }, [state, router]);
+
   return (
-    <div className={shell}>
+    <form className={shell} action={submit}>
       {/*
         버튼이 입력을 대신 누른다. label로 감싸는 방법도 되지만, 감춰진 입력이
         포커스를 받으면 포커스 링이 화면 밖에 그려진다. 버튼은 그 자리에서
@@ -306,12 +394,12 @@ export function UploadForm() {
         // 버튼의 이름이고, 이 입력의 이름이 되어 주지 않는다.
         aria-label="스크린샷 파일 선택"
         accept={ACCEPT}
-        multiple
+        name="image"
         onChange={event => {
-          add(Array.from(event.target.files ?? []));
-          // 값을 비워야 같은 파일을 다시 고를 때 change가 또 뜬다. 안 비우면
-          // 실수로 뺀 장을 되돌릴 방법이 "다른 파일을 하나 고르기"가 된다.
-          event.target.value = '';
+          choose(Array.from(event.target.files ?? []));
+          // 값을 비우지 않는다. 이 입력이 폼의 필드라 제출할 때 FormData가
+          // 여기서 파일을 가져간다 — 비우면 서버에 빈 폼이 간다. 대신 장을
+          // 뺄 때 비워서 같은 파일을 다시 고를 수 있게 한다.
         }}
       />
       <button
@@ -341,39 +429,54 @@ export function UploadForm() {
         </div>
       )}
 
-      {images.length > 0 && (
-        <>
-          <p className={count}>{images.length}장 선택됨</p>
-          <ul className={grid}>
-            {images.map(image => (
-              <li key={image.fingerprint} className={cell}>
-                {/*
-                  blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수
-                  없는 주소다). 크기도 모르므로 next/image가 요구하는 width·
-                  height를 줄 수 없다. 그래서 순수 img를 쓴다 — 그 예외는
-                  eslint.config.mts에 스코프로 적어 두었다.
-                */}
-                <img
-                  className={thumb}
-                  src={image.previewUrl}
-                  alt={image.file.name}
-                />
-                <p className={fileName}>{image.file.name}</p>
-                <button
-                  type="button"
-                  className={removeButton}
-                  onClick={() => {
-                    remove(image.fingerprint);
-                  }}
-                  aria-label={`${image.file.name} 빼기`}
-                >
-                  ×
-                </button>
-              </li>
-            ))}
+      {(state.status === 'failed' || state.status === 'invalid') && (
+        <div className={warning} role="alert">
+          <p className={warningTitle}>추출하지 못했습니다</p>
+          <ul className={warningList}>
+            <li>
+              {state.status === 'failed'
+                ? explainFailure(state.reason)
+                : state.message}
+            </li>
           </ul>
+        </div>
+      )}
+
+      {image !== null && (
+        <>
+          <p className={count}>1장 선택됨</p>
+          <div className={cell}>
+            {/*
+              blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수 없는
+              주소다). 크기도 모르므로 next/image가 요구하는 width·height를 줄 수
+              없다. 그래서 순수 img를 쓴다 — 그 예외는 eslint.config.mts에
+              스코프로 적어 두었다.
+            */}
+            <img
+              className={thumb}
+              src={image.previewUrl}
+              alt={image.file.name}
+            />
+            <p className={fileName}>{image.file.name}</p>
+            <button
+              type="button"
+              className={removeButton}
+              onClick={clear}
+              aria-label={`${image.file.name} 빼기`}
+            >
+              ×
+            </button>
+          </div>
+          <button
+            type="submit"
+            className={submitButton}
+            disabled={pending}
+            aria-busy={pending}
+          >
+            {pending ? '읽는 중…' : '주소 읽기'}
+          </button>
         </>
       )}
-    </div>
+    </form>
   );
 }

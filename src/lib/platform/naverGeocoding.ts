@@ -1,4 +1,4 @@
-import type { SpotCoordinates } from '@/shared/spot';
+import type { SpotCoordinates, SpotRegion } from '@/shared/spot';
 import { isSpotCoordinates } from '@/shared/spot';
 import { NAVER_MAP_CLIENT_ID } from '@/shared/naverMap';
 import { naverApiKey } from './env';
@@ -19,7 +19,7 @@ export interface GeocodeHit {
   readonly coord: SpotCoordinates;
   readonly roadAddress: string;
   readonly jibunAddress: string;
-  readonly region: { readonly sido: string; readonly sigugun: string } | null;
+  readonly region: SpotRegion | null;
 }
 
 export interface GeocodeResult {
@@ -39,6 +39,10 @@ export type GeocodeOutcome =
 export interface GeocodeOptions extends GetJsonOptions {
   /** 테스트용. 기본은 env의 시크릿. */
   readonly apiKey?: string | null;
+  /** 결과 목록 크기. 네이버 기본 10, 최대 100. 후보를 골라야 하는 검색(T51)이 쓴다. */
+  readonly count?: number;
+  /** 검색 중심 좌표. 주면 가까운 순으로 온다. */
+  readonly coordinate?: SpotCoordinates;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -72,7 +76,9 @@ export function parseGeocodeHit(raw: unknown): GeocodeHit | null {
     coord,
     roadAddress: typeof roadAddress === 'string' ? roadAddress : '',
     jibunAddress: typeof jibunAddress === 'string' ? jibunAddress : '',
-    region: sido !== null && sigugun !== null ? { sido, sigugun } : null,
+    // T03은 둘 중 하나만 온 응답에서도 남은 지역 값을 보존한다. 둘 다 없을
+    // 때만 지역 자체가 없는 것으로 접는다.
+    region: sido !== null || sigugun !== null ? { sido, sigugun } : null,
   };
 }
 
@@ -80,10 +86,14 @@ export async function geocodeAddress(
   query: string,
   options: GeocodeOptions = {},
 ): Promise<GeocodeOutcome> {
-  const { apiKey = naverApiKey(), ...http } = options;
+  const { apiKey = naverApiKey(), count, coordinate, ...http } = options;
   if (apiKey === null) return { ok: false, error: { kind: 'no_api_key' } };
 
-  const url = `${GEOCODE_ENDPOINT}?query=${encodeURIComponent(query)}`;
+  const params = new URLSearchParams({ query });
+  if (count !== undefined) params.set('count', String(Math.min(100, Math.max(1, Math.trunc(count)))));
+  // 네이버는 "경도,위도" 순이다 — 계약(latitude · longitude)과 반대라 여기서만 뒤집는다.
+  if (coordinate !== undefined) params.set('coordinate', `${String(coordinate.longitude)},${String(coordinate.latitude)}`);
+  const url = `${GEOCODE_ENDPOINT}?${params.toString()}`;
   const result = await getJson<unknown>(url, {
     ...http,
     headers: {

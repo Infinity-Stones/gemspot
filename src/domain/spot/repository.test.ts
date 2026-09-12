@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { SelectAllResult } from '@/lib/platform/supabase';
+import type { InsertRowResult, SelectAllResult, SelectByIdResult } from '@/lib/platform/supabase';
 import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
-import { loadSpots, parseSpotRow } from './repository';
+import { findSpot, insertSpot, loadSpots, parseSpotRow, toSpotRow } from './repository';
 import { SEED_SPOTS } from './seed';
 
 const ROW = {
@@ -89,5 +89,69 @@ describe('시드', () => {
 
   it('id가 겹치지 않는다', () => {
     expect(new Set(SEED_SPOTS.map(s => s.id)).size).toBe(SEED_SPOTS.length);
+  });
+});
+
+describe('insertSpot', () => {
+  const newSpot = {
+    name: ROW.name,
+    roadAddress: ROW.road_address,
+    jibunAddress: null,
+    coordinates: { latitude: 37.5299, longitude: 126.9648 },
+    region: { sido: '서울특별시', sigugun: '용산구' },
+    category: 'cafe' as const,
+    origin: 'ocr' as const,
+  };
+
+  it('toSpotRow는 parseSpotRow의 역방향이다', () => {
+    const row = toSpotRow(newSpot);
+    expect(row).toEqual({
+      name: ROW.name,
+      road_address: ROW.road_address,
+      jibun_address: null,
+      latitude: 37.5299,
+      longitude: 126.9648,
+      sido: '서울특별시',
+      sigugun: '용산구',
+      category: 'cafe',
+      origin: 'ocr',
+    });
+    expect(parseSpotRow({ ...row, id: 'x' })).toEqual({ ...newSpot, id: 'x' });
+  });
+
+  it('DB가 돌려준 행(id 포함)을 계약으로 옮겨 준다', async () => {
+    const insert = (_row: Record<string, unknown>): Promise<InsertRowResult> => Promise.resolve({ ok: true, row: ROW });
+    const result = await insertSpot(newSpot, { insert });
+    expect(result).toMatchObject({ ok: true, spot: { id: ROW.id } });
+  });
+
+  it('저장소가 없으면 unconfigured로 실패한다 — 시드에 끼워 넣지 않는다', async () => {
+    const insert = (): Promise<InsertRowResult> => Promise.resolve({ ok: false, error: { kind: 'unconfigured' } });
+    await expect(insertSpot(newSpot, { insert })).resolves.toEqual({ ok: false, error: { kind: 'unconfigured' } });
+  });
+
+  it('돌려받은 행이 계약을 통과하지 못하면 invalid_row', async () => {
+    const insert = (): Promise<InsertRowResult> => Promise.resolve({ ok: true, row: { ...ROW, latitude: 'x' } });
+    await expect(insertSpot(newSpot, { insert })).resolves.toEqual({ ok: false, error: { kind: 'invalid_row' } });
+  });
+});
+
+describe('findSpot', () => {
+  it('저장소에서 찾으면 계약으로, 없으면 null', async () => {
+    const readRow = (id: string): Promise<SelectByIdResult> =>
+      Promise.resolve({ ok: true, row: id === ROW.id ? ROW : null });
+    await expect(findSpot(ROW.id, { readRow })).resolves.toMatchObject({ id: ROW.id, name: ROW.name });
+    await expect(findSpot('nope', { readRow })).resolves.toBeNull();
+  });
+
+  it('저장소가 없으면 시드 id로 찾는다 — 시드 결과 화면이 저장소 없이 돌아야 한다', async () => {
+    const readRow = (): Promise<SelectByIdResult> => Promise.resolve({ ok: false, error: { kind: 'unconfigured' } });
+    await expect(findSpot('seed-cafe-b', { readRow })).resolves.toMatchObject({ name: '카페 B' });
+    await expect(findSpot('nope', { readRow })).resolves.toBeNull();
+  });
+
+  it('읽기 오류면 null', async () => {
+    const readRow = (): Promise<SelectByIdResult> => Promise.resolve({ ok: false, error: { kind: 'query', message: 'x' } });
+    await expect(findSpot(ROW.id, { readRow })).resolves.toBeNull();
   });
 });

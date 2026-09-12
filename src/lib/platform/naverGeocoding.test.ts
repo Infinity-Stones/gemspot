@@ -40,6 +40,15 @@ describe('parseGeocodeHit', () => {
   it('좌표가 숫자로 안 바뀌면 그 건은 버린다', () => {
     expect(parseGeocodeHit({ x: 'abc', y: '37' })).toBeNull();
   });
+
+  it('SIDO · SIGUGUN 중 한쪽만 와도 T03 지역 계약에 남은 값을 보존한다', () => {
+    expect(
+      parseGeocodeHit({
+        ...NAVER_RESPONSE.addresses[0],
+        addressElements: [{ types: ['SIDO'], longName: '세종특별자치시' }],
+      }),
+    ).toMatchObject({ region: { sido: '세종특별자치시', sigugun: null } });
+  });
 });
 
 describe('geocodeAddress', () => {
@@ -55,6 +64,27 @@ describe('geocodeAddress', () => {
     const [url, init] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
     expect(url).toContain('query=%EC%84%B1%EC%88%98%EB%8F%99');
     expect(init.headers).toMatchObject({ 'x-ncp-apigw-api-key': 'secret' });
+  });
+
+  it('count · coordinate 옵션을 쿼리로 싣고, coordinate는 경도,위도 순으로 뒤집는다', async () => {
+    const fetchImpl = respondWith(NAVER_RESPONSE);
+    await geocodeAddress('성수동', {
+      fetchImpl,
+      apiKey: 'secret',
+      count: 10,
+      coordinate: { latitude: 37.5447, longitude: 127.0557 },
+    });
+    const [url] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
+    const params = new URL(url).searchParams;
+    expect(params.get('count')).toBe('10');
+    expect(params.get('coordinate')).toBe('127.0557,37.5447');
+  });
+
+  it('count는 1~100으로 자른다', async () => {
+    const fetchImpl = respondWith(NAVER_RESPONSE);
+    await geocodeAddress('성수동', { fetchImpl, apiKey: 'secret', count: 500 });
+    const [url] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
+    expect(new URL(url).searchParams.get('count')).toBe('100');
   });
 
   it('totalCount 0은 성공이되 hits가 빈 — "그런 주소가 없다"', async () => {

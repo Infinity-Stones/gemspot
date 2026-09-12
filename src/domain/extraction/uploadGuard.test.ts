@@ -13,14 +13,17 @@ function candidate(overrides: Partial<UploadCandidate> = {}): UploadCandidate {
 
 describe('screenUploads — 형식', () => {
   it('png · jpeg · webp를 통과시킨다', () => {
-    const { accepted, rejected } = screenUploads([
-      candidate({ name: 'a.png', type: 'image/png' }),
-      candidate({ name: 'b.jpg', type: 'image/jpeg' }),
-      candidate({ name: 'c.webp', type: 'image/webp' }),
-    ]);
+    // 장수 상한이 한 장이라 형식은 한 건씩 본다.
+    for (const [name, type] of [
+      ['a.png', 'image/png'],
+      ['b.jpg', 'image/jpeg'],
+      ['c.webp', 'image/webp'],
+    ]) {
+      const { accepted, rejected } = screenUploads([candidate({ name, type })]);
 
-    expect(accepted).toHaveLength(3);
-    expect(rejected).toHaveLength(0);
+      expect(accepted).toHaveLength(1);
+      expect(rejected).toHaveLength(0);
+    }
   });
 
   it('이미지가 아닌 것을 막는다', () => {
@@ -94,6 +97,10 @@ describe('screenUploads — 장수', () => {
       name: `s${String(MAX_IMAGE_COUNT)}.png`,
       limit: MAX_IMAGE_COUNT,
     });
+  });
+
+  it('한 장이 상한이다 — 명세가 여러 장 선택을 두지 않는다', () => {
+    expect(MAX_IMAGE_COUNT).toBe(1);
   });
 
   it('이미 담긴 장수를 합쳐서 센다 — 한 장씩 나눠 고르면 통과하는 상한은 상한이 아니다', () => {

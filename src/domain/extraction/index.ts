@@ -6,6 +6,18 @@
  * 싣는다. 그 규칙도 lint(no-restricted-syntax)가 잡는다.
  */
 
+export { extractFromImage } from './extractFromImage';
+export type {
+  ExtractFailureReason,
+  ExtractFromImageInput,
+  ExtractOutcome,
+} from './extractFromImage';
+export {
+  isRoadAddress,
+  partitionByRoadAddress,
+  toSpotCandidates,
+} from './roadAddress';
+export type { ReadSpot, RoadAddressPartition } from './roadAddress';
 export {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,

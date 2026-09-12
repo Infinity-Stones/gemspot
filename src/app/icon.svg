@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- 파비콘은 브라우저 탭에서 16px로 줄어든다. 면(facet)을 세 개로만 나눈 것은
-       그 크기에서 더 쪼개면 진흙이 되기 때문이다. 색은 gem.500/gem.600/gem.300 —
-       panda/preset.ts의 원시 팔레트와 같은 값이지만, SVG는 CSS 변수를 읽지 못해
-       (파비콘 렌더러에는 문서 컨텍스트가 없다) 여기서는 리터럴로 둔다. -->
-  <path d="M16 2 L30 12 L16 30 L2 12 Z" fill="#8b5cf6" />
-  <path d="M16 2 L30 12 L16 12 Z" fill="#c4b5fd" />
-  <path d="M2 12 L16 12 L16 30 Z" fill="#7c3aed" />
-</svg>
