@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isValidSlug } from './routes';
+import { isValidSlug, UPLOAD_PATH, UPLOAD_RESULTS_PATH } from './routes';
+
+describe('upload routes', () => {
+  it('추출 결과를 긴 검토 작업에 맞는 독립 페이지로 둔다', () => {
+    expect(UPLOAD_PATH).toBe('/upload');
+    expect(UPLOAD_RESULTS_PATH).toBe('/upload/results');
+  });
+});
 
 describe('isValidSlug', () => {
   it('소문자·숫자·단일 하이픈 조합을 통과시킨다', () => {
