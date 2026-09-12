@@ -2,6 +2,7 @@ import { css } from 'styled-system/css';
 import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
+import { PinFab } from '@/components/spot/PinFab';
 import { DEMO_SPOTS, findSpot } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 
@@ -43,6 +44,10 @@ const screen = css({
   height: '[100dvh]',
 });
 
+// 지도와 그 위에 뜨는 것(플로팅 버튼)의 기준 상자. minHeight 0은 grid 자식이
+// 내용 높이만큼 늘어나 지도가 화면을 넘치는 것을 막는다.
+const mapArea = css({ position: 'relative', minHeight: '0' });
+
 interface Props {
   // 이 화면이 읽는 것은 `result` 하나지만, 파라미터는 앞으로 늘어난다
   // (필터 · 목록 선택 등). 그래서 모양을 좁히지 않고 Next가 주는 그대로 받는다.
@@ -74,7 +79,10 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <main className={screen}>
       <AppHeader />
-      <HomeMap spot={spot} markers={MARKERS} />
+      <div className={mapArea}>
+        <HomeMap spot={spot} markers={MARKERS} />
+        <PinFab />
+      </div>
       {spot !== null && (
         <SpotDetailPanel
           placeName={spot.placeName}
