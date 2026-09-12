@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import { IntroSplash } from './IntroSplash';
 import type { MapMarker } from './SpotMap';
 import { SpotMap } from './SpotMap';
 
@@ -60,6 +61,11 @@ export function HomeMap({ spot, markers }: Props) {
   const [current, setCurrent] = useState<Coordinates | null>(null);
   const [status, setStatus] = useState<LocationStatus>('asking');
   const [attempt, setAttempt] = useState(0);
+  const [isMapSettled, setIsMapSettled] = useState(false);
+
+  const markMapSettled = useCallback(() => {
+    setIsMapSettled(true);
+  }, []);
 
   // 고른 핀은 주소에 남긴다. 뒤로가기로 닫히고 링크로 공유된다(T53 · #115).
   const selectMarker = useCallback(
@@ -108,13 +114,17 @@ export function HomeMap({ spot, markers }: Props) {
 
   if (spot !== null) {
     return (
-      <SpotMap
-        latitude={spot.latitude}
-        longitude={spot.longitude}
-        placeName={spot.placeName}
-        markers={markers}
-        onMarkerSelect={selectMarker}
-      />
+      <>
+        <IntroSplash isReady={isMapSettled} />
+        <SpotMap
+          latitude={spot.latitude}
+          longitude={spot.longitude}
+          placeName={spot.placeName}
+          markers={markers}
+          onMarkerSelect={selectMarker}
+          onSettled={markMapSettled}
+        />
+      </>
     );
   }
 
@@ -123,6 +133,7 @@ export function HomeMap({ spot, markers }: Props) {
   if (status === 'unavailable') {
     return (
       <div className={notice}>
+        <IntroSplash isReady />
         <p className={noticeText}>
           내 주변 스팟을 보려면 위치 권한이 필요합니다. 브라우저 설정에서 위치
           사용을 허용해 주세요.
@@ -144,20 +155,25 @@ export function HomeMap({ spot, markers }: Props) {
   if (current === null) {
     return (
       <div className={notice}>
+        <IntroSplash isReady={false} />
         <p className={noticeText}>현재 위치를 확인하고 있습니다</p>
       </div>
     );
   }
 
   return (
-    <SpotMap
-      latitude={current.latitude}
-      longitude={current.longitude}
-      placeName="내 주변"
-      hasMarker={false}
-      hasLocationDot
-      markers={markers}
-      onMarkerSelect={selectMarker}
-    />
+    <>
+      <IntroSplash isReady={isMapSettled} />
+      <SpotMap
+        latitude={current.latitude}
+        longitude={current.longitude}
+        placeName="내 주변"
+        hasMarker={false}
+        hasLocationDot
+        markers={markers}
+        onMarkerSelect={selectMarker}
+        onSettled={markMapSettled}
+      />
+    </>
   );
 }
