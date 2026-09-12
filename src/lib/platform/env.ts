@@ -48,23 +48,18 @@ export function tmapAppKey(): string | null {
   return readOptional('TMAP_APP_KEY');
 }
 
-/**
- * Gemini API 키 (D12 결정 · M7 요청 해석 · 순서 제안 · T35 · T38).
- * 없으면 동선 가이드가 문장을 해석할 수 없다(기능 비활성). 구조화된 요청을
- * 직접 주는 경로는 키 없이도 돈다.
- */
-export function geminiApiKey(): string | null {
-  return readOptional('GEMINI_API_KEY');
+/** OpenAI 호환 API 설정. 기본 주소·키·모델은 서버 환경 변수로만 지정한다. */
+export function openaiApiKey(): string | null {
+  return readOptional('OPENAI_API_KEY');
 }
 
-/**
- * Gemini 모델 이름. 코드에 박지 않는 이유는 모델이 주기적으로 은퇴하기
- * 때문이다 — 배포 설정만 바꿔 갈아탈 수 있어야 한다.
- */
-export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+/** `/chat/completions` 앞까지의 기본 주소. 제공자를 임의로 선택하지 않는다. */
+export function openaiBaseUrl(): string | null {
+  return readOptional('OPENAI_BASE_URL');
+}
 
-export function geminiModel(): string {
-  return readOptional('GEMINI_MODEL') ?? DEFAULT_GEMINI_MODEL;
+export function openaiModel(): string | null {
+  return readOptional('OPENAI_MODEL');
 }
 
 /**
@@ -83,7 +78,10 @@ export function supabaseUrl(): string | null {
 }
 
 export function supabaseSecretKey(): string | null {
-  return readOptional('SUPABASE_SECRET_KEY') ?? readOptional('SUPABASE_SERVICE_ROLE_KEY');
+  return (
+    readOptional('SUPABASE_SECRET_KEY') ??
+    readOptional('SUPABASE_SERVICE_ROLE_KEY')
+  );
 }
 
 /**
@@ -106,9 +104,8 @@ export function naverSearchClientSecret(): string | null {
 /**
  * Vercel AI Gateway 키.
  *
- * 게이트웨이를 지나면 제공자 교체가 모델 이름 문자열 하나로 끝난다. 아직 쓰는
- * 코드는 없다 — LLM 어댑터(`llm.ts`)는 D12 결정대로 Gemini를 직접 부른다.
- * 게이트웨이로 옮기기로 하면 그 파일 하나만 바뀐다.
+ * 이 변수는 현재 사용하지 않는다. 호환 호출에는 OPENAI_BASE_URL과
+ * OPENAI_API_KEY, OPENAI_MODEL을 설정한다.
  */
 export function aiGatewayApiKey(): string | null {
   return readOptional('AI_GATEWAY_API_KEY');

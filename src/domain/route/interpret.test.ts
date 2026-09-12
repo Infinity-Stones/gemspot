@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { failingGenerate, stubGenerate } from './fixtures.test-helper';
 import {
   QUESTION_AREA,
+  QUESTION_PAST_WINDOW,
   QUESTION_BOTH,
   QUESTION_WINDOW,
   buildUserPrompt,
@@ -62,6 +63,46 @@ describe('interpret (LLM 응답 고정)', () => {
     expect(r2).toMatchObject({ kind: 'incomplete', missing: ['window', 'area'], question: QUESTION_BOTH });
   });
 
+  it('오프셋 없는 시각을 돌려줘도 받아들인다 — 모델이 붙였다 말았다 한다(#144)', async () => {
+    const result = await interpret({
+      ...base,
+      sentence: '오늘 저녁 7시부터 9시까지 성수동에서 걷고 싶어',
+      generate: stubGenerate([
+        {
+          // 오프셋이 없다. 실제 SDK 응답에서 관측된 모양.
+          window: { start: '2026-09-12T19:00:00', end: '2026-09-12T21:00:00' },
+          areaName: '성수동',
+          preferredCategories: [],
+          requiredSpotNames: [],
+        },
+      ]),
+    });
+    expect(result.kind).toBe('complete');
+    if (result.kind === 'complete') {
+      expect(result.draft.window).toEqual({
+        start: '2026-09-12T19:00:00+09:00',
+        end: '2026-09-12T21:00:00+09:00',
+      });
+    }
+  });
+
+  it('이미 지난 시간대는 없는 것과 다른 문구로 되묻는다 — 같은 답을 반복하게 두지 않는다', async () => {
+    const result = await interpret({
+      ...base,
+      // NOW는 13:07이다. 오전 9~11시는 이미 지났다.
+      sentence: '오늘 9시부터 11시까지 성수동에서 걷고 싶어',
+      generate: stubGenerate([
+        {
+          window: { start: '2026-09-12T09:00:00+09:00', end: '2026-09-12T11:00:00+09:00' },
+          areaName: '성수동',
+          preferredCategories: [],
+          requiredSpotNames: [],
+        },
+      ]),
+    });
+    expect(result).toMatchObject({ kind: 'incomplete', missing: ['window'], question: QUESTION_PAST_WINDOW });
+  });
+
   it('LLM 실패는 failed로, 기본값으로 채우지 않는다', async () => {
     const result = await interpret({ ...base, generate: failingGenerate });
     expect(result.kind).toBe('failed');
@@ -75,7 +116,7 @@ describe('interpret (LLM 응답 고정)', () => {
 
 describe('parseDraft', () => {
   it('이미 지난 시간대는 "없다"로 본다 — 어제 동선을 주지 않는다', () => {
-    const draft = parseDraft(
+    const parsed = parseDraft(
       {
         window: { start: '2026-09-12T09:00:00+09:00', end: '2026-09-12T11:00:00+09:00' },
         areaName: '성수동',
@@ -84,11 +125,13 @@ describe('parseDraft', () => {
       },
       NOW,
     );
-    expect(draft?.window).toBeNull();
+    expect(parsed?.draft.window).toBeNull();
+    // "없음"이 아니라 "지났음"으로 갈린다 — 되묻는 문구가 달라야 한다(#144)
+    expect(parsed?.windowIssue).toBe('past');
   });
 
   it('"지금부터 두 시간" — 요청 시각 기준의 절대 시각이 통과한다', () => {
-    const draft = parseDraft(
+    const parsed = parseDraft(
       {
         window: { start: NOW, end: '2026-09-12T15:07:00+09:00' },
         areaName: '성수동',
@@ -97,20 +140,22 @@ describe('parseDraft', () => {
       },
       NOW,
     );
-    expect(draft?.window).toEqual({ start: NOW, end: '2026-09-12T15:07:00+09:00' });
+    expect(parsed?.draft.window).toEqual({ start: NOW, end: '2026-09-12T15:07:00+09:00' });
   });
 
   it('표에 없는 카테고리 코드는 버리고, 중복은 접는다', () => {
-    const draft = parseDraft(
+    const parsed = parseDraft(
       { window: null, areaName: null, preferredCategories: ['cafe', 'pub', 'cafe'], requiredSpotNames: ['카페 B', '카페 B'] },
       NOW,
     );
-    expect(draft?.preferredCategories).toEqual(['cafe']);
-    expect(draft?.requiredSpotNames).toEqual(['카페 B']);
+    expect(parsed?.draft.preferredCategories).toEqual(['cafe']);
+    expect(parsed?.draft.requiredSpotNames).toEqual(['카페 B']);
   });
 
   it('빈 문자열 동네는 없는 것', () => {
-    expect(parseDraft({ window: null, areaName: '  ', preferredCategories: [], requiredSpotNames: [] }, NOW)?.areaName).toBeNull();
+    expect(
+      parseDraft({ window: null, areaName: '  ', preferredCategories: [], requiredSpotNames: [] }, NOW)?.draft.areaName,
+    ).toBeNull();
   });
 });
 

@@ -126,7 +126,7 @@ describe('RouteComposer', () => {
     expect(seen[1]).toMatchObject({ sentence: '2시부터 4시', history: '성수동 걷고 싶어' });
   });
 
-  it('되묻기가 아닌 실패는 실패 자리에 종류가 드러난다 — 빈 화면으로 끝나지 않는다', async () => {
+  it('되묻기가 아닌 실패는 이유와 다음 수를 말한다 — 빈 화면으로 끝나지 않는다', async () => {
     const user = userEvent.setup();
     const failed: RoutePlanState = {
       status: 'done',
@@ -140,7 +140,7 @@ describe('RouteComposer', () => {
     await user.click(screen.getByRole('button', { name: '동선 만들기' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('area_not_found');
+      expect(screen.getByRole('alert')).toHaveTextContent('없는동');
     });
   });
 

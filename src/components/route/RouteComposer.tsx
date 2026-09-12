@@ -5,10 +5,11 @@ import { useActionState, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { RoutePlanState } from '@/app/route/planState';
 import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/route/planState';
-import type { PlanFailure, PlanSuccess } from '@/domain/route';
+import type { PlanFailure } from '@/domain/route';
+import { ItineraryList } from './ItineraryList';
+import { PlanFailureNotice } from './PlanFailureNotice';
 import type { SpotSource } from '@/domain/spot';
 import { UPLOAD_PATH } from '@/shared/routes';
-import { formatSeoulHourMinute } from '@/shared/time';
 
 /**
  * 한 문장을 받아 동선을 청하는 입력 — T44(#59).
@@ -129,17 +130,6 @@ const asked = css({
   _dark: { bg: 'slate.800', color: 'slate.100' },
 });
 
-const resultBox = css({
-  px: '4',
-  py: '4',
-  rounded: 'lg',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'slate.200',
-  textStyle: 'md',
-  _dark: { borderColor: 'slate.800' },
-});
-
 const link = css({ color: 'violet.700', textDecoration: 'underline', _dark: { color: 'violet.300' } });
 
 /** 되묻기 상태인가 — 이때만 이전 문장을 이어 붙인다. */
@@ -234,47 +224,19 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
         </p>
       )}
 
-      {state.status === 'done' && state.outcome.kind === 'ok' && <ItineraryPlaceholder success={state.outcome} />}
+      {state.status === 'done' && state.outcome.kind === 'ok' && (
+        <ItineraryList
+          itinerary={state.outcome.itinerary}
+          areaName={state.outcome.request.area.name}
+          unmatchedRequiredNames={state.outcome.unmatchedRequiredNames}
+        />
+      )}
 
       {state.status === 'done' && state.outcome.kind === 'failed' && clarification === null && (
-        <FailurePlaceholder failure={state.outcome.failure} />
+        <PlanFailureNotice failure={state.outcome.failure} />
       )}
     </div>
   );
 }
 
-/**
- * 여정 자리. T49(#73)가 이 컴포넌트를 목록 화면으로 바꾼다. 지금은 여정이
- * 나왔다는 사실과 뼈대 숫자만 보여 분기가 맞게 걸리는지 확인할 수 있게 한다.
- */
-function ItineraryPlaceholder({ success }: { readonly success: PlanSuccess }) {
-  const { itinerary } = success;
-  return (
-    <section className={resultBox} aria-label="제안된 동선">
-      <p>
-        {formatSeoulHourMinute(itinerary.start.departAt)} 출발 · 정거장 {String(itinerary.stops.length)}곳 ·{' '}
-        {formatSeoulHourMinute(itinerary.endAt)} 끝 · 도보 {String(itinerary.totalWalkMinutes)}분
-        {itinerary.ordering === 'rule' ? ' · 규칙 기반 순서' : ''}
-      </p>
-      <ol>
-        {itinerary.stops.map(stop => (
-          <li key={stop.candidate.id}>
-            {formatSeoulHourMinute(stop.arriveAt)} {stop.candidate.name}
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
 
-/**
- * 실패 자리. T47(#62)이 kind별 문구와 다음 행동으로 바꾼다. 빈 화면으로
- * 끝나지 않게 종류만 우선 드러낸다.
- */
-function FailurePlaceholder({ failure }: { readonly failure: PlanFailure }) {
-  return (
-    <p className={notice} role="alert">
-      동선을 제안하지 못했어요 ({failure.kind}).
-    </p>
-  );
-}

@@ -11,6 +11,8 @@ import { spotResultPath } from '@/shared/routes';
 import type { SpotCategory } from '@/shared/spot';
 import { isSpotCategory } from '@/shared/spot';
 import type { FoundPlace } from '@/domain/spot';
+import type { PinIntent } from './intent';
+import { messageForMissing, missingFieldFor, resolveIntent } from './intent';
 import type { PinDraft, PinFormState } from './pinState';
 
 /**
@@ -28,17 +30,11 @@ export async function pinSpotAction(previous: PinFormState, formData: FormData):
   // 그 목록을 들고 있으므로 번호로 집는다.
   const pick = readText(formData, 'pick');
   const picked = readPickedPlace(previous, formData);
-  const rawIntent = readText(formData, 'intent');
-  const intent: 'search_place' | 'search' | 'locate' | 'save' =
-    picked !== null || pick.length > 0
-      ? 'locate'
-      : rawIntent === 'save'
-        ? 'save'
-        : rawIntent === 'locate'
-          ? 'locate'
-          : rawIntent === 'search_place'
-            ? 'search_place'
-            : 'search';
+  const intent: PinIntent = resolveIntent({
+    rawIntent: readText(formData, 'intent'),
+    hasPickedAddress: pick.length > 0,
+    hasPickedPlace: picked !== null,
+  });
   const typed = readDraft(formData);
   const draft: PinDraft =
     picked !== null
@@ -47,11 +43,11 @@ export async function pinSpotAction(previous: PinFormState, formData: FormData):
         ? { ...typed, address: pick }
         : typed;
 
-  if (draft.name.length === 0) {
-    return { status: 'invalid', field: 'name', message: '장소 이름을 적어 주세요.', draft };
-  }
-  if (draft.address.length === 0) {
-    return { status: 'invalid', field: 'address', message: '주소를 적어 주세요. 도로명 주소면 가장 정확합니다.', draft };
+  // 의도마다 필요한 칸이 다르다. 이름으로 찾는데 주소를 요구하면 그 길이
+  // 통째로 막힌다 — 규칙과 근거는 intent.ts에 있다.
+  const missing = missingFieldFor(intent, draft);
+  if (missing !== null) {
+    return { status: 'invalid', field: missing, message: messageForMissing(missing), draft };
   }
 
   if (intent === 'search_place') {

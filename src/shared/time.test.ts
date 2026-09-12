@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   addSeconds,
+  normalizeSeoulIso,
   diffSeconds,
   formatSeoulHourMinute,
   formatSeoulIso,
@@ -46,5 +47,24 @@ describe('minutesOfSeoulDay · formatSeoulHourMinute', () => {
     // UTC 자정은 서울 09:00
     expect(minutesOfSeoulDay('2026-09-12T00:00:00Z')).toBe(9 * 60);
     expect(formatSeoulHourMinute('2026-09-12T05:08:00Z')).toBe('14:08');
+  });
+});
+
+describe('normalizeSeoulIso', () => {
+  it('오프셋이 있으면 그대로 둔다', () => {
+    expect(normalizeSeoulIso('2026-09-12T19:00:00+09:00')).toBe('2026-09-12T19:00:00+09:00');
+    expect(normalizeSeoulIso('2026-09-12T10:00:00Z')).toBe('2026-09-12T10:00:00Z');
+  });
+
+  it('오프셋이 없는 벽시계 시각에는 서울 오프셋을 붙인다 — LLM이 이렇게 준다(#144)', () => {
+    expect(normalizeSeoulIso('2026-09-12T19:00:00')).toBe('2026-09-12T19:00:00+09:00');
+    expect(normalizeSeoulIso('2026-09-12T19:00')).toBe('2026-09-12T19:00:00+09:00');
+    expect(normalizeSeoulIso('  2026-09-12T19:00  ')).toBe('2026-09-12T19:00:00+09:00');
+  });
+
+  it('시각이 아닌 문자열은 null', () => {
+    expect(normalizeSeoulIso('오늘 저녁 7시')).toBeNull();
+    expect(normalizeSeoulIso('2026-09-12')).toBeNull();
+    expect(normalizeSeoulIso('2026-13-40T99:99')).toBeNull();
   });
 });
