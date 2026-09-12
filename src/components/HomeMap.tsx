@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import type { MapMarker } from './SpotMap';
 import { SpotMap } from './SpotMap';
 
 interface Coordinates {
@@ -12,6 +13,8 @@ interface Coordinates {
 interface Props {
   /** 결과로 열린 스팟. 있으면 위치 권한과 무관하게 그 좌표를 본다. */
   spot: (Coordinates & { placeName: string }) | null;
+  /** 저장된 스팟들. 지도가 보이는 영역에 드는 것만 그린다. */
+  markers: readonly MapMarker[];
 }
 
 type LocationStatus = 'asking' | 'ready' | 'unavailable';
@@ -51,7 +54,7 @@ const retryButton = css({
   _dark: { borderColor: 'slate.700', bg: 'slate.900' },
 });
 
-export function HomeMap({ spot }: Props) {
+export function HomeMap({ spot, markers }: Props) {
   const [current, setCurrent] = useState<Coordinates | null>(null);
   const [status, setStatus] = useState<LocationStatus>('asking');
   const [attempt, setAttempt] = useState(0);
@@ -99,6 +102,7 @@ export function HomeMap({ spot }: Props) {
         latitude={spot.latitude}
         longitude={spot.longitude}
         placeName={spot.placeName}
+        markers={markers}
       />
     );
   }
@@ -140,6 +144,7 @@ export function HomeMap({ spot }: Props) {
       longitude={current.longitude}
       placeName="내 주변"
       hasMarker={false}
+      markers={markers}
     />
   );
 }

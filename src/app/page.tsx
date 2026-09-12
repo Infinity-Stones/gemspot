@@ -2,7 +2,7 @@ import { css } from 'styled-system/css';
 import { AppHeader } from '@/components/AppHeader';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
-import { findSpot } from '@/domain/spot';
+import { DEMO_SPOTS, findSpot } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 
 /**
@@ -17,6 +17,15 @@ import { HOME_PATH } from '@/shared/routes';
  * 파라미터가 그 둘을 함께 만족하는 유일한 자리다 — 닫기는 `/`로 돌아가는
  * 링크 하나로 끝난다(T28).
  */
+// 저장소 조회(T29 · #41)가 붙기 전까지 시연용 스팟을 그대로 쓴다. 지도는
+// 도메인 모양을 모르므로 좌표와 이름만 넘긴다.
+const MARKERS = DEMO_SPOTS.map(spot => ({
+  id: spot.id,
+  name: spot.name,
+  latitude: spot.coordinates.latitude,
+  longitude: spot.coordinates.longitude,
+}));
+
 const SAMPLE_SPOT = {
   placeName: '피롤츠 커피하우스',
   roadAddress: '서울 용산구 한강대로 56-1, 2층',
@@ -65,7 +74,7 @@ export default async function HomePage({ searchParams }: Props) {
   return (
     <main className={screen}>
       <AppHeader />
-      <HomeMap spot={spot} />
+      <HomeMap spot={spot} markers={MARKERS} />
       {spot !== null && (
         <SpotDetailPanel
           placeName={spot.placeName}
