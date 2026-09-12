@@ -120,10 +120,9 @@ vitest 하나로 돌리되 **환경**만 둘로 나눈다.
 
 ## 환경 변수
 
-`.env.example` 참고. `GEMSPOT_API_BASE_URL`을 비워 두면 도메인 repository가
-번들된 시드(`src/domain/example/seed.ts`)로 떨어지고, 화면에 `seed 데이터`
-배지가 뜬다 — 조용히 폴백해서 백엔드가 죽은 것을 아무도 모르는 상태를 만들지
-않기 위한 것이다.
+`.env.example` 참고. `src/lib/platform/env.ts`가 `process.env`를 읽는 **유일한
+곳**이다 — 소스 전체에 흩뿌려진 `process.env.X`는 배포 직전에야 "이 변수도
+있었네"로 발견된다.
 
 ## 에이전트
 
