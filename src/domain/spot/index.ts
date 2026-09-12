@@ -5,10 +5,22 @@
 
 export { DEMO_SPOTS } from './demoSpots';
 export { toRouteCandidate } from './projection';
-export { findSpot, insertSpot, loadSpots } from './repository';
-export type { InsertSpotResult, LoadSpotsResult, NewSpot, SpotSource } from './repository';
+export { deleteSpot, findSpot, insertSpot, loadSpots } from './repository';
+export type {
+  DeleteSpotResult,
+  InsertSpotResult,
+  LoadSpotsResult,
+  NewSpot,
+  SpotSource,
+} from './repository';
 export { locateAddress, saveSpot, searchAddress } from './save';
-export type { LocateAddressResult, SaveSpotFailure, SaveSpotInput, SaveSpotOutcome, SearchAddressResult } from './save';
+export type {
+  LocateAddressResult,
+  SaveSpotFailure,
+  SaveSpotInput,
+  SaveSpotOutcome,
+  SearchAddressResult,
+} from './save';
 export { prepareGeocodedLocations } from './geocoding';
 export { searchPlaces, toFoundPlace } from './placeSearch';
 export type { FoundPlace, SearchPlacesResult } from './placeSearch';
