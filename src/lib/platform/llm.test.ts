@@ -18,6 +18,19 @@ describe('createGenerateJson', () => {
     );
   });
 
+  it('기본 30초를 기다리고 명시한 제한 시간은 우선한다', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    const caller: JsonCaller = () => Promise.resolve('{}');
+    const generate = createGenerateJson({ apiKey: 'k', caller });
+
+    await generate(input);
+    await generate({ ...input, timeoutMs: 1_234 });
+
+    expect(timeout).toHaveBeenNthCalledWith(1, 30_000);
+    expect(timeout).toHaveBeenNthCalledWith(2, 1_234);
+    timeout.mockRestore();
+  });
+
   it('키가 없으면 API를 만들지도 부르지도 않고 no_api_key', async () => {
     const generate = createGenerateJson({ apiKey: null });
     await expect(generate(input)).resolves.toEqual({

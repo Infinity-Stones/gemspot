@@ -1,6 +1,10 @@
 import { Buffer } from 'node:buffer';
 import { openaiApiKey, openaiBaseUrl, openaiModel } from './env';
-import { callChatCompletion, completionFailure } from './openaiCompatible';
+import {
+  callChatCompletion,
+  completionFailure,
+  DEFAULT_AI_TIMEOUT_MS,
+} from './openaiCompatible';
 import type { HttpFailure } from './httpClient';
 import { httpFailure } from './httpClient';
 
@@ -54,9 +58,6 @@ export type ReadSpotsResult =
 export type ReadSpotsFromImage = (
   input: ReadSpotsInput,
 ) => Promise<ReadSpotsResult>;
-
-/** 이미지 한 장을 읽는 데 몇 초가 걸린다. 문장 생성(15초)보다 넉넉하게 둔다. */
-const DEFAULT_TIMEOUT_MS = 20_000;
 
 /**
  * 응답 모양을 강제하는 스키마.
@@ -201,7 +202,7 @@ export function createReadSpotsFromImage(
   const caller =
     options.caller ?? (apiKey === null ? null : apiCaller(apiKey, baseUrl));
 
-  return async ({ bytes, mimeType, timeoutMs = DEFAULT_TIMEOUT_MS }) => {
+  return async ({ bytes, mimeType, timeoutMs = DEFAULT_AI_TIMEOUT_MS }) => {
     if (caller === null) return { ok: false, error: { kind: 'no_api_key' } };
 
     let text: string | undefined;

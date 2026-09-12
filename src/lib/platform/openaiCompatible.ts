@@ -1,6 +1,9 @@
 import type { HttpFailure } from './httpClient';
 import { httpFailure } from './httpClient';
 
+/** 텍스트·이미지 구조화 응답을 기다리는 공통 기본 상한. */
+export const DEFAULT_AI_TIMEOUT_MS = 30_000;
+
 /** 전송 오류와 응답 형식 오류를 기존 도메인의 실패 계약에 맞춰 전달한다. */
 class CompletionError extends Error {
   readonly failure: HttpFailure;
