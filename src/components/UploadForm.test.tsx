@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -122,6 +123,25 @@ describe('UploadForm', () => {
     await user.upload(picker(), [screenshot('IMG_0001.png', 2)]);
 
     expect(screen.getByText('2장 선택됨')).toBeInTheDocument();
+  });
+
+  it('StrictMode에서도 장마다 URL을 한 번만 만든다', async () => {
+    const user = userEvent.setup();
+    // `reactStrictMode: true`가 켜져 있어 개발 중 state 업데이터가 두 번
+    // 호출된다. 업데이터 안에서 createObjectURL을 부르면 장마다 URL이 하나씩
+    // 새고, 그 누수는 화면에 아무 증상도 남기지 않는다.
+    render(
+      <StrictMode>
+        <UploadForm />
+      </StrictMode>,
+    );
+
+    await user.upload(picker(), [
+      screenshot('pirouettes.png'),
+      screenshot('fabri.png'),
+    ]);
+
+    expect(create).toHaveBeenCalledTimes(2);
   });
 
   it('화면을 떠날 때 남은 URL을 전부 해제한다', async () => {

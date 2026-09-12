@@ -188,32 +188,34 @@ export function UploadForm() {
     [],
   );
 
+  // URL을 만들고 해제하는 일은 **업데이터 밖에서** 한다. `reactStrictMode`가
+  // 켜져 있어 개발 중 state 업데이터가 두 번 호출되는데(불순한 업데이터를
+  // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 장마다
+  // URL이 하나씩 새고 revokeObjectURL은 두 번 불린다. 업데이터는 앞의 배열에서
+  // 뒤의 배열을 계산하는 일만 한다.
   function add(picked: readonly File[]) {
-    setImages(previous => {
-      const seen = new Set(previous.map(image => image.fingerprint));
-      const added: PickedImage[] = [];
+    const seen = new Set(images.map(image => image.fingerprint));
+    const added: PickedImage[] = [];
 
-      for (const file of picked) {
-        const fingerprint = fingerprintOf(file);
-        if (seen.has(fingerprint)) continue;
-        seen.add(fingerprint);
-        added.push({
-          fingerprint,
-          file,
-          previewUrl: URL.createObjectURL(file),
-        });
-      }
+    for (const file of picked) {
+      const fingerprint = fingerprintOf(file);
+      if (seen.has(fingerprint)) continue;
+      seen.add(fingerprint);
+      added.push({ fingerprint, file, previewUrl: URL.createObjectURL(file) });
+    }
 
-      return [...previous, ...added];
-    });
+    if (added.length === 0) return;
+    setImages(previous => [...previous, ...added]);
   }
 
   function remove(fingerprint: string) {
-    setImages(previous => {
-      const going = previous.find(image => image.fingerprint === fingerprint);
-      if (going !== undefined) URL.revokeObjectURL(going.previewUrl);
-      return previous.filter(image => image.fingerprint !== fingerprint);
-    });
+    const going = images.find(image => image.fingerprint === fingerprint);
+    if (going === undefined) return;
+
+    URL.revokeObjectURL(going.previewUrl);
+    setImages(previous =>
+      previous.filter(image => image.fingerprint !== fingerprint),
+    );
   }
 
   return (
