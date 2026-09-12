@@ -27,6 +27,25 @@ const NO_ESCAPED_HEX = {
 } as const;
 
 /**
+ * 도메인이 열 수 있는 것 — shared와 platform뿐이다.
+ *
+ * 세 도메인이 같은 허용을 공유하는 것은 우연이 아니라 **한 결정**이다("도메인은
+ * 순수 규칙 + 어댑터 조립이다"). 그래서 세 벌 복사하지 않고 여기 한 번 적는다 —
+ * 복사해 두면 한쪽만 넓어져도 아무도 눈치채지 못한다. 어느 도메인이 다른 허용을
+ * 갖게 되면 그 도메인의 policy만 떼어내 인라인으로 적고, 그때 근거를 함께 적는다.
+ *
+ * 외부 패키지는 없다. 도메인이 특정 SDK 모양에 묶이면 그게 곧 platform 레이어를
+ * 우회한 것이다 — SDK는 platform의 어댑터 안에서만 산다.
+ *
+ * `from`을 도메인별로 나눠 적는 것과 달리, 여기 `to` 목록에 도메인이 없으므로
+ * 도메인끼리는 서로를 열지 못한다. 도메인 간 의존이 필요해 보이면 조립을 위
+ * 레이어(유스케이스)로 올리는 것이 정답이고, 여기 이름을 더하는 것이 아니다.
+ */
+const DOMAIN_OPENS = [
+  { to: { element: { types: { anyOf: ['shared', 'platform'] } } } },
+];
+
+/**
  * ESLint 10 구성 — `eslint-config-next` 프리셋을 쓰지 않고 플러그인을 직접 조립한다.
  *
  * 프리셋이 끌고 오는 eslint-plugin-react@7.x가 ESLint 10에서 제거된
@@ -360,6 +379,11 @@ export default defineConfig([
         { type: 'design-system', pattern: 'styled-system' },
         { type: 'shared', pattern: 'src/shared' },
         { type: 'platform', pattern: 'src/lib/platform' },
+        // 도메인은 하나씩 나열한다. `src/domain/*` 한 패턴으로 뭉치면 셋이 같은
+        // element type이 되어 도메인끼리 자유롭게 import된다 — 격리가 사라진다.
+        { type: 'extraction', pattern: 'src/domain/extraction' },
+        { type: 'spot', pattern: 'src/domain/spot' },
+        { type: 'route', pattern: 'src/domain/route' },
         // 레이어 부모 폴더 직속(src/lib·src/domain 바로 아래)에 떨어진 파일의
         // 격리 element. 어떤 policy에도 없으므로, 이 자리에 파일이 생기면
         // 그것이 무언가를 import하거나 import되는 순간 에러가 난다 —
@@ -419,6 +443,10 @@ export default defineConfig([
                 { to: { module: { origin: 'external' } } },
               ],
             },
+            // 도메인 셋. 허용은 DOMAIN_OPENS 한 곳에 있다(위 주석 참조).
+            { from: { element: { type: 'extraction' } }, allow: DOMAIN_OPENS },
+            { from: { element: { type: 'spot' } }, allow: DOMAIN_OPENS },
+            { from: { element: { type: 'route' } }, allow: DOMAIN_OPENS },
             {
               // app은 platform을 직접 만지지 않는다 — 데이터 접근은 전부 도메인
               // 배럴 경유다. node 코어도 열지 않는다(클라이언트 번들 누수 예방).
@@ -428,7 +456,13 @@ export default defineConfig([
                   to: {
                     element: {
                       types: {
-                        anyOf: ['shared', 'design-system'],
+                        anyOf: [
+                          'shared',
+                          'extraction',
+                          'spot',
+                          'route',
+                          'design-system',
+                        ],
                       },
                     },
                   },
