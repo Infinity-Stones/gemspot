@@ -3,6 +3,7 @@
  * 모듈 최상위 부수효과를 두지 않는다(lint가 잡는다).
  */
 
+export { DEMO_SPOTS } from './demoSpots';
 export { toRouteCandidate } from './projection';
 export { findSpot, insertSpot, loadSpots } from './repository';
 export type { InsertSpotResult, LoadSpotsResult, NewSpot, SpotSource } from './repository';
