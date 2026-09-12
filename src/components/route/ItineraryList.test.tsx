@@ -10,17 +10,17 @@ const BASE: Itinerary = {
   window: { start: '2026-09-12T14:00:00+09:00', end: '2026-09-12T16:00:00+09:00' },
   stops: [
     {
-      candidate: { id: 'a', name: '편집숍 A', category: 'shop', coord: START },
+      candidate: { id: 'a', name: '편집숍 A', category: 'other', coord: START },
       arriveAt: '2026-09-12T14:08:00+09:00',
-      departAt: '2026-09-12T14:28:00+09:00',
-      dwellMinutes: 20,
+      departAt: '2026-09-12T14:38:00+09:00',
+      dwellMinutes: 30,
       required: false,
       reason: '출발점에서 가장 가깝다',
     },
     {
       candidate: { id: 'b', name: '카페 B', category: 'cafe', coord: START },
-      arriveAt: '2026-09-12T14:34:00+09:00',
-      departAt: '2026-09-12T15:14:00+09:00',
+      arriveAt: '2026-09-12T14:44:00+09:00',
+      departAt: '2026-09-12T15:24:00+09:00',
       dwellMinutes: 40,
       required: true,
       reason: null,
@@ -30,13 +30,13 @@ const BASE: Itinerary = {
     { fromId: 'start', toId: 'a', distanceM: 600, durationS: 480, source: 'tmap', path: [] },
     { fromId: 'a', toId: 'b', distanceM: 500, durationS: 360, source: 'estimate', path: [] },
   ],
-  endAt: '2026-09-12T15:14:00+09:00',
+  endAt: '2026-09-12T15:24:00+09:00',
   overBySeconds: 0,
   totalWalkMinutes: 14,
   totalDistanceM: 1100,
   hasEstimatedLegs: true,
   dropped: [
-    { candidate: { id: 'd', name: '밥집 D', category: 'restaurant', coord: START }, reason: 'outside_window' },
+    { candidate: { id: 'd', name: '밥집 D', category: 'meal', coord: START }, reason: 'outside_window' },
   ],
   ordering: 'llm',
 };
@@ -49,8 +49,8 @@ describe('ItineraryList', () => {
     expect(screen.getByText(/총 도보 14분 · 1.1 km/)).toBeInTheDocument();
     expect(screen.getByText('14:00 출발')).toBeInTheDocument();
     expect(screen.getByText(/14:08 편집숍 A/)).toBeInTheDocument();
-    expect(screen.getByText(/체류 20분/)).toBeInTheDocument();
-    expect(screen.getByText('15:14 끝')).toBeInTheDocument();
+    expect(screen.getByText(/체류 30분/)).toBeInTheDocument();
+    expect(screen.getByText('15:24 끝')).toBeInTheDocument();
   });
 
   it('추정 구간은 (추정)으로 구분하고 합계에도 그 사실을 적는다', () => {
