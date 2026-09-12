@@ -12,7 +12,7 @@ import {
 import {
   ACCEPTED_IMAGE_TYPES,
   isRetryable,
-  screenUploads,
+  screenUpload,
 } from '@/domain/extraction';
 import { SPOT_NEW_PATH, UPLOAD_RESULTS_PATH } from '@/shared/routes';
 import type {
@@ -276,7 +276,7 @@ const fallbackLink = css({
  * 보이는데 고르면 막히는 파일이 있으면 사용자는 앱이 고장난 줄 안다.
  *
  * 다만 이 속성은 **힌트일 뿐이고 강제가 아니다.** 사용자가 "모든 파일"로 바꿔
- * 고를 수 있으므로 받은 뒤에 `screenUploads`가 다시 검사한다.
+ * 고를 수 있으므로 받은 뒤에 `screenUpload`가 다시 검사한다.
  */
 const ACCEPT = ACCEPTED_IMAGE_TYPES.join(',');
 
@@ -301,8 +301,6 @@ function explain(rejection: UploadRejection): string {
       return `읽을 수 없는 형식입니다. ${TYPE_NAMES}만 올릴 수 있습니다.`;
     case 'size':
       return `${megabytes(rejection.size)}MB로 장당 상한 ${megabytes(rejection.limit)}MB를 넘습니다.`;
-    case 'count':
-      return `한 번에 ${String(rejection.limit)}장까지 올릴 수 있습니다.`;
   }
 }
 
@@ -357,7 +355,7 @@ export function UploadForm({ action }: Props) {
   const [state, submit, pending] = useActionState(action, IDLE_EXTRACT_STATE);
   const inputRef = useRef<HTMLInputElement>(null);
   const [image, setImage] = useState<PickedImage | null>(null);
-  const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
+  const [rejection, setRejection] = useState<UploadRejection | null>(null);
 
   /**
    * 경고 상자가 재시도 버튼을 들고 있는가.
@@ -396,17 +394,17 @@ export function UploadForm({ action }: Props) {
   // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 URL이
   // 하나씩 새고 revokeObjectURL은 두 번 불린다.
   function choose(picked: readonly File[]) {
-    // `File`이 `UploadCandidate`(이름·형식·크기)를 만족하므로 그대로 넘긴다.
-    // 이미 한 장을 들고 있어도 `alreadyAccepted`는 0이다 — 새로 고른 장이 앞의
-    // 장을 갈아 끼우기 때문이고, 1을 넘기면 갈아 끼우는 일 자체가 상한에 걸린다.
-    const { accepted, rejected } = screenUploads(picked, 0);
+    // 드래그 앤 드롭이나 공유하기로 여러 장이 들어와도 **첫 장만** 본다.
+    // 멀티 업로드를 지원하지 않으므로 나머지는 볼 이유가 없다.
+    const [file] = picked;
+    if (file === undefined) return;
 
+    // `File`이 `UploadCandidate`(이름·형식·크기)를 만족하므로 그대로 넘긴다.
     // 이번 선택의 결과만 보여준다. 앞선 선택의 경고를 쌓아 두면 방금 고친 것도
     // 여전히 문제인 것처럼 남는다.
-    setRejections(rejected);
-
-    const [file] = accepted;
-    if (file === undefined) return;
+    const rejected = screenUpload(file);
+    setRejection(rejected);
+    if (rejected !== null) return;
 
     const next = {
       fingerprint: fingerprintOf(file),
@@ -509,19 +507,15 @@ export function UploadForm({ action }: Props) {
         스크린샷 고르기
       </button>
 
-      {rejections.length > 0 && (
+      {rejection !== null && (
         // role="alert"로 두는 이유: 사용자가 방금 한 행동의 결과라 그 자리에서
-        // 읽혀야 한다. 조용히 목록에서 빠지면 무엇이 왜 없는지 알 수 없다.
+        // 읽혀야 한다. 조용히 빠지면 무엇이 왜 없는지 알 수 없다.
         <div className={warning} role="alert">
-          <p className={warningTitle}>
-            {rejections.length}장을 올릴 수 없습니다
-          </p>
+          <p className={warningTitle}>올릴 수 없는 스크린샷입니다</p>
           <ul className={warningList}>
-            {rejections.map((rejection, index) => (
-              <li key={`${rejection.kind}:${rejection.name}:${String(index)}`}>
-                {rejection.name} — {explain(rejection)}
-              </li>
-            ))}
+            <li>
+              {rejection.name} — {explain(rejection)}
+            </li>
           </ul>
         </div>
       )}
