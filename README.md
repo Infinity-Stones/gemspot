@@ -48,6 +48,18 @@ src/lib/platform                바깥 세계 어댑터(HTTP·환경 변수)
 src/shared                      순수 계약. 아무것도 import하지 않는다
 ```
 
+등록된 도메인은 셋이다.
+
+| 도메인              | 가진 것                                          |
+| ------------------- | ------------------------------------------------ |
+| `domain/extraction` | 이미지에서 가게명·주소 후보를 뽑는다 (STEP 2)    |
+| `domain/spot`       | 주소를 좌표로 바꿔 저장하고 조회한다 (STEP 4·M6) |
+| `domain/route`      | 저장된 스팟으로 동선을 짠다 (M7)                 |
+
+셋은 서로를 모른다. 도메인 둘이 함께 필요한 일(동선을 짜려면 스팟을 읽어야
+한다)은 조립을 **위 레이어로 올려서** 푼다 — 유스케이스가 spot 배럴에서 읽어
+route에 넘긴다. 도메인끼리 여는 것이 정답이었던 적은 아직 없다.
+
 ### 이 배치의 핵심
 
 **app이 platform을 직접 열 수 없다.** 데이터 접근이 전부 도메인을 지나므로,
@@ -79,7 +91,10 @@ src/shared                      순수 계약. 아무것도 import하지 않는�
 1. `src/domain/<이름>/` 을 만들고 `index.ts` 배럴을 둔다.
 2. `eslint.config.mts`의 `boundaries/elements`에 한 줄
    (`{ type: '<이름>', pattern: 'src/domain/<이름>' }`) — **`layer-root`보다 앞에**.
-3. 같은 파일 `policies`에 한 줄 (무엇을 열 수 있는지).
+3. 같은 파일 `policies`에 한 줄
+   (`{ from: { element: { type: '<이름>' } }, allow: DOMAIN_OPENS }`).
+   허용이 셋과 달라야 할 때만 `DOMAIN_OPENS` 대신 인라인으로 적고, 근거를
+   주석에 남긴다.
 4. app 레이어의 `allow`에 그 type을 추가한다.
 
 ## 스타일
