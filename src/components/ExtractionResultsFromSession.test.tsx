@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CANDIDATES_SESSION_KEY } from '@/app/upload/extractState';
 import { ExtractionResultsFromSession } from './ExtractionResultsFromSession';
@@ -8,7 +9,8 @@ beforeEach(() => {
 });
 
 describe('ExtractionResultsFromSession', () => {
-  it('업로드 이미지 id와 후보를 결합해 실패 앨범에 넘긴다', () => {
+  it('업로드 이미지 id와 후보를 결합해 실패 앨범에 넘긴다', async () => {
+    const user = userEvent.setup();
     sessionStorage.setItem(
       CANDIDATES_SESSION_KEY,
       JSON.stringify({
@@ -29,6 +31,7 @@ describe('ExtractionResultsFromSession', () => {
     );
 
     render(<ExtractionResultsFromSession />);
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(screen.getByRole('img', { name: 'egg.png' })).toHaveAttribute(
       'src',
