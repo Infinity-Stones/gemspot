@@ -157,6 +157,12 @@ export default defineConfig([
     files: ['src/components/UploadForm.tsx'],
     rules: { '@next/next/no-img-element': 'off' },
   },
+  {
+    // 업로드 직후의 실패 앨범도 브라우저 안에서만 유효한 blob URL을 표시한다.
+    // UploadForm과 같은 이유로 next/image가 주소나 크기를 미리 알 수 없다.
+    files: ['src/components/ExtractionResults.tsx'],
+    rules: { '@next/next/no-img-element': 'off' },
+  },
 
   reactHooks.configs.flat['recommended-latest'],
 
