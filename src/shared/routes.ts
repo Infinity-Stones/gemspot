@@ -21,6 +21,15 @@ export const HOME_PATH = '/';
 export const UPLOAD_PATH = '/upload';
 
 /**
+ * 추출 결과를 검토하는 독립 페이지. 메인 플로우의 STEP 3이다.
+ *
+ * 여러 건을 확인하고 실패 건의 주소까지 고치는 긴 작업이라 업로드 화면의
+ * 모달이나 바텀시트에 얹지 않는다(D03). T12가 추출 결과를 넘기는 연결은 이
+ * 경로를 목적지로 삼는다.
+ */
+export const UPLOAD_RESULTS_PATH = '/upload/results';
+
+/**
  * URL 세그먼트로 안전한 형태인지 검사한다.
  *
  * slug를 그대로 경로에 붙이면 `..`이나 `/`가 섞였을 때 다른 경로로 튄다.
