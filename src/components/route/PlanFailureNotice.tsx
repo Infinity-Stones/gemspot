@@ -2,6 +2,7 @@ import { css } from 'styled-system/css';
 import type { PlanFailure } from '@/domain/route';
 import { labelOf } from '@/shared/spotCategory';
 import { formatSeoulHourMinute } from '@/shared/time';
+import { DROP_REASON_TEXT } from './routePresentation';
 
 /**
  * 제안하지 않는 경우 — T47(#62).
@@ -57,9 +58,7 @@ export function PlanFailureNotice({ failure }: Props) {
             {failure.dropped.map(item => (
               <li key={`${item.candidate.id}-${item.reason}`}>
                 {item.candidate.name} ({labelOf(item.candidate.category)}) —{' '}
-                {item.reason === 'outside_window'
-                  ? '이 시간대엔 문을 열지 않아요'
-                  : '그 동네에서 멀어요'}
+                {DROP_REASON_TEXT[item.reason]}
               </li>
             ))}
           </ul>

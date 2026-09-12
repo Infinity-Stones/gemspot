@@ -1,7 +1,9 @@
 import { css } from 'styled-system/css';
-import type { DroppedSpot, Itinerary } from '@/domain/route';
+import type { Itinerary } from '@/domain/route';
 import { labelOf } from '@/shared/spotCategory';
 import { formatSeoulHourMinute } from '@/shared/time';
+import { DROP_REASON_TEXT } from './routePresentation';
+import { actionButton, row } from './routeStyles';
 
 /**
  * 제안된 여정 — T49(#73).
@@ -106,13 +108,6 @@ const droppedList = css({
   m: '0',
 });
 
-const DROP_REASON_TEXT: Readonly<Record<DroppedSpot['reason'], string>> = {
-  outside_window: '이 시간대엔 문을 열지 않아요',
-  outside_area: '그 동네에서 멀어요',
-  over_time: '시간이 부족해 뺐어요',
-  user: '직접 뺐어요',
-};
-
 function kilometers(meters: number): string {
   return (meters / 1000).toFixed(1);
 }
@@ -122,12 +117,19 @@ interface Props {
   readonly areaName: string;
   /** 문장에서 "꼭 갈 곳"으로 나왔지만 저장된 스팟과 짝이 안 맞은 이름. */
   readonly unmatchedRequiredNames?: readonly string[];
+  readonly pending?: boolean;
+  readonly onEdit?: (
+    intent: 'remove' | 'up' | 'down' | 'restore',
+    spotId: string,
+  ) => void;
 }
 
 export function ItineraryList({
   itinerary,
   areaName,
   unmatchedRequiredNames = [],
+  pending = false,
+  onEdit,
 }: Props) {
   const { stops, legs, dropped } = itinerary;
   const overMinutes = Math.ceil(itinerary.overBySeconds / 60);
@@ -142,7 +144,16 @@ export function ItineraryList({
         <p className={muted}>
           총 도보 {String(itinerary.totalWalkMinutes)}분 ·{' '}
           {kilometers(itinerary.totalDistanceM)} km
-          {itinerary.hasEstimatedLegs ? ' · 일부 구간 추정' : ''}
+          {itinerary.hasEstimatedLegs
+            ? legs.every(leg => leg.source === 'estimate')
+              ? ' · 전체 구간 추정'
+              : ' · 일부 구간 추정'
+            : ''}
+        </p>
+        <p className={muted}>
+          장소에서 머무는 시간은 총{' '}
+          {String(stops.reduce((sum, stop) => sum + stop.dwellMinutes, 0))}
+          분이에요. 실제 영업시간은 방문 전에 확인해 주세요.
         </p>
       </header>
 
@@ -154,8 +165,8 @@ export function ItineraryList({
 
       {itinerary.overBySeconds > 0 && (
         <p className={warning} role="status">
-          꼭 갈 곳만 남겨도 종료 시각을 {String(overMinutes)}분 넘어요. 한 곳을
-          빼거나 시간을 늘려 주세요.
+          예정한 종료 시각보다 {String(overMinutes)}분 넘어요. 한 곳을 빼거나
+          시간을 늘려 주세요.
         </p>
       )}
 
@@ -197,6 +208,42 @@ export function ItineraryList({
                   {stop.reason !== null && (
                     <p className={muted}>{stop.reason}</p>
                   )}
+                  {onEdit !== undefined && (
+                    <div className={row}>
+                      <button
+                        type="button"
+                        className={actionButton}
+                        aria-label={`${stop.candidate.name} 위로`}
+                        disabled={pending || index === 0}
+                        onClick={() => onEdit('up', stop.candidate.id)}
+                      >
+                        위로
+                      </button>
+                      <button
+                        type="button"
+                        className={actionButton}
+                        aria-label={`${stop.candidate.name} 아래로`}
+                        disabled={pending || index === stops.length - 1}
+                        onClick={() => onEdit('down', stop.candidate.id)}
+                      >
+                        아래로
+                      </button>
+                      <button
+                        type="button"
+                        className={actionButton}
+                        aria-label={`${stop.candidate.name} 빼기`}
+                        disabled={pending || stops.length === 1}
+                        title={
+                          stops.length === 1
+                            ? '동선에는 한 곳 이상이 필요해요'
+                            : undefined
+                        }
+                        onClick={() => onEdit('remove', stop.candidate.id)}
+                      >
+                        빼기
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </li>
@@ -213,6 +260,17 @@ export function ItineraryList({
             {dropped.map(item => (
               <li key={`${item.candidate.id}-${item.reason}`} className={muted}>
                 {item.candidate.name} — {DROP_REASON_TEXT[item.reason]}
+                {item.reason === 'user' && onEdit !== undefined && (
+                  <button
+                    type="button"
+                    className={actionButton}
+                    aria-label={`${item.candidate.name} 되돌리기`}
+                    disabled={pending}
+                    onClick={() => onEdit('restore', item.candidate.id)}
+                  >
+                    되돌리기
+                  </button>
+                )}
               </li>
             ))}
           </ul>
