@@ -1,7 +1,16 @@
-import type { InsertRowResult, SelectAllResult, SelectByIdResult } from '@/lib/platform/supabase';
-import { insertRow, selectAllRows, selectRowById } from '@/lib/platform/supabase';
+import type {
+  InsertRowResult,
+  SelectAllResult,
+  SelectByIdResult,
+} from '@/lib/platform/supabase';
+import {
+  insertRow,
+  selectAllRows,
+  selectRowById,
+} from '@/lib/platform/supabase';
 import type { SavedSpot } from '@/shared/spot';
 import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
+import { DEMO_SPOTS } from './demoSpots';
 import { SEED_SPOTS } from './seed';
 
 /**
@@ -40,7 +49,18 @@ function optionalText(value: unknown): string | null {
  */
 export function parseSpotRow(raw: unknown): SavedSpot | null {
   if (!isRecord(raw)) return null;
-  const { id, name, road_address, jibun_address, latitude, longitude, sido, sigugun, category, origin } = raw;
+  const {
+    id,
+    name,
+    road_address,
+    jibun_address,
+    latitude,
+    longitude,
+    sido,
+    sigugun,
+    category,
+    origin,
+  } = raw;
 
   if (typeof id !== 'string' || id.length === 0) return null;
   if (typeof name !== 'string' || name.length === 0) return null;
@@ -66,20 +86,27 @@ export interface LoadSpotsOptions {
   readonly readRows?: () => Promise<SelectAllResult>;
 }
 
-export async function loadSpots(options: LoadSpotsOptions = {}): Promise<LoadSpotsResult> {
+export async function loadSpots(
+  options: LoadSpotsOptions = {},
+): Promise<LoadSpotsResult> {
   const readRows =
-    options.readRows ?? (() => selectAllRows(SPOTS_TABLE, { orderBy: 'created_at', ascending: false }));
+    options.readRows ??
+    (() =>
+      selectAllRows(SPOTS_TABLE, { orderBy: 'created_at', ascending: false }));
 
   const result = await readRows();
   if (!result.ok) {
     return {
       spots: SEED_SPOTS,
       source: 'seed',
-      storeError: result.error.kind === 'unconfigured' ? null : result.error.message,
+      storeError:
+        result.error.kind === 'unconfigured' ? null : result.error.message,
     };
   }
 
-  const spots = result.rows.map(parseSpotRow).filter((s): s is SavedSpot => s !== null);
+  const spots = result.rows
+    .map(parseSpotRow)
+    .filter((s): s is SavedSpot => s !== null);
   return { spots, source: 'store', storeError: null };
 }
 
@@ -124,8 +151,13 @@ export interface InsertSpotOptions {
  * 저장소가 없으면 `unconfigured`로 **실패**한다. 시드에 끼워 넣지 않는다 —
  * 새로 고치면 사라지는 저장을 성공처럼 보이면 안 된다.
  */
-export async function insertSpot(spot: NewSpot, options: InsertSpotOptions = {}): Promise<InsertSpotResult> {
-  const insert = options.insert ?? ((row: Record<string, unknown>) => insertRow(SPOTS_TABLE, row));
+export async function insertSpot(
+  spot: NewSpot,
+  options: InsertSpotOptions = {},
+): Promise<InsertSpotResult> {
+  const insert =
+    options.insert ??
+    ((row: Record<string, unknown>) => insertRow(SPOTS_TABLE, row));
   const result = await insert(toSpotRow(spot));
   if (!result.ok) return { ok: false, error: result.error };
   const saved = parseSpotRow(result.row);
@@ -142,11 +174,23 @@ export interface FindSpotOptions {
  * id로 스팟 하나. 저장소가 없으면 시드에서 찾는다 — 시드 id로 열린 결과
  * 화면이 저장소 없이도 돌아야 한다. 없으면 `null`.
  */
-export async function findSpot(id: string, options: FindSpotOptions = {}): Promise<SavedSpot | null> {
-  const readRow = options.readRow ?? ((spotId: string) => selectRowById(SPOTS_TABLE, spotId));
+export async function findSpot(
+  id: string,
+  options: FindSpotOptions = {},
+): Promise<SavedSpot | null> {
+  const readRow =
+    options.readRow ?? ((spotId: string) => selectRowById(SPOTS_TABLE, spotId));
   const result = await readRow(id);
   if (!result.ok) {
-    if (result.error.kind === 'unconfigured') return SEED_SPOTS.find((s) => s.id === id) ?? null;
+    // 저장소가 없으면 번들에 실린 목록에서 찾는다. 동선용 시드와 지도
+    // 시연용 스팟을 함께 보는 이유는, 둘 다 저장소 없이 화면을 돌려 보기
+    // 위한 데이터이기 때문이다.
+    if (result.error.kind === 'unconfigured')
+      return (
+        SEED_SPOTS.find(spot => spot.id === id) ??
+        DEMO_SPOTS.find(spot => spot.id === id) ??
+        null
+      );
     return null;
   }
   return result.row === null ? null : parseSpotRow(result.row);

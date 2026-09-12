@@ -49,12 +49,14 @@ const screen = css({
 const mapArea = css({ position: 'relative', minHeight: '0' });
 
 interface Props {
-  // 이 화면이 읽는 것은 `result` 하나지만, 파라미터는 앞으로 늘어난다
+  // 이 화면이 읽는 것은 `result` · `spot` 둘이지만, 파라미터는 앞으로 더 늘어난다
   // (필터 · 목록 선택 등). 그래서 모양을 좁히지 않고 Next가 주는 그대로 받는다.
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function resolveSavedSpot(id: string): Promise<typeof SAMPLE_SPOT | null> {
+async function resolveSavedSpot(
+  id: string,
+): Promise<typeof SAMPLE_SPOT | null> {
   const saved = await findSpot(id);
   if (saved === null) return null;
   return {
@@ -66,15 +68,30 @@ async function resolveSavedSpot(id: string): Promise<typeof SAMPLE_SPOT | null> 
   };
 }
 
+/** 파라미터가 배열로 오면 없는 것으로 본다 — 임의로 첫 값을 고르면 주소를 고친
+ * 사람이 무엇을 보게 될지 알 수 없다. */
+function readOne(value: string | string[] | undefined): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 export default async function HomePage({ searchParams }: Props) {
-  // `?result=a&result=b`면 배열로 온다. 결과는 하나뿐이므로 그때는 없는 것으로
-  // 본다 — 임의로 첫 값을 고르면 주소를 고친 사람이 무엇을 보게 될지 알 수 없다.
-  const raw = (await searchParams)['result'];
-  const result = typeof raw === 'string' ? raw : undefined;
+  const params = await searchParams;
+  const result = readOne(params['result']);
+  // 핀을 골라서 보는 상태다. 저장 직후(`result`)와 나누는 이유는 같은 화면이
+  // 아니기 때문이다 — 하나는 방금 만든 것을 확인하는 자리이고, 다른 하나는
+  // 이미 저장된 것을 들여다보는 자리다(D10 · #40).
+  const selected = readOne(params['spot']);
 
   // 결과 id로 저장된 스팟을 읽는다(T51). `sample`은 저장소 없이 화면을 볼 수
-  // 있게 남긴 데모 값이다. 없는 id면 결과 없는 홈으로 — 지도를 빈 핀으로 채우지 않는다.
-  const spot = result === undefined ? null : result === 'sample' ? SAMPLE_SPOT : await resolveSavedSpot(result);
+  // 있게 남긴 데모 값이다. 없는 id면 패널 없는 홈으로 — 지도를 빈 핀으로 채우지 않는다.
+  const spot =
+    result === 'sample'
+      ? SAMPLE_SPOT
+      : result !== undefined
+        ? await resolveSavedSpot(result)
+        : selected !== undefined
+          ? await resolveSavedSpot(selected)
+          : null;
 
   return (
     <main className={screen}>
