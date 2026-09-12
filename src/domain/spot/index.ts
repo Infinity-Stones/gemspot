@@ -7,8 +7,9 @@ export { DEMO_SPOTS } from './demoSpots';
 export { toRouteCandidate } from './projection';
 export { findSpot, insertSpot, loadSpots } from './repository';
 export type { InsertSpotResult, LoadSpotsResult, NewSpot, SpotSource } from './repository';
-export { locateAddress, saveSpot } from './save';
-export type { LocateAddressResult, SaveSpotFailure, SaveSpotInput, SaveSpotOutcome } from './save';
+export { locateAddress, saveSpot, searchAddress } from './save';
+export type { LocateAddressResult, SaveSpotFailure, SaveSpotInput, SaveSpotOutcome, SearchAddressResult } from './save';
+export { prepareGeocodedLocations } from './geocoding';
 export { prepareGeocodedLocation } from './geocoding';
 export type {
   GeocodedSpotLocation,

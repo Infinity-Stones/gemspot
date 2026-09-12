@@ -26,6 +26,35 @@ export type PrepareGeocodedLocationResult =
  * 유효하지 않은 좌표를 모두 버린 경우를 같은 `not_found`로 다룬다. 어느
  * 경우에도 저장 모양인 `location`을 만들지 않는다.
  */
+/**
+ * 좌표가 있는 후보 **전부**를 저장 가능한 모양으로 — 주소 검색(T51)이 쓴다.
+ *
+ * 같은 주소가 도로명 · 지번으로 두 번 오면 하나로 접는다. 사용자는 "같은 곳"을
+ * 두 줄로 보면 어느 쪽을 골라야 하는지 모른다. 순서는 네이버가 준 순서
+ * (coordinate를 줬으면 가까운 순)를 그대로 지킨다.
+ */
+export function prepareGeocodedLocations(
+  result: GeocodeResult,
+): readonly GeocodedSpotLocation[] {
+  const seen = new Set<string>();
+  const locations: GeocodedSpotLocation[] = [];
+  for (const hit of result.hits) {
+    const key = hit.roadAddress.length > 0 ? hit.roadAddress : hit.jibunAddress;
+    if (key.length === 0 || seen.has(key)) continue;
+    seen.add(key);
+    locations.push({
+      coordinates: hit.coord,
+      roadAddress: hit.roadAddress,
+      jibunAddress: hit.jibunAddress,
+      region:
+        hit.region === null
+          ? { sido: null, sigugun: null }
+          : { sido: hit.region.sido, sigugun: hit.region.sigugun },
+    });
+  }
+  return locations;
+}
+
 export function prepareGeocodedLocation(
   result: GeocodeResult,
 ): PrepareGeocodedLocationResult {

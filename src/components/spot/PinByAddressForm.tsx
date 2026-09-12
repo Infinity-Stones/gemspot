@@ -12,9 +12,11 @@ import { SpotMap } from '../SpotMap';
 /**
  * 이름 · 주소 · 카테고리를 받아 좌표를 확인하고 저장하는 폼 — T51(#108).
  *
- * 한 폼에 버튼이 둘이다. "위치 찾기"는 `intent=locate`, "이 위치로 저장"은
- * `intent=save`. 저장 버튼은 좌표가 확인된 뒤에만 나타난다 — 미리보기를 건너뛰고
- * 저장할 수 있으면 사용자는 엉뚱한 곳에 핀이 찍힌 것을 홈에서야 안다.
+ * 한 폼에 의도가 셋이다. "주소 검색"은 `intent=search`로 네이버 Maps Geocoding
+ * (주소 검색)에서 후보를 여러 건 받고, 후보 버튼(`pick=<주소>`)을 누르면 그 주소로
+ * 좌표를 확인하고, "이 위치로 저장"은 `intent=save`. 저장 버튼은 좌표가 확인된
+ * 뒤에만 나타난다 — 미리보기를 건너뛰고 저장할 수 있으면 사용자는 엉뚱한 곳에
+ * 핀이 찍힌 것을 홈에서야 안다. 후보가 하나면 목록 없이 바로 미리보기다.
  *
  * 좌표는 폼에 담지 않는다. 저장은 서버가 다시 Geocoding을 돌린 결과로만 한다.
  *
@@ -105,6 +107,28 @@ const mapFrame = css({ height: '64', width: 'full' });
 
 const previewText = css({ px: '4', pb: '4', display: 'flex', flexDirection: 'column', gap: '1' });
 
+const candidateList = css({ display: 'flex', flexDirection: 'column', gap: '2', listStyle: 'none', p: '0', m: '0' });
+
+const candidateButton = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: '1',
+  width: 'full',
+  px: '4',
+  py: '3',
+  rounded: 'lg',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'white',
+  color: 'slate.900',
+  textAlign: 'left',
+  cursor: 'pointer',
+  _hover: { borderColor: 'violet.500', bg: 'violet.50' },
+  _dark: { borderColor: 'slate.800', bg: 'slate.900', color: 'slate.100', _hover: { bg: 'violet.950', borderColor: 'violet.400' } },
+});
+
 const alert = css({
   px: '4',
   py: '3',
@@ -135,6 +159,7 @@ export function PinByAddressForm({ action }: Props) {
 
   const draft = state.status === 'idle' ? null : state.draft;
   const located = state.status === 'located' ? state : null;
+  const searched = state.status === 'searched' ? state : null;
 
   return (
     <form className={form} action={submit}>
@@ -194,6 +219,28 @@ export function PinByAddressForm({ action }: Props) {
         </p>
       )}
 
+      {searched !== null && (
+        <section className={field} aria-label="주소 검색 결과">
+          <p className={label}>
+            {String(searched.candidates.length)}곳이 나왔어요. 맞는 곳을 골라 주세요.
+          </p>
+          <ul className={candidateList}>
+            {searched.candidates.map(candidate => {
+              const primary = candidate.roadAddress.length > 0 ? candidate.roadAddress : candidate.jibunAddress;
+              const secondary = candidate.roadAddress.length > 0 && candidate.jibunAddress.length > 0 ? candidate.jibunAddress : null;
+              return (
+                <li key={primary}>
+                  <button type="submit" name="pick" value={primary} className={candidateButton} disabled={pending}>
+                    <span>{primary}</span>
+                    {secondary !== null && <span className={hint}>{secondary}</span>}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
       {located !== null && (
         <section className={preview} aria-label="찾은 위치 미리보기">
           <div className={mapFrame}>
@@ -213,8 +260,8 @@ export function PinByAddressForm({ action }: Props) {
       )}
 
       <div className={row}>
-        <button type="submit" name="intent" value="locate" className={located === null ? primary : secondary} disabled={pending}>
-          {pending ? '처리 중…' : located === null ? '위치 찾기' : '다시 찾기'}
+        <button type="submit" name="intent" value="search" className={located === null ? primary : secondary} disabled={pending}>
+          {pending ? '처리 중…' : located === null ? '주소 검색' : '다시 검색'}
         </button>
         {located !== null && (
           <button type="submit" name="intent" value="save" className={primary} disabled={pending}>
