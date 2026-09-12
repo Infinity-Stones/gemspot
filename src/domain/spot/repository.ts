@@ -1,4 +1,4 @@
-import type { Spot } from '@/shared/spot';
+import type { SavedSpot } from '@/shared/spot';
 import { SEED_SPOTS } from './seed';
 
 /**
@@ -12,7 +12,7 @@ import { SEED_SPOTS } from './seed';
 export type SpotSource = 'seed' | 'store';
 
 export interface LoadSpotsResult {
-  readonly spots: readonly Spot[];
+  readonly spots: readonly SavedSpot[];
   readonly source: SpotSource;
 }
 

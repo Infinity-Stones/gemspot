@@ -13,28 +13,28 @@ const base = {
 };
 
 describe('schedule', () => {
-  it('명세 예시: 14:00 → 14:08 A(20) → 14:34 B(40) → 15:19 C(30) → 15:49 끝', () => {
+  it('명세 예시(shop 20분 기준): 14:00 → 14:08 A(20) → 14:34 B(40) → 15:19 C(20) → 15:39 끝', () => {
     const itinerary = schedule(base);
     const hm = (iso: string) => formatSeoulHourMinute(iso);
 
     expect(itinerary.stops.map((s) => [hm(s.arriveAt), s.dwellMinutes, hm(s.departAt)])).toEqual([
       ['14:08', 20, '14:28'],
       ['14:34', 40, '15:14'],
-      ['15:19', 30, '15:49'],
+      ['15:19', 20, '15:39'],
     ]);
-    expect(hm(itinerary.endAt)).toBe('15:49');
+    expect(hm(itinerary.endAt)).toBe('15:39');
     expect(itinerary.overBySeconds).toBe(0);
     expect(itinerary.totalWalkMinutes).toBe(20);
     expect(itinerary.totalDistanceM).toBe(1_600);
     expect(itinerary.hasEstimatedLegs).toBe(false);
   });
 
-  it('종료가 15:30이면 초과(15:49:40 − 15:30 = 1180초)로 나오고 빼지는 않는다', () => {
+  it('종료가 15:30이면 초과(15:39:40 − 15:30 = 580초)로 나오고 빼지는 않는다', () => {
     const itinerary = schedule({
       ...base,
       window: { ...base.window, end: '2026-09-12T15:30:00+09:00' },
     });
-    expect(itinerary.overBySeconds).toBe(1_180);
+    expect(itinerary.overBySeconds).toBe(580);
     expect(itinerary.stops).toHaveLength(3);
   });
 

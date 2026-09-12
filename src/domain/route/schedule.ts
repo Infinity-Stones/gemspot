@@ -1,4 +1,4 @@
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate, TimeWindow } from '@/shared/routeRequest';
 import { dwellMinutesOf } from '@/shared/spotCategory';
 import { addSeconds, diffSeconds } from '@/shared/time';
@@ -13,7 +13,7 @@ import type { DroppedSpot, Itinerary, ItineraryStop, Leg, OrderingSource } from 
  */
 
 export interface ScheduleInput {
-  readonly start: { readonly coord: GeoPoint; readonly departAt: string };
+  readonly start: { readonly coord: SpotCoordinates; readonly departAt: string };
   readonly window: TimeWindow;
   readonly order: readonly RouteCandidate[];
   /** `order.length`개. `legs[i]`는 `order[i]`로 가는 구간. */

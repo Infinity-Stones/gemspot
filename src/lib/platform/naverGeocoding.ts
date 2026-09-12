@@ -1,5 +1,5 @@
-import type { GeoPoint } from '@/shared/geo';
-import { isGeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
+import { isSpotCoordinates } from '@/shared/spot';
 import { NAVER_MAP_CLIENT_ID } from '@/shared/naverMap';
 import { naverApiKey } from './env';
 import type { GetJsonOptions, HttpFailure } from './httpClient';
@@ -16,7 +16,7 @@ import { getJson } from './httpClient';
 const GEOCODE_ENDPOINT = 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode';
 
 export interface GeocodeHit {
-  readonly coord: GeoPoint;
+  readonly coord: SpotCoordinates;
   readonly roadAddress: string;
   readonly jibunAddress: string;
   readonly region: { readonly sido: string; readonly sigugun: string } | null;
@@ -62,8 +62,8 @@ export function parseGeocodeHit(raw: unknown): GeocodeHit | null {
   if (!isRecord(raw)) return null;
   const { x, y, roadAddress, jibunAddress, addressElements } = raw;
   if (typeof x !== 'string' || typeof y !== 'string') return null;
-  const coord = { lat: Number(y), lng: Number(x) };
-  if (!isGeoPoint(coord)) return null;
+  const coord = { latitude: Number(y), longitude: Number(x) };
+  if (!isSpotCoordinates(coord)) return null;
 
   const sido = elementOf(addressElements, 'SIDO');
   const sigugun = elementOf(addressElements, 'SIGUGUN');

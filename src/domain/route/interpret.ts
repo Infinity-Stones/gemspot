@@ -2,8 +2,9 @@ import type { GenerateJson, GenerateJsonResult } from '@/lib/platform/llm';
 import { generateJson as defaultGenerateJson } from '@/lib/platform/llm';
 import type { TimeWindow } from '@/shared/routeRequest';
 import { timeWindowProblem } from '@/shared/routeRequest';
-import type { SpotCategory } from '@/shared/spotCategory';
-import { SPOT_CATEGORIES, SPOT_CATEGORY_TABLE, isSpotCategory } from '@/shared/spotCategory';
+import type { SpotCategory } from '@/shared/spot';
+import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
+import { SPOT_CATEGORY_TABLE } from '@/shared/spotCategory';
 import { parseIso } from '@/shared/time';
 import type { InterpretationDraft, MissingField } from './types';
 

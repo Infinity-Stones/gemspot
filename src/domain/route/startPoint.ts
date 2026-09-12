@@ -1,6 +1,6 @@
 import type { GeocodeFailure, GeocodeOutcome } from '@/lib/platform/naverGeocoding';
 import { geocodeAddress as defaultGeocode } from '@/lib/platform/naverGeocoding';
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 
 /**
  * 출발점 — T43(#58). 문장에서 해석한 동네 이름을 Geocoding으로 좌표로 바꾼다.
@@ -12,7 +12,7 @@ import type { GeoPoint } from '@/shared/geo';
 export type GeocodeFn = (query: string) => Promise<GeocodeOutcome>;
 
 export type ResolveAreaResult =
-  | { readonly kind: 'found'; readonly center: GeoPoint; readonly label: string }
+  | { readonly kind: 'found'; readonly center: SpotCoordinates; readonly label: string }
   | { readonly kind: 'not_found' }
   | { readonly kind: 'failed'; readonly error: GeocodeFailure };
 

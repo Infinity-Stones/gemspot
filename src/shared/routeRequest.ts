@@ -1,5 +1,4 @@
-import type { GeoPoint } from './geo';
-import type { SpotCategory } from './spotCategory';
+import type { SpotCategory, SpotCoordinates } from './spot';
 import { diffSeconds, parseIso } from './time';
 
 /**
@@ -26,7 +25,7 @@ export interface RouteRequest {
     /** 사용자가 말한 이름. 예: 성수동 */
     readonly name: string;
     /** Geocoding으로 얻은 출발점. */
-    readonly center: GeoPoint;
+    readonly center: SpotCoordinates;
   };
   /** 가중치로만 쓴다. 후보를 거르지 않는다. 비어 있으면 선호 없음. */
   readonly preferredCategories: readonly SpotCategory[];
@@ -42,7 +41,7 @@ export interface RouteCandidate {
   readonly id: string;
   readonly name: string;
   readonly category: SpotCategory;
-  readonly coord: GeoPoint;
+  readonly coord: SpotCoordinates;
 }
 
 /** 한 번의 산책으로 볼 수 있는 상한. 이보다 길면 해석 오류로 본다. */

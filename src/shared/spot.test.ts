@@ -1,45 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { isGeoPoint } from './geo';
-import { parseSpot } from './spot';
+import { SPOT_CATEGORIES, isSpotCategory } from './spot';
 
-const valid = {
-  id: 's1',
-  name: '카페 B',
-  roadAddress: '서울 성동구 성수이로 20',
-  jibunAddress: null,
-  coord: { lat: 37.5448, lng: 127.053 },
-  region: { sido: '서울특별시', sigugun: '성동구' },
-  origin: 'manual',
-  category: 'cafe',
-};
+describe('SPOT_CATEGORIES', () => {
+  // 이 목록은 D11의 적합 시간대 표·기본 체류 시간의 행 집합과 같다. 값이
+  // 늘거나 줄면 저쪽에 행이 없는 카테고리가 생기고, 그 스팟은 후보 선별에서
+  // 조용히 사라진다. 그 순간을 이 테스트가 깨져서 알린다.
+  it('시간대 표와 짝인 여섯 값을 고정한다', () => {
+    expect(SPOT_CATEGORIES).toEqual([
+      'cafe',
+      'restaurant',
+      'bar',
+      'shop',
+      'sight',
+      'other',
+    ]);
+  });
 
-describe('isGeoPoint', () => {
-  it('범위 안의 유한수만', () => {
-    expect(isGeoPoint({ lat: 37.5, lng: 127.0 })).toBe(true);
-    expect(isGeoPoint({ lat: 91, lng: 0 })).toBe(false);
-    expect(isGeoPoint({ lat: Number.NaN, lng: 0 })).toBe(false);
-    expect(isGeoPoint({ lat: '37.5', lng: 127 })).toBe(false);
-    expect(isGeoPoint(null)).toBe(false);
+  it('분류가 못 맞힌 곳을 담을 자리가 있다', () => {
+    expect(SPOT_CATEGORIES).toContain('other');
   });
 });
 
-describe('parseSpot', () => {
-  it('정상 건은 계약 모양으로 좁힌다', () => {
-    expect(parseSpot(valid)).toEqual(valid);
+describe('isSpotCategory', () => {
+  it('목록에 있는 값을 통과시킨다', () => {
+    for (const category of SPOT_CATEGORIES) {
+      expect(isSpotCategory(category)).toBe(true);
+    }
   });
 
-  it('좌표가 없거나 깨진 건은 null — 저장 전 후보는 여기 들어올 수 없다', () => {
-    expect(parseSpot({ ...valid, coord: undefined })).toBeNull();
-    expect(parseSpot({ ...valid, coord: { lat: '37', lng: '127' } })).toBeNull();
+  it('목록에 없는 값을 거른다 — AI와 저장소가 주는 값은 그냥 문자열이다', () => {
+    expect(isSpotCategory('카페')).toBe(false);
+    expect(isSpotCategory('Cafe')).toBe(false);
+    expect(isSpotCategory('brunch')).toBe(false);
+    expect(isSpotCategory('')).toBe(false);
   });
 
-  it('표에 없는 카테고리 · 모르는 출처는 null', () => {
-    expect(parseSpot({ ...valid, category: 'pub' })).toBeNull();
-    expect(parseSpot({ ...valid, origin: 'import' })).toBeNull();
-  });
-
-  it('region은 없어도 되고, 있으면 둘 다 문자열이어야 한다', () => {
-    expect(parseSpot({ ...valid, region: undefined })?.region).toBeNull();
-    expect(parseSpot({ ...valid, region: { sido: '서울' } })).toBeNull();
+  it('Object.prototype의 이름을 카테고리로 보지 않는다', () => {
+    // 배열 includes라 지금은 통과하지만, 구현을 객체 조회로 바꾸면
+    // 'toString'이 카테고리가 된다. 그 회귀를 여기서 잡는다.
+    expect(isSpotCategory('toString')).toBe(false);
+    expect(isSpotCategory('constructor')).toBe(false);
   });
 });

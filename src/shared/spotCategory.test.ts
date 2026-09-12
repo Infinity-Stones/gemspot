@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  SPOT_CATEGORIES,
-  SPOT_CATEGORY_TABLE,
-  dwellMinutesOf,
-  fitsWindow,
-  isSpotCategory,
-  overlapMinutes,
-} from './spotCategory';
+import { SPOT_CATEGORIES } from './spot';
+import { SPOT_CATEGORY_TABLE, dwellMinutesOf, fitsWindow, overlapMinutes } from './spotCategory';
 
 const window = (sh: number, sm: number, eh: number, em = 0) => ({
   startMinute: sh * 60 + sm,
@@ -14,23 +8,17 @@ const window = (sh: number, sm: number, eh: number, em = 0) => ({
 });
 
 describe('SPOT_CATEGORY_TABLE (D11 제안값)', () => {
-  it('모든 카테고리에 행이 있고 체류 시간이 양수다', () => {
+  it('spot.ts의 카테고리 목록 전부에 행이 있고 체류 시간이 양수다', () => {
     for (const c of SPOT_CATEGORIES) {
       expect(SPOT_CATEGORY_TABLE[c].dwellMinutes).toBeGreaterThan(0);
+      expect(SPOT_CATEGORY_TABLE[c].label.length).toBeGreaterThan(0);
     }
   });
 
-  it('명세 예시 수치: 카페 40 · 밥집 60 · 편집숍 20 · 서점 30', () => {
+  it('명세 예시 수치: 카페 40 · 밥집 60 · 편집숍(상점) 20', () => {
     expect(dwellMinutesOf('cafe')).toBe(40);
     expect(dwellMinutesOf('restaurant')).toBe(60);
     expect(dwellMinutesOf('shop')).toBe(20);
-    expect(dwellMinutesOf('bookstore')).toBe(30);
-  });
-
-  it('isSpotCategory는 표에 있는 코드만 통과시킨다', () => {
-    expect(isSpotCategory('cafe')).toBe(true);
-    expect(isSpotCategory('pub')).toBe(false);
-    expect(isSpotCategory(3)).toBe(false);
   });
 });
 
@@ -54,13 +42,12 @@ describe('overlapMinutes', () => {
 });
 
 describe('fitsWindow (겹침 ≥ 기본 체류)', () => {
-  it('명세 예시: 14~16시면 밥집은 빠지고 카페 · 상점 · 서점은 남는다', () => {
+  it('명세 예시: 14~16시면 밥집은 빠지고 카페 · 상점 · 구경거리는 남는다', () => {
     const w = window(14, 0, 16);
     expect(fitsWindow('restaurant', w)).toBe(false);
     expect(fitsWindow('cafe', w)).toBe(true);
     expect(fitsWindow('shop', w)).toBe(true);
-    expect(fitsWindow('bookstore', w)).toBe(true);
-    expect(fitsWindow('exhibit', w)).toBe(true);
+    expect(fitsWindow('sight', w)).toBe(true);
   });
 
   it('겹치기만 하고 체류할 시간이 없으면 후보가 아니다', () => {

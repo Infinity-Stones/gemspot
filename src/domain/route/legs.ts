@@ -1,6 +1,6 @@
 import type { WalkingRouteOutcome } from '@/lib/platform/tmap';
 import { walkingRoute as defaultWalkingRoute } from '@/lib/platform/tmap';
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate } from '@/shared/routeRequest';
 import { estimateWalkSeconds, haversineM } from './distance';
 import type { Leg } from './types';
@@ -14,7 +14,7 @@ import { START_ID } from './types';
  * 부른다 — 다듬기(T45)에서 안 바뀐 구간을 다시 실측하지 않기 위한 것이다.
  */
 
-export type WalkingRouteFn = (from: GeoPoint, to: GeoPoint) => Promise<WalkingRouteOutcome>;
+export type WalkingRouteFn = (from: SpotCoordinates, to: SpotCoordinates) => Promise<WalkingRouteOutcome>;
 
 /** 요청 범위 캐시. 전역 상태가 아니라 호출자가 만들어 넘긴다. */
 export type LegCache = Map<string, Leg>;
@@ -24,13 +24,13 @@ export function legKey(fromId: string, toId: string): string {
 }
 
 export interface MeasureLegsInput {
-  readonly start: GeoPoint;
+  readonly start: SpotCoordinates;
   readonly order: readonly RouteCandidate[];
   readonly route?: WalkingRouteFn;
   readonly cache?: LegCache;
 }
 
-function estimatedLeg(fromId: string, from: GeoPoint, toId: string, to: GeoPoint): Leg {
+function estimatedLeg(fromId: string, from: SpotCoordinates, toId: string, to: SpotCoordinates): Leg {
   const distanceM = Math.round(haversineM(from, to));
   return {
     fromId,

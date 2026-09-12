@@ -6,48 +6,49 @@ import type { Leg } from './types';
 /**
  * 도메인 테스트 공통 픽스처 — 명세의 성수동 예시.
  *
- * `14:00 출발 → 14:08 편집숍 A(20분) → 14:34 카페 B(40분) → 15:19 서점 C(30분) → 15:49 끝`
- * 구간 시간은 8분 · 6분 · 5분이고 합계는 `총 도보 21분 · 1.6 km`가 나와야 하므로
- * 초 단위 합이 20분을 넘도록(올림) 8:00 · 6:20 · 5:20으로 둔다.
+ * `14:00 출발 → 14:08 편집숍 A(20분) → 14:34 카페 B(40분) → 15:19 서점 C → 끝`
+ * 계약의 카테고리가 6종이라 서점은 `shop`(20분)이고, 그래서 종료는 명세의
+ * 15:49가 아니라 15:39다. 구간 시간은 8:00 · 6:20 · 5:20(초 단위 합 1,180초 →
+ * 올림 20분, 1.6 km).
  */
 
-export const START = { lat: 37.5447, lng: 127.0557 };
+export const START = { latitude: 37.5447, longitude: 127.0557 };
 
 export const SHOP_A: RouteCandidate = {
   id: 'a',
   name: '편집숍 A',
   category: 'shop',
-  coord: { lat: 37.5424, lng: 127.056 },
+  coord: { latitude: 37.5424, longitude: 127.056 },
 };
 export const CAFE_B: RouteCandidate = {
   id: 'b',
   name: '카페 B',
   category: 'cafe',
-  coord: { lat: 37.5448, lng: 127.053 },
+  coord: { latitude: 37.5448, longitude: 127.053 },
 };
 export const BOOK_C: RouteCandidate = {
   id: 'c',
   name: '서점 C',
-  category: 'bookstore',
-  coord: { lat: 37.547, lng: 127.05 },
+  category: 'shop',
+  coord: { latitude: 37.547, longitude: 127.05 },
 };
 export const FOOD_D: RouteCandidate = {
   id: 'd',
   name: '밥집 D',
   category: 'restaurant',
-  coord: { lat: 37.5435, lng: 127.0575 },
+  coord: { latitude: 37.5435, longitude: 127.0575 },
 };
 export const DESSERT_E: RouteCandidate = {
   id: 'e',
   name: '디저트 E',
-  category: 'dessert',
-  coord: { lat: 37.5462, lng: 127.059 },
+  category: 'cafe',
+  coord: { latitude: 37.5462, longitude: 127.059 },
 };
 export const PARK_F: RouteCandidate = {
   id: 'f',
   name: '공원 F',
-  category: 'walk',
-  coord: { lat: 37.5443, lng: 127.033 },
+  category: 'sight',
+  coord: { latitude: 37.5443, longitude: 127.033 },
 };
 
 export const ALL_SPOTS = [SHOP_A, CAFE_B, BOOK_C, FOOD_D, DESSERT_E, PARK_F];
@@ -77,7 +78,7 @@ export function specLegs(): readonly Leg[] {
 /** 항상 성공하는 실측 스텁. 고정 초를 주면 그 값, 없으면 400초 · 500 m. */
 export function stubRoute(seconds: Readonly<Record<string, number>> = {}, calls: string[] = []): WalkingRouteFn {
   return (from, to) => {
-    const key = `${String(from.lat)},${String(from.lng)}>${String(to.lat)},${String(to.lng)}`;
+    const key = `${String(from.latitude)},${String(from.longitude)}>${String(to.latitude)},${String(to.longitude)}`;
     calls.push(key);
     const idFrom = idOf(from);
     const idTo = idOf(to);
@@ -89,9 +90,9 @@ export function stubRoute(seconds: Readonly<Record<string, number>> = {}, calls:
   };
 }
 
-function idOf(coord: { lat: number; lng: number }): string {
-  if (coord.lat === START.lat && coord.lng === START.lng) return 'start';
-  return ALL_SPOTS.find((s) => s.coord.lat === coord.lat && s.coord.lng === coord.lng)?.id ?? '?';
+function idOf(coord: { latitude: number; longitude: number }): string {
+  if (coord.latitude === START.latitude && coord.longitude === START.longitude) return 'start';
+  return ALL_SPOTS.find((s) => s.coord.latitude === coord.latitude && s.coord.longitude === coord.longitude)?.id ?? '?';
 }
 
 /** 항상 실패하는 실측 스텁(타임아웃). */

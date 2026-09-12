@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSpot } from '@/shared/spot';
+import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
 import { loadSpots } from './repository';
 import { SEED_SPOTS } from './seed';
 
@@ -10,9 +10,11 @@ describe('loadSpots (시드 폴백)', () => {
     expect(result.spots).toHaveLength(6);
   });
 
-  it('시드 전부가 스팟 계약을 통과한다', () => {
+  it('시드 전부가 스팟 계약을 지킨다 — 카테고리는 목록에 있고 좌표는 유한수', () => {
     for (const spot of SEED_SPOTS) {
-      expect(parseSpot(spot)).toEqual(spot);
+      expect(isSpotCategory(spot.category)).toBe(true);
+      expect(isSpotCoordinates(spot.coordinates)).toBe(true);
+      expect(spot.name.length).toBeGreaterThan(0);
     }
   });
 

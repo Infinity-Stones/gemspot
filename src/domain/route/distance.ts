@@ -1,4 +1,4 @@
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 
 /**
  * 직선거리와 그 추정 — T32(#47).
@@ -15,13 +15,13 @@ export const WALK_DETOUR_FACTOR = 1.3;
 /** 보행 속도. 약 4.3 km/h — 구경하며 걷는 속도로 잡았다. */
 export const WALK_SPEED_MPS = 1.2;
 
-export function haversineM(a: GeoPoint, b: GeoPoint): number {
+export function haversineM(a: SpotCoordinates, b: SpotCoordinates): number {
   const toRad = (deg: number): number => (deg * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat);
-  const dLng = toRad(b.lng - a.lng);
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
   const h =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLng / 2) ** 2;
   return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -32,7 +32,7 @@ export function estimateWalkSeconds(distanceM: number): number {
 
 export interface Located {
   readonly id: string;
-  readonly coord: GeoPoint;
+  readonly coord: SpotCoordinates;
 }
 
 /** 쌍별 직선거리표. 10 m 단위로 반올림 — LLM에 허위 정밀도를 보이지 않는다. */

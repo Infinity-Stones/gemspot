@@ -1,8 +1,8 @@
 import type { GenerateJson, GenerateJsonResult } from '@/lib/platform/llm';
 import { generateJson as defaultGenerateJson } from '@/lib/platform/llm';
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate, TimeWindow } from '@/shared/routeRequest';
-import type { SpotCategory } from '@/shared/spotCategory';
+import type { SpotCategory } from '@/shared/spot';
 import { dwellMinutesOf, labelOf } from '@/shared/spotCategory';
 import { diffSeconds } from '@/shared/time';
 import type { DistanceTable } from './distance';
@@ -18,7 +18,7 @@ import { START_ID } from './types';
  */
 
 export interface ProposeInput {
-  readonly start: GeoPoint;
+  readonly start: SpotCoordinates;
   readonly window: TimeWindow;
   readonly candidates: readonly RouteCandidate[];
   readonly table: DistanceTable;

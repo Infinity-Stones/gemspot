@@ -3,7 +3,7 @@ import type { GeocodeFn } from './startPoint';
 import { resolveArea } from './startPoint';
 
 const hit = {
-  coord: { lat: 37.5447, lng: 127.0557 },
+  coord: { latitude: 37.5447, longitude: 127.0557 },
   roadAddress: '서울특별시 성동구 성수동1가',
   jibunAddress: '',
   region: { sido: '서울특별시', sigugun: '성동구' },

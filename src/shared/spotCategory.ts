@@ -1,27 +1,17 @@
+import type { SpotCategory } from './spot';
+import { SPOT_CATEGORIES } from './spot';
+
 /**
- * 스팟 카테고리 체계와 시간대 적합표 — D11(#43) · D07(#27)의 결정을 코드로.
+ * 카테고리별 적합 시간대 표와 기본 체류 시간 — D11(#43)의 결정을 코드로.
+ *
+ * 카테고리 목록 자체는 `spot.ts`의 `SPOT_CATEGORIES`가 단일 소스다. 이 표는
+ * 그 목록의 **모든 행**을 가져야 한다 — `Record<SpotCategory, …>`가 그것을
+ * 타입으로 강제하므로, 목록에 값이 늘면 여기서 컴파일이 깨진다.
  *
  * 동선 가이드는 "14~16시면 밥집은 빠지고 카페 · 상점 · 구경거리만 후보"처럼
- * **카테고리로 후보를 거른다.** 그 표가 여기다. 값은 D11의 제안값이고 리뷰로
- * 바뀔 수 있다 — 바꾸는 곳은 이 파일 하나다.
- *
- * shared에 두는 이유: 스팟(저장)과 동선(추천) 두 도메인이 같은 코드를 봐야
- * 하고, 도메인끼리는 서로를 import하지 못한다.
+ * 이 표로 후보를 거른다. 값은 D11의 제안값이고 리뷰로 바뀔 수 있다 — 바꾸는
+ * 곳은 이 파일 하나다.
  */
-
-export const SPOT_CATEGORIES = [
-  'cafe',
-  'restaurant',
-  'bar',
-  'dessert',
-  'shop',
-  'bookstore',
-  'exhibit',
-  'walk',
-  'other',
-] as const;
-
-export type SpotCategory = (typeof SPOT_CATEGORIES)[number];
 
 /** 하루 안의 분 범위. `[startMinute, endMinute)`. 0 ≤ start < end ≤ 1440. */
 export interface MinuteRange {
@@ -45,7 +35,7 @@ function range(startHour: number, startMinute: number, endHour: number, endMinut
 }
 
 export const SPOT_CATEGORY_TABLE: Readonly<Record<SpotCategory, SpotCategoryRule>> = {
-  cafe: { label: '카페', openRanges: [range(9, 0, 21)], dwellMinutes: 40 },
+  cafe: { label: '카페 · 디저트', openRanges: [range(9, 0, 21)], dwellMinutes: 40 },
   restaurant: {
     label: '밥집',
     // 점심 · 저녁 두 시간대. 14~16시 요청에는 어느 쪽과도 겹치지 않는다.
@@ -53,17 +43,16 @@ export const SPOT_CATEGORY_TABLE: Readonly<Record<SpotCategory, SpotCategoryRule
     dwellMinutes: 60,
   },
   bar: { label: '술집', openRanges: [range(17, 0, 24)], dwellMinutes: 60 },
-  dessert: { label: '디저트 · 베이커리', openRanges: [range(10, 0, 20)], dwellMinutes: 30 },
-  shop: { label: '상점 · 편집숍', openRanges: [range(11, 0, 20)], dwellMinutes: 20 },
-  bookstore: { label: '서점', openRanges: [range(11, 0, 20)], dwellMinutes: 30 },
-  exhibit: { label: '전시 · 구경거리', openRanges: [range(10, 0, 18)], dwellMinutes: 45 },
-  walk: { label: '산책 · 공원', openRanges: [range(7, 0, 20)], dwellMinutes: 30 },
+  // 편집숍 · 서점. 명세 예시는 편집숍 20분 · 서점 30분으로 갈랐지만 계약이
+  // 한 카테고리로 묶었으므로 짧은 쪽을 기본값으로 둔다 — 길게 잡으면 후보가
+  // 시간대 문턱에서 더 많이 빠진다.
+  shop: { label: '상점 · 서점', openRanges: [range(11, 0, 20)], dwellMinutes: 20 },
+  sight: { label: '구경거리 · 공원', openRanges: [range(10, 0, 18)], dwellMinutes: 45 },
   other: { label: '기타', openRanges: 'always', dwellMinutes: 30 },
 };
 
-export function isSpotCategory(value: unknown): value is SpotCategory {
-  return typeof value === 'string' && (SPOT_CATEGORIES as readonly string[]).includes(value);
-}
+/** 표의 모든 행이 목록과 같은 순서로. 화면의 칩 · 프롬프트의 코드 목록에 쓴다. */
+export const SPOT_CATEGORY_CODES: readonly SpotCategory[] = SPOT_CATEGORIES;
 
 export function dwellMinutesOf(category: SpotCategory): number {
   return SPOT_CATEGORY_TABLE[category].dwellMinutes;

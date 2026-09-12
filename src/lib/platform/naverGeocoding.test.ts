@@ -30,7 +30,7 @@ function respondWith(body: unknown, init?: ResponseInit): typeof fetch {
 describe('parseGeocodeHit', () => {
   it('x(경도) · y(위도) 문자열을 숫자 GeoPoint로, SIDO · SIGUGUN을 region으로', () => {
     expect(parseGeocodeHit(NAVER_RESPONSE.addresses[0])).toEqual({
-      coord: { lat: 37.5447, lng: 127.0557 },
+      coord: { latitude: 37.5447, longitude: 127.0557 },
       roadAddress: '서울특별시 성동구 성수동1가 685-696',
       jibunAddress: '서울특별시 성동구 성수동1가 685-696',
       region: { sido: '서울특별시', sigugun: '성동구' },
@@ -50,7 +50,7 @@ describe('geocodeAddress', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.totalCount).toBe(1);
-      expect(result.data.hits[0]?.coord).toEqual({ lat: 37.5447, lng: 127.0557 });
+      expect(result.data.hits[0]?.coord).toEqual({ latitude: 37.5447, longitude: 127.0557 });
     }
     const [url, init] = vi.mocked(fetchImpl).mock.calls[0] as [string, RequestInit];
     expect(url).toContain('query=%EC%84%B1%EC%88%98%EB%8F%99');

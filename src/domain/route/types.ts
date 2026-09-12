@@ -1,6 +1,6 @@
-import type { GeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate, RouteRequest, TimeWindow } from '@/shared/routeRequest';
-import type { SpotCategory } from '@/shared/spotCategory';
+import type { SpotCategory } from '@/shared/spot';
 
 /**
  * 동선 도메인의 어휘 — T32(#47).
@@ -27,7 +27,7 @@ export interface Leg {
   readonly durationS: number;
   readonly source: LegSource;
   /** 경로선. 추정이면 `[from, to]` 두 점. */
-  readonly path: readonly GeoPoint[];
+  readonly path: readonly SpotCoordinates[];
 }
 
 export interface ItineraryStop {
@@ -46,7 +46,7 @@ export interface DroppedSpot {
 }
 
 export interface Itinerary {
-  readonly start: { readonly coord: GeoPoint; readonly departAt: string };
+  readonly start: { readonly coord: SpotCoordinates; readonly departAt: string };
   readonly window: TimeWindow;
   readonly stops: readonly ItineraryStop[];
   /** `stops.length`개. `legs[i]`는 `stops[i]`에 **도착하는** 구간이다. */

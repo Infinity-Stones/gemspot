@@ -1,12 +1,10 @@
 import { css } from 'styled-system/css';
-import { ItemCard } from '@/components/ItemCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { loadExampleBoard } from '@/domain/example';
 
 /**
  * 홈 — 서버 컴포넌트.
  *
- * 데이터는 도메인 배럴(`@/domain/example`) 하나로만 들어온다. 이 파일은
+ * 데이터가 붙으면 도메인 배럴(`@/domain/<x>`) 하나로만 들어온다. 이 파일은
  * repository도, HTTP 어댑터도, 환경 변수도 모른다 — 그 셋을 여기서 못 여는
  * 것은 컨벤션이 아니라 lint다(eslint.config.mts의 boundaries 블록).
  */
@@ -89,48 +87,6 @@ const layerNote = css({
   _dark: { color: 'slate.400' },
 });
 
-const grid = css({
-  display: 'grid',
-  gridTemplateColumns: '[repeat(auto-fill, minmax(15rem, 1fr))]',
-  gap: '4',
-});
-
-const meta = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '3',
-  mb: '4',
-  flexWrap: 'wrap',
-});
-
-const badge = css({
-  px: '2',
-  py: '0.5',
-  rounded: 'full',
-  textStyle: 'sm',
-  fontFamily: 'mono',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-});
-
-const seedBadge = css({
-  borderColor: 'red.600',
-  color: 'red.600',
-  bg: 'red.100',
-  _dark: { borderColor: 'red.400', color: 'red.400', bg: 'red.900' },
-});
-
-const remoteBadge = css({
-  borderColor: 'emerald.600',
-  color: 'emerald.600',
-  bg: 'emerald.100',
-  _dark: {
-    borderColor: 'emerald.400',
-    color: 'emerald.400',
-    bg: 'emerald.900',
-  },
-});
-
 /** 레이어 표의 내용. 여기 한 줄과 eslint.config.mts의 policies 한 줄이 짝이다. */
 const LAYERS = [
   {
@@ -151,9 +107,7 @@ const LAYERS = [
   },
 ] as const;
 
-export default async function HomePage() {
-  const board = await loadExampleBoard();
-
+export default function HomePage() {
   return (
     <main className={shell}>
       <header className={header}>
@@ -177,25 +131,6 @@ export default async function HomePage() {
               <span className={layerName}>{layer.name}</span>
               <span className={layerNote}>{layer.note}</span>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 className={sectionTitle}>예시 도메인</h2>
-        <div className={meta}>
-          <span
-            className={`${badge} ${board.source === 'seed' ? seedBadge : remoteBadge}`}
-          >
-            {board.source === 'seed' ? 'seed 데이터' : 'remote'}
-          </span>
-          <span className={layerNote}>
-            {board.summary.total}건 · 평균 {board.summary.averageScore}점
-          </span>
-        </div>
-        <div className={grid}>
-          {board.items.map(item => (
-            <ItemCard key={item.slug} item={item} />
           ))}
         </div>
       </section>

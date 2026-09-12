@@ -43,7 +43,7 @@ const foundGeocode: GeocodeFn = () =>
   });
 
 describe('planRoute — 명세 예시 해피 패스', () => {
-  it('문장 → 14:00 출발 → 14:08 A → 14:34 B → 15:19 C → 15:49 끝, 밥집 D는 시간대 밖', async () => {
+  it('문장 → 14:00 출발 → 14:08 A → 14:34 B → 15:19 C → 15:39 끝, 밥집 D는 시간대 밖', async () => {
     const outcome = await planRoute({
       sentence: '오늘 2시부터 4시까지 성수동에서 카페 들르면서 걷고 싶어',
       now: NOW,
@@ -64,7 +64,7 @@ describe('planRoute — 명세 예시 해피 패스', () => {
       '14:34 카페 B',
       '15:19 서점 C',
     ]);
-    expect(formatSeoulHourMinute(itinerary.endAt)).toBe('15:49');
+    expect(formatSeoulHourMinute(itinerary.endAt)).toBe('15:39');
     expect(itinerary.stops[0]?.reason).toBe('출발점에서 가장 가깝다');
     expect(itinerary.dropped).toEqual(
       expect.arrayContaining([{ candidate: FOOD_D, reason: 'outside_window' }]),

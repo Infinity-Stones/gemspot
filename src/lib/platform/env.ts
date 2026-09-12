@@ -25,30 +25,37 @@ function readOptional(name: string): string | null {
 }
 
 /**
- * 예시 API의 베이스 URL. 설정하지 않으면 `null`이고, 도메인 repository는 그때
- * 번들된 시드로 떨어진다 — 백엔드가 아직 없어도 앱이 뜨게 하기 위한 것이다.
- */
-export function apiBaseUrl(): string | null {
-  return readOptional('GEMSPOT_API_BASE_URL');
-}
-
-/**
  * 네이버 Geocoding 시크릿 키. 설정하지 않으면 `null`이고, 호출하는 쪽이
  * "키가 없다"를 실패로 다룬다 — 여기서 던지면 키 없이 띄워 보는 개발이 막힌다.
  *
  * 값은 Vercel 환경 변수(또는 로컬 `.env.local`)에서 온다. 짝이 되는 클라이언트
  * ID는 감출 수 없는 값이라 `src/shared/naverMap.ts`에 상수로 있다.
+ *
+ * 이름을 둘 읽는 이유: 배포 프로젝트마다 등록된 이름이 다르다.
+ * `juhee200s-projects/gemspot`(현재 프로덕션)에는 `GEMSPOT_NAVER_API_KEY`로,
+ * 다른 프로젝트에는 `SECRET_KEY`로 들어가 있다. 한쪽만 읽으면 다른 배포에서
+ * 키가 있는데도 Geocoding이 전부 "키 없음"으로 떨어진다. 이름이 하나로
+ * 정리되면 남는 쪽 하나만 지우면 된다.
  */
 export function naverApiKey(): string | null {
-  return readOptional('GEMSPOT_NAVER_API_KEY');
+  return readOptional('GEMSPOT_NAVER_API_KEY') ?? readOptional('SECRET_KEY');
 }
 
-/** TMAP 보행자 경로 API의 appKey. 없으면 구간 시간을 직선거리로 추정한다. */
+/**
+ * TMAP 보행자 경로 앱 키 (M7 구간 실측 · T40).
+ *
+ * 없으면 구간 도보 시간을 직선거리로 추정한다(T41). 그래도 여기 이름을 올려
+ * 두는 이유는 필요한 키의 목록이 한 화면에 있어야 한다는 것이다.
+ */
 export function tmapAppKey(): string | null {
   return readOptional('TMAP_APP_KEY');
 }
 
-/** Gemini API 키. 없으면 동선 가이드가 문장을 해석할 수 없다(기능 비활성). */
+/**
+ * Gemini API 키 (D12 결정 · M7 요청 해석 · 순서 제안 · T35 · T38).
+ * 없으면 동선 가이드가 문장을 해석할 수 없다(기능 비활성). 구조화된 요청을
+ * 직접 주는 경로는 키 없이도 돈다.
+ */
 export function geminiApiKey(): string | null {
   return readOptional('GEMINI_API_KEY');
 }
@@ -61,4 +68,15 @@ export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
 
 export function geminiModel(): string {
   return readOptional('GEMINI_MODEL') ?? DEFAULT_GEMINI_MODEL;
+}
+
+/**
+ * Vercel AI Gateway 키.
+ *
+ * 게이트웨이를 지나면 제공자 교체가 모델 이름 문자열 하나로 끝난다. 아직 쓰는
+ * 코드는 없다 — LLM 어댑터(`llm.ts`)는 D12 결정대로 Gemini를 직접 부른다.
+ * 게이트웨이로 옮기기로 하면 그 파일 하나만 바뀐다.
+ */
+export function aiGatewayApiKey(): string | null {
+  return readOptional('AI_GATEWAY_API_KEY');
 }

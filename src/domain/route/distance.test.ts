@@ -11,8 +11,8 @@ describe('haversineM', () => {
   });
 
   it('서울시청 ↔ 서울역은 약 1.9 km', () => {
-    const cityHall = { lat: 37.5665, lng: 126.978 };
-    const station = { lat: 37.5547, lng: 126.9707 };
+    const cityHall = { latitude: 37.5665, longitude: 126.978 };
+    const station = { latitude: 37.5547, longitude: 126.9707 };
     expect(haversineM(cityHall, station)).toBeCloseTo(1_460, -2);
   });
 });

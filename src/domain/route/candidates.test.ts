@@ -16,11 +16,11 @@ describe('selectCandidates', () => {
     ]);
   });
 
-  it('선호는 거르지 않고 앞으로만 보낸다', () => {
+  it('선호는 거르지 않고 앞으로만 보낸다 — 카페 둘(B · E)이 앞, 나머지는 입력 순서', () => {
     const { candidates } = selectCandidates(ALL_SPOTS, REQUEST_14_16);
     expect(candidates[0]).toEqual(CAFE_B);
     // 나머지는 입력 순서 유지(안정 정렬)
-    expect(candidates.slice(1).map((c) => c.id)).toEqual([SHOP_A.id, BOOK_C.id, DESSERT_E.id]);
+    expect(candidates.slice(1).map((c) => c.id)).toEqual([DESSERT_E.id, SHOP_A.id, BOOK_C.id]);
   });
 
   it('필수 스팟은 시간대 · 반경 규칙을 건너뛴다', () => {

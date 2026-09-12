@@ -47,9 +47,9 @@ describe('parseWalkingRoute', () => {
       distanceM: 620,
       durationS: 480,
       path: [
-        { lat: 37.5447, lng: 127.0557 },
-        { lat: 37.544, lng: 127.056 },
-        { lat: 37.5424, lng: 127.056 },
+        { latitude: 37.5447, longitude: 127.0557 },
+        { latitude: 37.544, longitude: 127.056 },
+        { latitude: 37.5424, longitude: 127.056 },
       ],
     });
   });
@@ -60,8 +60,8 @@ describe('parseWalkingRoute', () => {
 });
 
 describe('walkingRoute', () => {
-  const from = { lat: 37.5447, lng: 127.0557 };
-  const to = { lat: 37.5424, lng: 127.056 };
+  const from = { latitude: 37.5447, longitude: 127.0557 };
+  const to = { latitude: 37.5424, longitude: 127.056 };
 
   it('appKey 헤더 · 문자열 좌표 · 인코딩된 이름으로 POST한다', async () => {
     const fetchImpl = respondWith(TMAP_RESPONSE);

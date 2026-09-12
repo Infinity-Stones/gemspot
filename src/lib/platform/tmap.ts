@@ -1,5 +1,5 @@
-import type { GeoPoint } from '@/shared/geo';
-import { isGeoPoint } from '@/shared/geo';
+import type { SpotCoordinates } from '@/shared/spot';
+import { isSpotCoordinates } from '@/shared/spot';
 import { tmapAppKey } from './env';
 import type { HttpFailure, PostJsonOptions } from './httpClient';
 import { postJson } from './httpClient';
@@ -25,7 +25,7 @@ export interface WalkingRoute {
   readonly distanceM: number;
   readonly durationS: number;
   /** 보행 경로선. `[from, …, to]`. */
-  readonly path: readonly GeoPoint[];
+  readonly path: readonly SpotCoordinates[];
 }
 
 export type WalkingRouteFailure =
@@ -45,11 +45,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** GeoJSON 좌표 `[lng, lat]` → `GeoPoint`. 순서를 여기서 한 번만 뒤집는다. */
-function toGeoPoint(pair: unknown): GeoPoint | null {
+/** GeoJSON 좌표 `[lng, lat]` → `SpotCoordinates`. 순서를 여기서 한 번만 뒤집는다. */
+function toGeoPoint(pair: unknown): SpotCoordinates | null {
   if (!Array.isArray(pair) || pair.length < 2) return null;
-  const point = { lat: pair[1] as number, lng: pair[0] as number };
-  return isGeoPoint(point) ? point : null;
+  const point = { latitude: pair[1] as number, longitude: pair[0] as number };
+  return isSpotCoordinates(point) ? point : null;
 }
 
 /**
@@ -68,7 +68,7 @@ export function parseWalkingRoute(raw: unknown): WalkingRoute | null {
   if (typeof totalDistance !== 'number' || typeof totalTime !== 'number') return null;
   if (!Number.isFinite(totalDistance) || !Number.isFinite(totalTime)) return null;
 
-  const path: GeoPoint[] = [];
+  const path: SpotCoordinates[] = [];
   for (const feature of features as unknown[]) {
     if (!isRecord(feature)) continue;
     const { geometry } = feature;
@@ -80,7 +80,7 @@ export function parseWalkingRoute(raw: unknown): WalkingRoute | null {
       if (point === null) continue;
       const last = path.at(-1);
       // 구간 경계에서 끝점과 다음 시작점이 같은 좌표로 겹친다. 하나만 남긴다.
-      if (last !== undefined && last.lat === point.lat && last.lng === point.lng) continue;
+      if (last !== undefined && last.latitude === point.latitude && last.longitude === point.longitude) continue;
       path.push(point);
     }
   }
@@ -90,8 +90,8 @@ export function parseWalkingRoute(raw: unknown): WalkingRoute | null {
 }
 
 export async function walkingRoute(
-  from: GeoPoint,
-  to: GeoPoint,
+  from: SpotCoordinates,
+  to: SpotCoordinates,
   options: WalkingRouteOptions = {},
 ): Promise<WalkingRouteOutcome> {
   const { appKey = tmapAppKey(), timeoutMs = DEFAULT_TIMEOUT_MS, ...http } = options;
@@ -100,10 +100,10 @@ export async function walkingRoute(
   const result = await postJson<unknown>(
     PEDESTRIAN_ENDPOINT,
     {
-      startX: String(from.lng),
-      startY: String(from.lat),
-      endX: String(to.lng),
-      endY: String(to.lat),
+      startX: String(from.longitude),
+      startY: String(from.latitude),
+      endX: String(to.longitude),
+      endY: String(to.latitude),
       // 이름은 필수 파라미터고 URL 인코딩된 문자열이어야 한다(없으면 400).
       startName: encodeURIComponent('출발'),
       endName: encodeURIComponent('도착'),

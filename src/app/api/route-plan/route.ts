@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { planFromRequest, planRoute } from '@/domain/route';
 import { loadSpots } from '@/domain/spot';
-import { isGeoPoint } from '@/shared/geo';
+import type { SavedSpot } from '@/shared/spot';
+import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate, RouteRequest } from '@/shared/routeRequest';
 import { isValidTimeWindow } from '@/shared/routeRequest';
-import { isSpotCategory } from '@/shared/spotCategory';
 import { formatSeoulIso } from '@/shared/time';
 
 /**
@@ -28,8 +28,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function toCandidate(spot: { id: string; name: string; category: RouteCandidate['category']; coord: RouteCandidate['coord'] }): RouteCandidate {
-  return { id: spot.id, name: spot.name, category: spot.category, coord: spot.coord };
+function toCandidate(spot: SavedSpot): RouteCandidate {
+  return { id: spot.id, name: spot.name, category: spot.category, coord: spot.coordinates };
 }
 
 function parseRouteRequest(raw: unknown): RouteRequest | null {
@@ -39,14 +39,14 @@ function parseRouteRequest(raw: unknown): RouteRequest | null {
   const { start, end } = window;
   if (typeof start !== 'string' || typeof end !== 'string' || !isValidTimeWindow({ start, end })) return null;
   const { name, center } = area;
-  if (typeof name !== 'string' || !isGeoPoint(center)) return null;
+  if (typeof name !== 'string' || !isSpotCoordinates(center)) return null;
   const preferred = Array.isArray(preferredCategories) ? preferredCategories.filter(isSpotCategory) : [];
   const required = Array.isArray(requiredSpotIds)
     ? requiredSpotIds.filter((id): id is string => typeof id === 'string')
     : [];
   return {
     window: { start, end },
-    area: { name, center: { lat: center.lat, lng: center.lng } },
+    area: { name, center: { latitude: center.latitude, longitude: center.longitude } },
     preferredCategories: preferred,
     requiredSpotIds: required,
   };

@@ -1,4 +1,4 @@
-import type { Spot } from '@/shared/spot';
+import type { SavedSpot } from '@/shared/spot';
 
 /**
  * 번들에 함께 실리는 시드 스팟 — T50(#74).
@@ -14,65 +14,67 @@ import type { Spot } from '@/shared/spot';
  *
  * 저장소가 붙으면 이 파일과 repository의 폴백 분기를 함께 지울 것.
  */
-export const SEED_SPOTS: readonly Spot[] = [
+const SEONGDONG = { sido: '서울특별시', sigugun: '성동구' } as const;
+
+export const SEED_SPOTS: readonly SavedSpot[] = [
   {
     id: 'seed-shop-a',
     name: '편집숍 A',
     roadAddress: '서울 성동구 연무장길 41',
     jibunAddress: null,
-    coord: { lat: 37.5424, lng: 127.056 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
-    origin: 'manual',
+    coordinates: { latitude: 37.5424, longitude: 127.056 },
+    region: SEONGDONG,
     category: 'shop',
+    origin: 'manual',
   },
   {
     id: 'seed-cafe-b',
     name: '카페 B',
     roadAddress: '서울 성동구 성수이로 7길 20',
     jibunAddress: null,
-    coord: { lat: 37.5448, lng: 127.053 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
-    origin: 'manual',
+    coordinates: { latitude: 37.5448, longitude: 127.053 },
+    region: SEONGDONG,
     category: 'cafe',
+    origin: 'manual',
   },
   {
     id: 'seed-book-c',
     name: '서점 C',
     roadAddress: '서울 성동구 왕십리로 83',
     jibunAddress: null,
-    coord: { lat: 37.547, lng: 127.05 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
+    coordinates: { latitude: 37.547, longitude: 127.05 },
+    region: SEONGDONG,
+    category: 'shop',
     origin: 'manual',
-    category: 'bookstore',
   },
   {
     id: 'seed-food-d',
     name: '밥집 D',
     roadAddress: '서울 성동구 아차산로 104',
     jibunAddress: null,
-    coord: { lat: 37.5435, lng: 127.0575 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
-    origin: 'manual',
+    coordinates: { latitude: 37.5435, longitude: 127.0575 },
+    region: SEONGDONG,
     category: 'restaurant',
+    origin: 'manual',
   },
   {
     id: 'seed-dessert-e',
     name: '디저트 E',
     roadAddress: '서울 성동구 성수일로 12길 31',
     jibunAddress: null,
-    coord: { lat: 37.5462, lng: 127.059 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
+    coordinates: { latitude: 37.5462, longitude: 127.059 },
+    region: SEONGDONG,
+    category: 'cafe',
     origin: 'manual',
-    category: 'dessert',
   },
   {
     id: 'seed-park-f',
     name: '공원 F',
     roadAddress: '서울 성동구 뚝섬로 273',
     jibunAddress: null,
-    coord: { lat: 37.5443, lng: 127.033 },
-    region: { sido: '서울특별시', sigugun: '성동구' },
+    coordinates: { latitude: 37.5443, longitude: 127.033 },
+    region: SEONGDONG,
+    category: 'sight',
     origin: 'manual',
-    category: 'walk',
   },
 ];
