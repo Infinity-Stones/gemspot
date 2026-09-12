@@ -21,7 +21,6 @@ import { formatSeoulIso } from '@/shared/time';
  * app 레이어는 도메인 배럴과 shared만 연다. platform은 열지 않는다(lint).
  */
 
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -31,16 +30,26 @@ function parseRouteRequest(raw: unknown): RouteRequest | null {
   const { window, area, preferredCategories, requiredSpotIds } = raw;
   if (!isRecord(window) || !isRecord(area)) return null;
   const { start, end } = window;
-  if (typeof start !== 'string' || typeof end !== 'string' || !isValidTimeWindow({ start, end })) return null;
+  if (
+    typeof start !== 'string' ||
+    typeof end !== 'string' ||
+    !isValidTimeWindow({ start, end })
+  )
+    return null;
   const { name, center } = area;
   if (typeof name !== 'string' || !isSpotCoordinates(center)) return null;
-  const preferred = Array.isArray(preferredCategories) ? preferredCategories.filter(isSpotCategory) : [];
+  const preferred = Array.isArray(preferredCategories)
+    ? preferredCategories.filter(isSpotCategory)
+    : [];
   const required = Array.isArray(requiredSpotIds)
     ? requiredSpotIds.filter((id): id is string => typeof id === 'string')
     : [];
   return {
     window: { start, end },
-    area: { name, center: { latitude: center.latitude, longitude: center.longitude } },
+    area: {
+      name,
+      center: { latitude: center.latitude, longitude: center.longitude },
+    },
     preferredCategories: preferred,
     requiredSpotIds: required,
   };
@@ -51,26 +60,53 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: '본문이 JSON이 아닙니다' }, { status: 400 });
+    return NextResponse.json(
+      { error: '본문이 JSON이 아닙니다' },
+      { status: 400 },
+    );
   }
-  if (!isRecord(body)) return NextResponse.json({ error: '본문이 객체가 아닙니다' }, { status: 400 });
+  if (!isRecord(body))
+    return NextResponse.json(
+      { error: '본문이 객체가 아닙니다' },
+      { status: 400 },
+    );
 
-  const { spots, source } = await loadSpots();
+  const { spots, error } = await loadSpots();
+  if (error !== null) {
+    return NextResponse.json(
+      { error: '저장한 스팟을 불러오지 못했습니다' },
+      { status: 503 },
+    );
+  }
   const candidates = spots.map(toRouteCandidate);
 
   const { sentence: rawSentence, request: rawRequest } = body;
   if (typeof rawSentence === 'string') {
     const sentence = rawSentence.trim().slice(0, MAX_SENTENCE_LENGTH);
-    if (sentence.length === 0) return NextResponse.json({ error: '문장이 비어 있습니다' }, { status: 400 });
-    const outcome = await planRoute({ sentence, now: formatSeoulIso(Date.now()), spots: candidates });
-    return NextResponse.json({ ...outcome, spotSource: source });
+    if (sentence.length === 0)
+      return NextResponse.json(
+        { error: '문장이 비어 있습니다' },
+        { status: 400 },
+      );
+    const outcome = await planRoute({
+      sentence,
+      now: formatSeoulIso(Date.now()),
+      spots: candidates,
+    });
+    return NextResponse.json(outcome);
   }
 
   const routeRequest = parseRouteRequest(rawRequest);
   if (routeRequest !== null) {
-    const outcome = await planFromRequest({ request: routeRequest, spots: candidates });
-    return NextResponse.json({ ...outcome, spotSource: source });
+    const outcome = await planFromRequest({
+      request: routeRequest,
+      spots: candidates,
+    });
+    return NextResponse.json(outcome);
   }
 
-  return NextResponse.json({ error: 'sentence 또는 request 중 하나가 필요합니다' }, { status: 400 });
+  return NextResponse.json(
+    { error: 'sentence 또는 request 중 하나가 필요합니다' },
+    { status: 400 },
+  );
 }

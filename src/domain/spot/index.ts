@@ -8,9 +8,9 @@ export { deleteSpot, findSpot, insertSpot, loadSpots } from './repository';
 export type {
   DeleteSpotResult,
   InsertSpotResult,
+  LoadSpotsError,
   LoadSpotsResult,
   NewSpot,
-  SpotSource,
 } from './repository';
 export { locateAddress, saveSpot, searchAddress } from './save';
 export type {

@@ -11,8 +11,8 @@ import { supabaseSecretKey, supabaseUrl } from './env';
  * 브라우저 쿠키의 ownerId는 `spotStorage.ts`가 모든 쿼리에 넣는다. 시크릿 키는
  * RLS를 우회하므로 이 필터가 프로토타입의 사용자 경계다.
  *
- * 키가 없으면 `null`이다. 던지지 않는 이유는 env.ts와 같다 — 저장소 없이도
- * 앱은 시드로 떠야 하고, "없을 때 무엇이 맞는가"는 도메인이 정한다.
+ * 키가 없으면 `null`이다. 던지지 않는 이유는 env.ts와 같다 — 어댑터가
+ * `unconfigured`를 돌려주면 "없을 때 무엇이 맞는가"는 도메인이 정한다.
  */
 
 let cached: SupabaseClient | null | undefined;
