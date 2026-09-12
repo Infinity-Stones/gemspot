@@ -7,6 +7,11 @@ import {
 } from './openaiCompatible';
 import type { HttpFailure } from './httpClient';
 import { httpFailure } from './httpClient';
+import {
+  SPOT_CATEGORIES,
+  isSpotCategory,
+  type SpotCategory,
+} from '@/shared/spot';
 
 /**
  * 이미지에서 가게를 읽는 어댑터 — D02(#12)의 결정(Gemini 멀티모달).
@@ -38,6 +43,8 @@ export interface VisionSpot {
    * 들어오고, 그때 도로명 검증(#15)이 지어낸 주소를 성공으로 통과시킨다.
    */
   readonly address: string;
+  /** 프로젝트 고정 목록 안에서 VLM이 제안한 카테고리. */
+  readonly category: SpotCategory;
 }
 
 export interface ReadSpotsInput {
@@ -75,8 +82,9 @@ const RESPONSE_SCHEMA = {
         properties: {
           name: { type: 'string' },
           address: { type: 'string' },
+          category: { type: 'string', enum: SPOT_CATEGORIES },
         },
-        required: ['name', 'address'],
+        required: ['name', 'address', 'category'],
       },
     },
   },
@@ -92,12 +100,19 @@ const RESPONSE_SCHEMA = {
  * 편집이 맞는지 확인할 방법이 없다. **가게마다 한 항목**이라는 줄이 T12다.
  */
 const EXTRACT_PROMPT = [
-  '이미지에서 가게의 상호명과 주소를 읽어낸다.',
+  '이미지에서 가게의 상호명과 주소를 읽고 카테고리를 제안한다.',
   '',
   '- 한 장에 가게가 여러 곳이면 가게마다 한 항목으로 나눈다.',
   '- 화면에 보이는 글자를 그대로 적는다. 시·도를 보태거나 층수를 떼지 않는다.',
   '- 보이지 않는 것을 지어내지 않는다. 상호명이나 주소가 없으면 빈 문자열로 둔다.',
   '- 해시태그·계정명·좋아요 수·본문 설명은 상호명이 아니다.',
+  '- 각 가게의 category는 아래 코드 중 정확히 하나만 고른다.',
+  '  - meal: 식당, 음식점처럼 끼니를 먹는 곳',
+  '  - cafe: 카페나 디저트를 먹는 곳',
+  '  - movie: 영화관',
+  '  - amusement: 노래방, 게임장, 방탈출처럼 즐기는 곳',
+  '  - sports: 운동을 하거나 경기를 관람하는 곳',
+  '  - other: 위 분류에 없거나 판단하기 어려운 곳',
   '- 가게가 하나도 보이지 않으면 빈 목록을 돌려준다.',
 ].join('\n');
 
@@ -160,6 +175,7 @@ export function parseVisionSpots(raw: unknown): readonly VisionSpot[] {
     if (!isRecord(item)) continue;
     const name = item['name'];
     const address = item['address'];
+    const category = item['category'];
     if (typeof name !== 'string' || typeof address !== 'string') continue;
 
     const trimmedName = name.trim();
@@ -168,7 +184,13 @@ export function parseVisionSpots(raw: unknown): readonly VisionSpot[] {
     // 아무것도 적히지 않은 빈 줄이 생긴다.
     if (trimmedName.length === 0 && trimmedAddress.length === 0) continue;
 
-    spots.push({ name: trimmedName, address: trimmedAddress });
+    // 호환 제공자가 strict JSON Schema를 무시할 수도 있다. 그때 목록 밖 값을
+    // 특정 카테고리인 척 통과시키지 않고, 가장 보수적인 '기타'로 낮춘다.
+    spots.push({
+      name: trimmedName,
+      address: trimmedAddress,
+      category: isSpotCategory(category) ? category : 'other',
+    });
   }
 
   return spots;

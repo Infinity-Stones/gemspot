@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { closeResponseSchema } from './openaiCompatible';
 import { createGenerateJson } from './llm';
 import { createReadSpotsFromImage } from './vision';
+import { SPOT_CATEGORIES } from '@/shared/spot';
 
 const config = {
   apiKey: 'test-key',
@@ -76,7 +77,8 @@ describe('OpenAI 호환 API 통합', () => {
         completion(
           JSON.stringify({
             spots: [
-              { name: ' 가게 ', address: ' 서울 ' },
+              { name: ' 가게 ', address: ' 서울 ', category: 'cafe' },
+              { name: ' 분류 실패 ', address: ' 부산 ', category: 'unknown' },
               { name: 123, address: '' },
               { name: '', address: '' },
             ],
@@ -89,7 +91,10 @@ describe('OpenAI 호환 API 통합', () => {
       });
       expect(result).toEqual({
         ok: true,
-        spots: [{ name: '가게', address: '서울' }],
+        spots: [
+          { name: '가게', address: '서울', category: 'cafe' },
+          { name: '분류 실패', address: '부산', category: 'other' },
+        ],
       });
       const body = fetchMock.mock.calls[0]?.[1]?.body;
       expect(typeof body).toBe('string');
@@ -110,7 +115,15 @@ describe('OpenAI 호환 API 통합', () => {
               {
                 type: 'text',
                 text: expect.stringContaining(
-                  '화면에 보이는 글자를 그대로 적는다.',
+                  [
+                    '각 가게의 category는 아래 코드 중 정확히 하나만 고른다.',
+                    '  - meal: 식당, 음식점처럼 끼니를 먹는 곳',
+                    '  - cafe: 카페나 디저트를 먹는 곳',
+                    '  - movie: 영화관',
+                    '  - amusement: 노래방, 게임장, 방탈출처럼 즐기는 곳',
+                    '  - sports: 운동을 하거나 경기를 관람하는 곳',
+                    '  - other: 위 분류에 없거나 판단하기 어려운 곳',
+                  ].join('\n'),
                 ) as unknown,
               },
             ],
@@ -118,7 +131,22 @@ describe('OpenAI 호환 API 통합', () => {
         ],
         response_format: {
           type: 'json_schema',
-          json_schema: { schema: { required: ['spots'] } },
+          json_schema: {
+            strict: true,
+            schema: {
+              required: ['spots'],
+              properties: {
+                spots: {
+                  items: {
+                    required: ['name', 'address', 'category'],
+                    properties: {
+                      category: { enum: SPOT_CATEGORIES },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       });
     },

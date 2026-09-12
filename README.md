@@ -39,6 +39,8 @@ OPENAI_MODEL=your-vision-model
 모델은 이미지 입력과 `response_format: json_schema`를 지원해야 한다.
 이 형식은 [공식 이미지 입력 문서](https://developers.openai.com/api/docs/guides/images-vision)와
 [구조화 응답 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 따른다.
+이미지 추출 결과의 카테고리는 프로젝트 고정 코드인 `meal`, `cafe`, `movie`,
+`amusement`, `sports`, `other` 중 하나로 제안되며, 사용자가 저장 전에 수정할 수 있다.
 
 기존 `GEMINI_API_KEY`와 `GEMINI_MODEL`은 더 이상 사용하지 않는다.
 세 값을 모두 설정한 뒤 서버를 재시작한다. 키가 없으면 기존 키 누락 오류로,

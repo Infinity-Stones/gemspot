@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
 import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
+import type { SpotCategory } from '@/shared/spot';
 
 /**
  * 서버 액션은 jsdom에서 돌지 않는다. 이 화면이 지는 책임은 "고른 건을 그
@@ -40,6 +41,7 @@ function putCandidates(
     id: string;
     name: string;
     roadAddress: string | null;
+    suggestedCategory?: SpotCategory;
   }[],
 ) {
   sessionStorage.setItem(
@@ -48,6 +50,7 @@ function putCandidates(
       uploadImage: { id: 'upload-42', src: 'blob:upload-42', alt: 'shot.png' },
       candidates: candidates.map(candidate => ({
         ...candidate,
+        suggestedCategory: candidate.suggestedCategory ?? 'other',
         origin: 'ocr',
       })),
     }),
@@ -108,6 +111,32 @@ describe('ExtractionResultsFromSession', () => {
     ).toBeInTheDocument();
   });
 
+  it('카테고리 제안이 없거나 잘못된 이전 세션은 기타로 복구한다', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(
+      CANDIDATES_SESSION_KEY,
+      JSON.stringify({
+        uploadImage: { id: 'old', src: 'blob:old', alt: 'old.png' },
+        candidates: [
+          {
+            id: 'old:0',
+            name: '이전 후보',
+            roadAddress: '서울 용산구 한강대로 56호',
+            origin: 'ocr',
+            suggestedCategory: 'unknown',
+          },
+        ],
+      }),
+    );
+
+    render(<ExtractionResultsFromSession />);
+    await openList(user);
+
+    expect(
+      screen.getByRole('combobox', { name: '이전 후보 카테고리' }),
+    ).toHaveValue('other');
+  });
+
   it('저장을 고른 건만 액션에 넘긴다 — 좌표는 보내지 않는다', async () => {
     const user = userEvent.setup();
     putCandidates([
@@ -115,8 +144,14 @@ describe('ExtractionResultsFromSession', () => {
         id: 'c1',
         name: '피롤츠 커피하우스',
         roadAddress: '서울 용산구 한강대로 56-1',
+        suggestedCategory: 'cafe',
       },
-      { id: 'c2', name: '텅 베이커리', roadAddress: '서울 마포구 와우산로 29' },
+      {
+        id: 'c2',
+        name: '텅 베이커리',
+        roadAddress: '서울 마포구 와우산로 29',
+        suggestedCategory: 'cafe',
+      },
     ]);
     render(<ExtractionResultsFromSession />);
     await openList(user);
@@ -133,7 +168,7 @@ describe('ExtractionResultsFromSession', () => {
         candidateId: 'c1',
         name: '피롤츠 커피하우스',
         address: '서울 용산구 한강대로 56-1',
-        category: 'other',
+        category: 'cafe',
       },
     ]);
   });

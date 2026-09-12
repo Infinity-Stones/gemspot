@@ -12,7 +12,7 @@ import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
 import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
 import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { UPLOAD_PATH } from '@/shared/routes';
-import type { SpotCandidate } from '@/shared/spot';
+import { isSpotCategory, type SpotCandidate } from '@/shared/spot';
 import { ExtractionResults } from './ExtractionResults';
 import type {
   ExtractionResultCandidate,
@@ -171,7 +171,8 @@ function parseCandidates(
   if (!Array.isArray(candidates)) return [];
 
   return candidates
-    .filter(isSpotCandidate)
+    .map(parseSpotCandidate)
+    .filter((candidate): candidate is SpotCandidate => candidate !== null)
     .map(candidate => ({ ...candidate, uploadImage }));
 }
 
@@ -179,15 +180,28 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isSpotCandidate(value: unknown): value is SpotCandidate {
-  if (!isRecord(value)) return false;
+function parseSpotCandidate(value: unknown): SpotCandidate | null {
+  if (!isRecord(value)) return null;
   const row = value;
-  return (
-    typeof row['id'] === 'string' &&
-    typeof row['name'] === 'string' &&
-    (row['roadAddress'] === null || typeof row['roadAddress'] === 'string') &&
-    (row['origin'] === 'ocr' || row['origin'] === 'manual')
-  );
+  if (
+    typeof row['id'] !== 'string' ||
+    typeof row['name'] !== 'string' ||
+    (row['roadAddress'] !== null && typeof row['roadAddress'] !== 'string') ||
+    (row['origin'] !== 'ocr' && row['origin'] !== 'manual')
+  ) {
+    return null;
+  }
+  return {
+    id: row['id'],
+    name: row['name'],
+    roadAddress: row['roadAddress'],
+    origin: row['origin'],
+    // 배포 전에 열린 탭에는 이 필드가 없다. 이전 세션을 버리지 않고, 특정
+    // 카테고리를 지어내지도 않도록 가장 보수적인 '기타'로 올린다.
+    suggestedCategory: isSpotCategory(row['suggestedCategory'])
+      ? row['suggestedCategory']
+      : 'other',
+  };
 }
 
 function isUploadImage(value: unknown): value is UploadImage {
