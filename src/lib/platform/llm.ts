@@ -1,5 +1,9 @@
 import { openaiApiKey, openaiBaseUrl, openaiModel } from './env';
-import { callChatCompletion, completionFailure } from './openaiCompatible';
+import {
+  callChatCompletion,
+  completionFailure,
+  DEFAULT_AI_TIMEOUT_MS,
+} from './openaiCompatible';
 import type { HttpFailure } from './httpClient';
 import { httpFailure } from './httpClient';
 
@@ -35,9 +39,6 @@ export type GenerateJsonResult =
 export type GenerateJson = (
   input: GenerateJsonInput,
 ) => Promise<GenerateJsonResult>;
-
-/** 구조화 출력은 수 초가 걸린다. GET 기본값(5초)보다 넉넉해야 한다. */
-const DEFAULT_TIMEOUT_MS = 15_000;
 
 /** API 호출 한 번의 최소 면. 테스트에서 이것만 갈아 끼운다. */
 export type JsonCaller = (params: {
@@ -86,7 +87,12 @@ export function createGenerateJson(
   const caller =
     options.caller ?? (apiKey === null ? null : apiCaller(apiKey, baseUrl));
 
-  return async ({ system, user, schema, timeoutMs = DEFAULT_TIMEOUT_MS }) => {
+  return async ({
+    system,
+    user,
+    schema,
+    timeoutMs = DEFAULT_AI_TIMEOUT_MS,
+  }) => {
     if (caller === null) return { ok: false, error: { kind: 'no_api_key' } };
 
     let text: string | undefined;
