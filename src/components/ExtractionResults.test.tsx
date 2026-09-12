@@ -20,16 +20,27 @@ const CANDIDATES: readonly SpotCandidate[] = [
 ];
 
 describe('ExtractionResults', () => {
-  it('성공과 실패 건수를 알리고 성공 탭을 먼저 보여준다', () => {
+  it('목록보다 먼저 성공과 실패 건수를 알린다', () => {
     render(<ExtractionResults candidates={CANDIDATES} />);
 
-    expect(
-      screen.getByText('주소 확인 1건 · 주소 입력 필요 1건'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '성공 1' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    const alert = screen.getByRole('alertdialog');
+    expect(screen.getByText('성공 1건 · 실패 1건')).toBeInTheDocument();
+    expect(alert).toHaveAccessibleName('추출이 완료되었습니다');
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByText('피롤츠 커피하우스')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '목록 보기' })).toHaveFocus();
+  });
+
+  it('알럿을 확인하면 성공 탭과 목록을 보여준다', async () => {
+    const user = userEvent.setup();
+    render(<ExtractionResults candidates={CANDIDATES} />);
+
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    const successTab = screen.getByRole('tab', { name: '성공 1' });
+    expect(successTab).toHaveAttribute('aria-selected', 'true');
+    expect(successTab).toHaveFocus();
     expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
     expect(screen.queryByText('에그앤플라워')).not.toBeInTheDocument();
   });
@@ -38,6 +49,7 @@ describe('ExtractionResults', () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
     await user.click(screen.getByRole('tab', { name: '실패 1' }));
 
     expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
@@ -51,6 +63,7 @@ describe('ExtractionResults', () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
     const successTab = screen.getByRole('tab', { name: '성공 1' });
     successTab.focus();
     await user.keyboard('{ArrowRight}');
@@ -61,8 +74,12 @@ describe('ExtractionResults', () => {
     expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
   });
 
-  it('성공 건이 없으면 실패 탭부터 열어 빈 탭을 건너뛴다', () => {
+  it('성공 건이 없으면 알럿 확인 후 실패 탭부터 연다', async () => {
+    const user = userEvent.setup();
     render(<ExtractionResults candidates={[CANDIDATES[1]]} />);
+
+    expect(screen.getByText('성공 0건 · 실패 1건')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(screen.getByRole('tab', { name: '실패 1' })).toHaveAttribute(
       'aria-selected',
@@ -71,17 +88,40 @@ describe('ExtractionResults', () => {
     expect(screen.getByText('에그앤플라워')).toBeInTheDocument();
   });
 
-  it('후보가 없으면 빈 상태를 보여준다', () => {
+  it('후보가 없으면 0건을 알린 뒤 빈 상태를 보여준다', async () => {
+    const user = userEvent.setup();
     render(<ExtractionResults candidates={[]} />);
+
+    expect(screen.getByText('성공 0건 · 실패 0건')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(
       screen.getByText('주소 입력이 필요한 결과가 없습니다.'),
     ).toBeInTheDocument();
   });
 
-  it('확정 전 화면에는 저장 동작이 없다', () => {
+  it('새 추출 데이터를 받으면 목록보다 새 알럿을 먼저 보여준다', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <ExtractionResults candidates={CANDIDATES.slice(0, 1)} />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
+    expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
+
+    rerender(<ExtractionResults candidates={CANDIDATES} />);
+
+    expect(screen.getByRole('alertdialog')).toHaveTextContent(
+      '성공 1건 · 실패 1건',
+    );
+    expect(screen.queryByText('피롤츠 커피하우스')).not.toBeInTheDocument();
+  });
+
+  it('확정 전 화면에는 저장 동작이 없다', async () => {
+    const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
     expect(
       screen.queryByRole('button', { name: /저장/ }),
     ).not.toBeInTheDocument();
