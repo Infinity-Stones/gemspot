@@ -29,22 +29,15 @@ describe('env 리더', () => {
     expect(tmapAppKey()).toBe('key');
   });
 
-  describe('naverApiKey — 배포 프로젝트마다 다른 이름을 둘 다 읽는다', () => {
-    it('GEMSPOT_NAVER_API_KEY가 우선', () => {
+  describe('naverApiKey — 배포에 등록된 이름 GEMSPOT_NAVER_API_KEY만 읽는다', () => {
+    it('값이 있으면 그 값', () => {
       vi.stubEnv('GEMSPOT_NAVER_API_KEY', 'a');
-      vi.stubEnv('SECRET_KEY', 'b');
       expect(naverApiKey()).toBe('a');
     });
 
-    it('그 이름이 비어 있으면 SECRET_KEY로 떨어진다', () => {
-      vi.stubEnv('GEMSPOT_NAVER_API_KEY', '');
-      vi.stubEnv('SECRET_KEY', 'b');
-      expect(naverApiKey()).toBe('b');
-    });
-
-    it('둘 다 없으면 null', () => {
+    it('다른 이름(SECRET_KEY)은 보지 않는다', () => {
       vi.stubEnv('GEMSPOT_NAVER_API_KEY', undefined);
-      vi.stubEnv('SECRET_KEY', undefined);
+      vi.stubEnv('SECRET_KEY', 'b');
       expect(naverApiKey()).toBeNull();
     });
   });
