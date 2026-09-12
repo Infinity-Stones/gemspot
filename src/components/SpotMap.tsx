@@ -18,6 +18,11 @@ interface NaverBounds {
 
 interface NaverMap {
   setCenter(position: NaverLatLng): void;
+  setZoom(zoom: number): void;
+  fitBounds(
+    bounds: NaverLatLng[],
+    options: { top: number; right: number; bottom: number; left: number },
+  ): void;
   getBounds(): NaverBounds;
   destroy(): void;
 }
@@ -69,6 +74,7 @@ const SCRIPT_ID = 'naver-maps-sdk';
 const SCRIPT_SOURCE = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_CLIENT_ID}`;
 
 const DEFAULT_ZOOM = 16;
+const FIT_BOUNDS_PADDING = 48;
 
 function readNaverMaps(): NaverMaps | null {
   const candidate = (globalThis as { naver?: { maps?: NaverMaps } }).naver
@@ -135,6 +141,8 @@ interface Props {
   onSettled?: () => void;
   /** 중심을 현재 위치로 표시할지. 스팟 마커가 아니라 맥동하는 점으로 그린다. */
   hasLocationDot?: boolean;
+  /** 현재 위치가 없을 때 저장된 핀이 모두 들어오도록 최초 범위를 맞춘다. */
+  fitMarkers?: boolean;
 }
 
 const frame = css({
@@ -247,6 +255,7 @@ export function SpotMap({
   hasLocationDot = false,
   onMarkerSelect,
   onSettled,
+  fitMarkers = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapsRef = useRef<NaverMaps | null>(null);
@@ -307,6 +316,33 @@ export function SpotMap({
 
     map.setCenter(new maps.LatLng(latitude, longitude));
   }, [status, latitude, longitude, hasCoordinate]);
+
+  // 위치 권한 없이 저장된 핀으로 시작할 때만 전체 범위를 맞춘다. 한 건은
+  // 경계의 폭과 높이가 0이라 SDK가 과도하게 확대할 수 있어 기본 줌을 쓴다.
+  useEffect(() => {
+    const maps = mapsRef.current;
+    const map = mapRef.current;
+    if (maps === null || map === null || !fitMarkers || markers.length === 0)
+      return;
+
+    const positions = markers.map(
+      marker => new maps.LatLng(marker.latitude, marker.longitude),
+    );
+    if (positions.length === 1) {
+      const only = positions[0];
+      if (only === undefined) return;
+      map.setCenter(only);
+      map.setZoom(DEFAULT_ZOOM);
+      return;
+    }
+
+    map.fitBounds(positions, {
+      top: FIT_BOUNDS_PADDING,
+      right: FIT_BOUNDS_PADDING,
+      bottom: FIT_BOUNDS_PADDING,
+      left: FIT_BOUNDS_PADDING,
+    });
+  }, [status, fitMarkers, markers]);
 
   // 중심 표시(스팟 마커 · 현재 위치 점).
   useEffect(() => {

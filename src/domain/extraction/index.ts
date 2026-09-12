@@ -22,11 +22,6 @@ export type { ReadSpot, RoadAddressPartition } from './roadAddress';
 export {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
-  MAX_IMAGE_COUNT,
-  screenUploads,
+  screenUpload,
 } from './uploadGuard';
-export type {
-  UploadCandidate,
-  UploadRejection,
-  UploadScreening,
-} from './uploadGuard';
+export type { UploadCandidate, UploadRejection } from './uploadGuard';

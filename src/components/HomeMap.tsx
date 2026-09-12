@@ -128,9 +128,31 @@ export function HomeMap({ spot, markers }: Props) {
     );
   }
 
-  // 위치도 없고 보여 줄 스팟도 없으면 지도를 띄우지 않는다. 시작점도 그릴
-  // 것도 없는 빈 지도는 무엇을 해야 하는지 알려 주지 못한다.
   if (status === 'unavailable') {
+    // 현재 위치를 쓸 수 없어도 저장된 핀이 있으면 첫 좌표에서 지도를 만든 뒤
+    // 목록 전체가 들어오도록 범위를 맞춘다(T52). 중심 마커는 목록의 첫 핀과
+    // 겹치므로 따로 찍지 않는다.
+    const first = markers[0];
+    if (first !== undefined) {
+      return (
+        <>
+          <IntroSplash isReady={isMapSettled} />
+          <SpotMap
+            latitude={first.latitude}
+            longitude={first.longitude}
+            placeName="저장한 스팟"
+            hasMarker={false}
+            markers={markers}
+            fitMarkers
+            onMarkerSelect={selectMarker}
+            onSettled={markMapSettled}
+          />
+        </>
+      );
+    }
+
+    // 위치도 없고 보여 줄 스팟도 없으면 지도를 띄우지 않는다. 시작점도 그릴
+    // 것도 없는 빈 지도는 무엇을 해야 하는지 알려 주지 못한다.
     return (
       <div className={notice}>
         <IntroSplash isReady />

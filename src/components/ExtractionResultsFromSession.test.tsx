@@ -22,6 +22,11 @@ beforeEach(() => {
   registerMock.mockResolvedValue({ registered: [], rejected: [] });
 });
 
+/** 목록은 요약 알럿(T14) 뒤에 있다. 결과를 만지려면 먼저 그것을 지나야 한다. */
+async function openList(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: '목록 보기' }));
+}
+
 /** 후보 카드의 저장 · 삭제는 이름이 같고, 어느 건의 것인지는 그룹이 말한다. */
 function decide(candidateName: string, choice: '저장' | '삭제') {
   const group = screen.getByRole('group', {
@@ -50,7 +55,8 @@ function putCandidates(
 }
 
 describe('ExtractionResultsFromSession', () => {
-  it('업로드 이미지 id와 후보를 결합해 실패 앨범에 넘긴다', () => {
+  it('업로드 이미지 id와 후보를 결합해 실패 앨범에 넘긴다', async () => {
+    const user = userEvent.setup();
     sessionStorage.setItem(
       CANDIDATES_SESSION_KEY,
       JSON.stringify({
@@ -71,6 +77,7 @@ describe('ExtractionResultsFromSession', () => {
     );
 
     render(<ExtractionResultsFromSession />);
+    await user.click(screen.getByRole('button', { name: '목록 보기' }));
 
     expect(screen.getByRole('img', { name: 'egg.png' })).toHaveAttribute(
       'src',
@@ -112,6 +119,7 @@ describe('ExtractionResultsFromSession', () => {
       { id: 'c2', name: '텅 베이커리', roadAddress: '서울 마포구 와우산로 29' },
     ]);
     render(<ExtractionResultsFromSession />);
+    await openList(user);
 
     await user.click(decide('피롤츠 커피하우스', '저장'));
     await user.click(decide('텅 베이커리', '삭제'));
@@ -145,6 +153,7 @@ describe('ExtractionResultsFromSession', () => {
       },
     ]);
     render(<ExtractionResultsFromSession />);
+    await openList(user);
 
     await user.click(decide('피롤츠 커피하우스', '저장'));
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
