@@ -187,6 +187,60 @@ describe('ExtractionResults', () => {
     expect(screen.getByRole('button', { name: '선택 완료' })).toBeDisabled();
   });
 
+  it('실패 건의 상호명과 주소를 고쳐 저장 대상에 추가한다', async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    render(
+      <ExtractionResults
+        candidates={[CANDIDATES[1]]}
+        onContinue={onContinue}
+      />,
+    );
+
+    const name = screen.getByRole('textbox', { name: '상호명' });
+    const address = screen.getByRole('textbox', { name: '주소' });
+
+    await user.clear(name);
+    await user.type(name, '에그 앤 플라워');
+    await user.type(address, '서울 용산구 신흥로 26길 35');
+
+    // 타이핑은 폼의 초안만 바꾼다. 명시적으로 추가하기 전에는 실패 건이
+    // 성공(다음 저장 단계로 넘길 대상)에 섞이지 않는다.
+    expect(screen.getByRole('tab', { name: '성공 0' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '실패 1' })).toBeInTheDocument();
+    expect(onContinue).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '저장 대상에 추가' }));
+
+    expect(screen.getByRole('tab', { name: '성공 1' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '실패 0' })).toBeInTheDocument();
+    expect(onContinue).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('tab', { name: '성공 1' }));
+    expect(screen.getByText('에그 앤 플라워')).toBeInTheDocument();
+    expect(screen.getByText('서울 용산구 신흥로 26길 35')).toBeInTheDocument();
+    expect(screen.getByText('직접 입력')).toBeInTheDocument();
+    expect(
+      screen.getByText('1건 중 1건 선택 · 저장 대상 1건'),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('group', { name: '에그 앤 플라워 처리 방법' }),
+      ).getByRole('button', { name: '저장' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(screen.getByRole('button', { name: '선택 완료' }));
+
+    expect(onContinue).toHaveBeenCalledWith([
+      {
+        id: 'egg-and-flower',
+        name: '에그 앤 플라워',
+        roadAddress: '서울 용산구 신흥로 26길 35',
+        origin: 'manual',
+      },
+    ]);
+  });
+
   it('실패 이미지를 업로드 이미지 id로 묶어 앨범에 한 번만 보여준다', () => {
     const sharedImage = {
       id: 'upload-shared',
