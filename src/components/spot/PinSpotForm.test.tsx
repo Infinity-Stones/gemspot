@@ -105,6 +105,69 @@ describe('PinSpotForm', () => {
     expect(screen.getByLabelText('주소')).toBeInTheDocument();
   });
 
+  it('이름만 넣어도 브라우저가 막지 않는다 — 이름 검색은 주소를 요구하지 않는다', async () => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    render(<PinSpotForm action={recording({ status: 'idle' }, seen)} />);
+
+    await user.type(screen.getByLabelText('가게 이름'), '피롤츠 커피하우스');
+    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+
+    await waitFor(() => {
+      expect(seen).toHaveLength(1);
+    });
+    expect(seen[0]).toMatchObject({ intent: 'search_place', address: '' });
+  });
+
+  it('주소만 넣어도 막지 않는다 — 주소로 찾고 이름은 나중에 붙인다', async () => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    render(<PinSpotForm action={recording({ status: 'idle' }, seen)} />);
+
+    await user.type(screen.getByLabelText('주소'), '서울 용산구 한강대로 56-1');
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+
+    await waitFor(() => {
+      expect(seen).toHaveLength(1);
+    });
+    expect(seen[0]).toMatchObject({ intent: 'search', name: '' });
+  });
+
+  it('좌표는 확인됐는데 이름이 없으면, 저장을 누르기 전에 그 사실을 말한다', async () => {
+    const user = userEvent.setup();
+    const noName: PinFormState = {
+      status: 'located',
+      draft: { ...DRAFT, name: '' },
+      location: LOCATED.location,
+    };
+    render(<PinSpotForm action={recording(noName, [])} />);
+
+    await user.type(screen.getByLabelText('주소'), '서울 용산구 한강대로 56-1');
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('저장하려면 위에 가게 이름을 적어 주세요')).toBeInTheDocument();
+    });
+  });
+
+  it('저장 버튼은 intent=save와 함께 그때까지의 이름 · 주소를 보낸다', async () => {
+    const user = userEvent.setup();
+    const seen: Record<string, string>[] = [];
+    render(<PinSpotForm action={recording(LOCATED, seen)} />);
+
+    await fill(user);
+    await user.click(screen.getByRole('button', { name: '주소 검색' }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
+
+    await waitFor(() => {
+      expect(seen).toHaveLength(2);
+    });
+    expect(seen[1]).toMatchObject({ intent: 'save', name: DRAFT.name, address: DRAFT.address });
+  });
+
   it('처음에는 위치 찾기만 있고 저장 버튼은 없다 — 미리보기를 건너뛰고 저장할 수 없다', () => {
     render(<PinSpotForm action={recording({ status: 'idle' }, [])} />);
     expect(screen.getByRole('button', { name: '주소 검색' })).toBeInTheDocument();
