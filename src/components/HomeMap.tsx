@@ -144,6 +144,7 @@ export function HomeMap({ spot, markers }: Props) {
       longitude={current.longitude}
       placeName="내 주변"
       hasMarker={false}
+      hasLocationDot
       markers={markers}
     />
   );

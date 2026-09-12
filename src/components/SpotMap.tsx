@@ -25,8 +25,13 @@ interface NaverMarker {
   setMap(map: NaverMap | null): void;
 }
 
+interface NaverPoint {
+  readonly _brand: 'naverPoint';
+}
+
 interface NaverMaps {
   LatLng: new (latitude: number, longitude: number) => NaverLatLng;
+  Point: new (x: number, y: number) => NaverPoint;
   Map: new (
     element: HTMLElement,
     options: { center: NaverLatLng; zoom: number },
@@ -35,6 +40,7 @@ interface NaverMaps {
     position: NaverLatLng;
     map: NaverMap;
     title?: string;
+    icon?: { content: string; anchor: NaverPoint };
   }) => NaverMarker;
   Event: {
     addListener(target: NaverMap, event: string, handler: () => void): void;
@@ -113,6 +119,8 @@ interface Props {
   hasMarker?: boolean;
   /** 저장된 스팟들. 지금 보이는 영역에 드는 것만 그린다. */
   markers?: readonly MapMarker[];
+  /** 중심을 현재 위치로 표시할지. 스팟 마커가 아니라 맥동하는 점으로 그린다. */
+  hasLocationDot?: boolean;
 }
 
 const frame = css({
@@ -126,6 +134,56 @@ const frame = css({
 const canvas = css({
   width: 'full',
   height: 'full',
+});
+
+const LOCATION_DOT_SIZE = 14;
+
+const locationDot = css({
+  position: 'relative',
+  width: '[14px]',
+  height: '[14px]',
+  rounded: 'full',
+  bg: 'violet.600',
+  boxShadow: 'sm',
+  _dark: { bg: 'violet.400' },
+});
+
+// 흰 선은 안쪽에 넣는다. 바깥 테두리로 두면 점이 그만큼 커져 지도 위에서
+// 마커처럼 읽힌다.
+const locationEdge = css({
+  position: 'absolute',
+  inset: '0',
+  rounded: 'full',
+  // 토큰은 1px(hairline)과 2px(thick)뿐인데, 14px 원에서 1px은 묻히고 2px은
+  // 원을 먹는다. 이 한 자리만 사이 값으로 둔다.
+  borderWidth: '[1.5px]',
+  borderStyle: 'solid',
+  borderColor: 'white',
+  _dark: { borderColor: 'slate.950' },
+});
+
+// 점 뒤에서 번지는 링. 시선을 한 번 끌어 주는 장치라 계속 돈다.
+const locationRing = css({
+  position: 'absolute',
+  top: '[50%]',
+  left: '[50%]',
+  // 점과 같은 크기에서 시작해 바깥으로 퍼진다. 점 뒤에 깔아야 원 가장자리를
+  // 덮지 않는다.
+  width: '[14px]',
+  height: '[14px]',
+  marginTop: '[-7px]',
+  marginLeft: '[-7px]',
+  zIndex: '[-1]',
+  rounded: 'full',
+  bg: 'violet.500',
+  opacity: '[0.35]',
+  animationName: 'ping',
+  // 프리셋의 duration은 전환용이라 여기 쓰기엔 짧다. 천천히 번지게 둔다.
+  animationDuration: '[2.4s]',
+  animationTimingFunction: 'out',
+  animationIterationCount: '[infinite]',
+  // 움직임을 줄여 달라고 한 사용자에게는 멈춘 원으로 보인다.
+  _motionReduce: { animationName: '[none]' },
 });
 
 const overlay = css({
@@ -149,6 +207,7 @@ export function SpotMap({
   placeName,
   hasMarker = true,
   markers = [],
+  hasLocationDot = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
@@ -170,6 +229,20 @@ export function SpotMap({
         const center = new maps.LatLng(latitude, longitude);
         const map = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
         if (hasMarker) new maps.Marker({ position: center, map });
+        if (hasLocationDot) {
+          new maps.Marker({
+            position: center,
+            map,
+            title: '현재 위치',
+            icon: {
+              content: `<div class="${locationDot}"><span class="${locationRing}"></span><span class="${locationEdge}"></span></div>`,
+              anchor: new maps.Point(
+                LOCATION_DOT_SIZE / 2,
+                LOCATION_DOT_SIZE / 2,
+              ),
+            },
+          });
+        }
         map.setCenter(center);
 
         // 보이는 영역에 드는 것만 그린다. 지도를 옮기면 들어온 것을 만들고
@@ -208,7 +281,7 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [hasCoordinate, latitude, longitude, hasMarker, markers]);
+  }, [hasCoordinate, latitude, longitude, hasMarker, markers, hasLocationDot]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.
