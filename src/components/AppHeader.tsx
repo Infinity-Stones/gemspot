@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { css } from 'styled-system/css';
 import { HOME_PATH, ROUTE_PATH, UPLOAD_PATH } from '@/shared/routes';
@@ -19,12 +20,12 @@ const header = css({
   },
 });
 
-// 로고 자리. 지금은 서비스명을 글자로 두고, 로고가 나오면 이 자리만 바뀐다.
-const wordmark = css({
-  textStyle: 'lg',
-  fontWeight: 'bold',
-  letterSpacing: 'tight',
-});
+// 로고. 원본은 public/brand/에 있고 파비콘(src/app/icon.png)과 같은 마크다.
+// 라이트/다크를 이미지 둘로 가르는 이유: 워드마크의 "Gem"이 검은 글자라 어두운
+// 지면에서 사라진다. CSS filter로 뒤집으면 보라까지 함께 뒤집힌다.
+const wordmark = css({ display: 'inline-flex', alignItems: 'center', minHeight: '11' });
+const logoLight = css({ display: 'block', height: '8', width: 'auto', _dark: { display: 'none' } });
+const logoDark = css({ display: 'none', height: '8', width: 'auto', _dark: { display: 'block' } });
 
 const uploadLink = css({
   display: 'inline-flex',
@@ -69,8 +70,9 @@ const actions = css({ display: 'flex', alignItems: 'center', gap: '2' });
 export function AppHeader() {
   return (
     <header className={header}>
-      <Link className={wordmark} href={HOME_PATH}>
-        gemspot
+      <Link className={wordmark} href={HOME_PATH} aria-label="GemSpot 홈">
+        <Image className={logoLight} src="/brand/gemspot-logo.png" alt="GemSpot" width={365} height={120} priority />
+        <Image className={logoDark} src="/brand/gemspot-logo-dark.png" alt="" width={365} height={120} priority />
       </Link>
       <nav className={actions} aria-label="주요 동작">
         <Link className={routeLink} href={ROUTE_PATH}>
