@@ -18,7 +18,10 @@ interface NaverMap {
 
 interface NaverMaps {
   LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-  Map: new (element: HTMLElement, options: { center: NaverLatLng; zoom: number }) => NaverMap;
+  Map: new (
+    element: HTMLElement,
+    options: { center: NaverLatLng; zoom: number },
+  ) => NaverMap;
   Marker: new (options: { position: NaverLatLng; map: NaverMap }) => unknown;
 }
 
@@ -28,7 +31,8 @@ const SCRIPT_SOURCE = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${
 const DEFAULT_ZOOM = 16;
 
 function readNaverMaps(): NaverMaps | null {
-  const candidate = (globalThis as { naver?: { maps?: NaverMaps } }).naver?.maps;
+  const candidate = (globalThis as { naver?: { maps?: NaverMaps } }).naver
+    ?.maps;
   return candidate ?? null;
 }
 
@@ -42,7 +46,10 @@ function loadNaverMaps(): Promise<NaverMaps> {
 
   return new Promise((resolve, reject) => {
     const existing = document.getElementById(SCRIPT_ID);
-    const script = existing instanceof HTMLScriptElement ? existing : document.createElement('script');
+    const script =
+      existing instanceof HTMLScriptElement
+        ? existing
+        : document.createElement('script');
 
     const handleLoad = () => {
       const maps = readNaverMaps();
@@ -54,9 +61,13 @@ function loadNaverMaps(): Promise<NaverMaps> {
     };
 
     script.addEventListener('load', handleLoad, { once: true });
-    script.addEventListener('error', () => {
-      reject(new Error('지도 SDK를 받지 못했습니다'));
-    }, { once: true });
+    script.addEventListener(
+      'error',
+      () => {
+        reject(new Error('지도 SDK를 받지 못했습니다'));
+      },
+      { once: true },
+    );
 
     if (existing === null) {
       script.id = SCRIPT_ID;
@@ -108,9 +119,13 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
 
-  const coordinate = { latitude: Number(latitude), longitude: Number(longitude) };
+  const coordinate = {
+    latitude: Number(latitude),
+    longitude: Number(longitude),
+  };
   const hasCoordinate =
-    Number.isFinite(coordinate.latitude) && Number.isFinite(coordinate.longitude);
+    Number.isFinite(coordinate.latitude) &&
+    Number.isFinite(coordinate.longitude);
 
   useEffect(() => {
     if (!hasCoordinate) return;
@@ -118,11 +133,14 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
     let cancelled = false;
 
     loadNaverMaps()
-      .then((maps) => {
+      .then(maps => {
         const element = containerRef.current;
         if (cancelled || element === null) return;
 
-        const center = new maps.LatLng(coordinate.latitude, coordinate.longitude);
+        const center = new maps.LatLng(
+          coordinate.latitude,
+          coordinate.longitude,
+        );
         const map = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
         new maps.Marker({ position: center, map });
         map.setCenter(center);
@@ -151,7 +169,9 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
       />
       {resolved !== 'ready' && (
         <p className={overlay} role="status">
-          {resolved === 'loading' ? '지도를 불러오는 중입니다' : '지도를 불러오지 못했습니다. 주소로 위치를 확인해 주세요.'}
+          {resolved === 'loading'
+            ? '지도를 불러오는 중입니다'
+            : '지도를 불러오지 못했습니다. 주소로 위치를 확인해 주세요.'}
         </p>
       )}
     </div>

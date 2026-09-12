@@ -41,7 +41,11 @@ const addressLabel = css({
   _dark: { color: 'slate.400' },
 });
 
-export function SpotDetailPanel({ placeName, roadAddress, jibunAddress }: Props) {
+export function SpotDetailPanel({
+  placeName,
+  roadAddress,
+  jibunAddress,
+}: Props) {
   return (
     <section className={panel} aria-label="저장된 장소 정보">
       <h1 className={name}>{placeName}</h1>
