@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
+import { MAX_SENTENCE_LENGTH } from '@/app/route/planState';
 import { planFromRequest, planRoute } from '@/domain/route';
-import { loadSpots } from '@/domain/spot';
-import type { SavedSpot } from '@/shared/spot';
+import { loadSpots, toRouteCandidate } from '@/domain/spot';
 import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
-import type { RouteCandidate, RouteRequest } from '@/shared/routeRequest';
+import type { RouteRequest } from '@/shared/routeRequest';
 import { isValidTimeWindow } from '@/shared/routeRequest';
 import { formatSeoulIso } from '@/shared/time';
 
@@ -21,15 +21,9 @@ import { formatSeoulIso } from '@/shared/time';
  * app 레이어는 도메인 배럴과 shared만 연다. platform은 열지 않는다(lint).
  */
 
-/** 문장 상한. LLM에 무제한 입력을 흘리지 않는다. */
-const MAX_SENTENCE_LENGTH = 500;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function toCandidate(spot: SavedSpot): RouteCandidate {
-  return { id: spot.id, name: spot.name, category: spot.category, coord: spot.coordinates };
 }
 
 function parseRouteRequest(raw: unknown): RouteRequest | null {
@@ -62,7 +56,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!isRecord(body)) return NextResponse.json({ error: '본문이 객체가 아닙니다' }, { status: 400 });
 
   const { spots, source } = await loadSpots();
-  const candidates = spots.map(toCandidate);
+  const candidates = spots.map(toRouteCandidate);
 
   const { sentence: rawSentence, request: rawRequest } = body;
   if (typeof rawSentence === 'string') {
