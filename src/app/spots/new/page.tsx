@@ -21,15 +21,25 @@ const shell = css({
   maxWidth: '2xl',
   mx: 'auto',
   px: '6',
-  py: '12',
+  pt: '12',
+  // 플로팅 버튼이 덮는 만큼 아래를 비운다.
+  pb: '28',
   display: 'flex',
   flexDirection: 'column',
   gap: '8',
 });
 
-const title = css({ textStyle: '3xl', fontWeight: 'bold', letterSpacing: 'tight' });
+const title = css({
+  textStyle: '3xl',
+  fontWeight: 'bold',
+  letterSpacing: 'tight',
+});
 
-const lede = css({ textStyle: 'md', color: 'slate.600', _dark: { color: 'slate.400' } });
+const lede = css({
+  textStyle: 'md',
+  color: 'slate.600',
+  _dark: { color: 'slate.400' },
+});
 
 export default function NewSpotPage() {
   return (
@@ -38,8 +48,8 @@ export default function NewSpotPage() {
         <h1 className={title}>핀 찍기</h1>
       </div>
       <p className={lede}>
-        장소 이름과 주소를 적으면 위치를 찾아 지도에 미리 보여 드립니다. 맞으면 저장하세요.
-        도로명 주소가 가장 정확합니다.
+        장소 이름과 주소를 적으면 위치를 찾아 지도에 미리 보여 드립니다. 맞으면
+        저장하세요. 도로명 주소가 가장 정확합니다.
       </p>
       <PinSpotForm action={pinSpotAction} />
     </main>

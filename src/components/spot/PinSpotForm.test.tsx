@@ -5,7 +5,11 @@ import type { PinFormState } from '@/app/spots/new/pinState';
 import type { PinSpotAction } from './PinSpotForm';
 import { PinSpotForm } from './PinSpotForm';
 
-const DRAFT = { name: '피롤츠 커피하우스', address: '서울 용산구 한강대로 56-1', category: 'cafe' as const };
+const DRAFT = {
+  name: '피롤츠 커피하우스',
+  address: '서울 용산구 한강대로 56-1',
+  category: 'cafe' as const,
+};
 const LOCATED: PinFormState = {
   status: 'located',
   draft: DRAFT,
@@ -17,9 +21,19 @@ const LOCATED: PinFormState = {
   },
 };
 
-function recording(state: PinFormState, seen: Record<string, string>[]): PinSpotAction {
+function recording(
+  state: PinFormState,
+  seen: Record<string, string>[],
+): PinSpotAction {
   return vi.fn((_prev: PinFormState, formData: FormData) => {
-    seen.push(Object.fromEntries([...formData.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : v.name])));
+    seen.push(
+      Object.fromEntries(
+        [...formData.entries()].map(([k, v]) => [
+          k,
+          typeof v === 'string' ? v : v.name,
+        ]),
+      ),
+    );
     return Promise.resolve(state);
   });
 }
@@ -38,47 +52,90 @@ describe('PinSpotForm', () => {
       status: 'place_searched',
       draft: DRAFT,
       places: [
-        { name: '피롤츠 커피하우스', category: '카페', address: '서울 용산구 한강대로 56-1', secondaryAddress: null },
-        { name: '피롤츠 로스터리', category: '카페', address: '서울 용산구 한강대로 60', secondaryAddress: null },
+        {
+          name: '피롤츠 커피하우스',
+          category: '카페',
+          address: '서울 용산구 한강대로 56-1',
+          secondaryAddress: null,
+        },
+        {
+          name: '피롤츠 로스터리',
+          category: '카페',
+          address: '서울 용산구 한강대로 60',
+          secondaryAddress: null,
+        },
       ],
     };
     render(<PinSpotForm action={recording(placeSearched, seen)} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+    await user.click(screen.getByRole('button', { name: '검색' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: '가게 검색 결과' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: '가게 검색 결과' }),
+      ).toBeInTheDocument();
     });
     expect(seen[0]).toMatchObject({ intent: 'search_place', name: DRAFT.name });
     // 5건 상한을 숨기지 않는다
     expect(screen.getByText(/최대 5곳/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '이 위치로 저장' }),
+    ).not.toBeInTheDocument();
   });
 
   it('가게를 고르면 pickPlace=<번호>가 실리고, 서버가 채운 이름 · 주소가 칸에 보인다', async () => {
     const user = userEvent.setup();
     const seen: Record<string, string>[] = [];
     const places = [
-      { name: '피롤츠 커피하우스', category: '카페', address: '서울 용산구 한강대로 56-1', secondaryAddress: null },
-      { name: '피롤츠 로스터리', category: '카페', address: '서울 용산구 한강대로 60', secondaryAddress: null },
+      {
+        name: '피롤츠 커피하우스',
+        category: '카페',
+        address: '서울 용산구 한강대로 56-1',
+        secondaryAddress: null,
+      },
+      {
+        name: '피롤츠 로스터리',
+        category: '카페',
+        address: '서울 용산구 한강대로 60',
+        secondaryAddress: null,
+      },
     ];
     let call = 0;
-    const action: PinSpotAction = vi.fn((_prev: PinFormState, formData: FormData) => {
-      seen.push(Object.fromEntries([...formData.entries()].map(([k, v]) => [k, typeof v === 'string' ? v : v.name])));
-      call += 1;
-      const next: PinFormState =
-        call === 1
-          ? { status: 'place_searched', draft: DRAFT, places }
-          : { status: 'located', draft: { ...DRAFT, name: places[1].name, address: places[1].address }, location: LOCATED.location };
-      return Promise.resolve(next);
-    });
+    const action: PinSpotAction = vi.fn(
+      (_prev: PinFormState, formData: FormData) => {
+        seen.push(
+          Object.fromEntries(
+            [...formData.entries()].map(([k, v]) => [
+              k,
+              typeof v === 'string' ? v : v.name,
+            ]),
+          ),
+        );
+        call += 1;
+        const next: PinFormState =
+          call === 1
+            ? { status: 'place_searched', draft: DRAFT, places }
+            : {
+                status: 'located',
+                draft: {
+                  ...DRAFT,
+                  name: places[1].name,
+                  address: places[1].address,
+                },
+                location: LOCATED.location,
+              };
+        return Promise.resolve(next);
+      },
+    );
     render(<PinSpotForm action={action} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+    await user.click(screen.getByRole('button', { name: '검색' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /피롤츠 로스터리/ })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /피롤츠 로스터리/ }),
+      ).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: /피롤츠 로스터리/ }));
 
@@ -88,16 +145,22 @@ describe('PinSpotForm', () => {
     expect(seen[1]?.['pickPlace']).toBe('1');
     // 비제어 입력이라도 서버가 돌려준 값이 화면에 반영돼야 한다
     expect(screen.getByLabelText('가게 이름')).toHaveValue('피롤츠 로스터리');
-    expect(screen.getByLabelText('주소')).toHaveValue('서울 용산구 한강대로 60');
+    expect(screen.getByLabelText('주소')).toHaveValue(
+      '서울 용산구 한강대로 60',
+    );
   });
 
   it('이름으로 못 찾으면 주소로 찾으라고 말한다 — 길이 끊기지 않는다', async () => {
     const user = userEvent.setup();
-    const failed: PinFormState = { status: 'failed', draft: DRAFT, failure: { kind: 'place_not_found' } };
+    const failed: PinFormState = {
+      status: 'failed',
+      draft: DRAFT,
+      failure: { kind: 'place_not_found' },
+    };
     render(<PinSpotForm action={recording(failed, [])} />);
 
     await fill(user);
-    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+    await user.click(screen.getByRole('button', { name: '검색' }));
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('주소를 직접 넣어');
@@ -111,7 +174,7 @@ describe('PinSpotForm', () => {
     render(<PinSpotForm action={recording({ status: 'idle' }, seen)} />);
 
     await user.type(screen.getByLabelText('가게 이름'), '피롤츠 커피하우스');
-    await user.click(screen.getByRole('button', { name: '이 이름으로 찾기' }));
+    await user.click(screen.getByRole('button', { name: '검색' }));
 
     await waitFor(() => {
       expect(seen).toHaveLength(1);
@@ -146,7 +209,9 @@ describe('PinSpotForm', () => {
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
-      expect(screen.getByText('저장하려면 위에 가게 이름을 적어 주세요')).toBeInTheDocument();
+      expect(
+        screen.getByText('저장하려면 위에 가게 이름을 적어 주세요'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -158,20 +223,30 @@ describe('PinSpotForm', () => {
     await fill(user);
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: '이 위치로 저장' }),
+      ).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
 
     await waitFor(() => {
       expect(seen).toHaveLength(2);
     });
-    expect(seen[1]).toMatchObject({ intent: 'save', name: DRAFT.name, address: DRAFT.address });
+    expect(seen[1]).toMatchObject({
+      intent: 'save',
+      name: DRAFT.name,
+      address: DRAFT.address,
+    });
   });
 
   it('처음에는 위치 찾기만 있고 저장 버튼은 없다 — 미리보기를 건너뛰고 저장할 수 없다', () => {
     render(<PinSpotForm action={recording({ status: 'idle' }, [])} />);
-    expect(screen.getByRole('button', { name: '주소 검색' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '주소 검색' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '이 위치로 저장' }),
+    ).not.toBeInTheDocument();
   });
 
   it('주소 검색은 intent=search로 이름 · 주소 · 카테고리를 보낸다', async () => {
@@ -185,7 +260,12 @@ describe('PinSpotForm', () => {
     await waitFor(() => {
       expect(seen).toHaveLength(1);
     });
-    expect(seen[0]).toMatchObject({ intent: 'search', name: DRAFT.name, address: DRAFT.address, category: 'cafe' });
+    expect(seen[0]).toMatchObject({
+      intent: 'search',
+      name: DRAFT.name,
+      address: DRAFT.address,
+      category: 'cafe',
+    });
   });
 
   it('후보가 여럿이면 목록을 보이고, 하나를 고르면 pick=<주소>가 실린다', async () => {
@@ -196,7 +276,11 @@ describe('PinSpotForm', () => {
       draft: DRAFT,
       candidates: [
         LOCATED.location,
-        { ...LOCATED.location, roadAddress: '서울특별시 용산구 한강대로 56-2', jibunAddress: '' },
+        {
+          ...LOCATED.location,
+          roadAddress: '서울특별시 용산구 한강대로 56-2',
+          jibunAddress: '',
+        },
       ],
     };
     render(<PinSpotForm action={recording(searched, seen)} />);
@@ -205,9 +289,13 @@ describe('PinSpotForm', () => {
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: '주소 검색 결과' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: '주소 검색 결과' }),
+      ).toBeInTheDocument();
     });
-    expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '이 위치로 저장' }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /한강대로 56-2/ }));
     await waitFor(() => {
@@ -224,11 +312,19 @@ describe('PinSpotForm', () => {
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('region', { name: '찾은 위치 미리보기' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('region', { name: '찾은 위치 미리보기' }),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByText('서울특별시 용산구 한강대로 56-1')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '다시 검색' })).toBeInTheDocument();
+    expect(
+      screen.getByText('서울특별시 용산구 한강대로 56-1'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '이 위치로 저장' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '다시 검색' }),
+    ).toBeInTheDocument();
   });
 
   it('저장 버튼은 intent=save를 보낸다', async () => {
@@ -240,7 +336,9 @@ describe('PinSpotForm', () => {
     await fill(user);
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: '이 위치로 저장' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: '이 위치로 저장' }),
+      ).toBeInTheDocument();
     });
     await user.click(screen.getByRole('button', { name: '이 위치로 저장' }));
 
@@ -252,21 +350,33 @@ describe('PinSpotForm', () => {
 
   it('주소를 못 찾으면 그 자리에서 다시 입력하라고 말하고 저장 버튼은 열지 않는다', async () => {
     const user = userEvent.setup();
-    const failed: PinFormState = { status: 'failed', draft: DRAFT, failure: { kind: 'address_not_found' } };
+    const failed: PinFormState = {
+      status: 'failed',
+      draft: DRAFT,
+      failure: { kind: 'address_not_found' },
+    };
     render(<PinSpotForm action={recording(failed, [])} />);
 
     await fill(user);
     await user.click(screen.getByRole('button', { name: '주소 검색' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('위치를 찾지 못했어요');
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        '위치를 찾지 못했어요',
+      );
     });
-    expect(screen.queryByRole('button', { name: '이 위치로 저장' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '이 위치로 저장' }),
+    ).not.toBeInTheDocument();
   });
 
   it('저장소가 없으면 환경 변수 이름을 알려 준다', async () => {
     const user = userEvent.setup();
-    const failed: PinFormState = { status: 'failed', draft: DRAFT, failure: { kind: 'store_unconfigured' } };
+    const failed: PinFormState = {
+      status: 'failed',
+      draft: DRAFT,
+      failure: { kind: 'store_unconfigured' },
+    };
     render(<PinSpotForm action={recording(failed, [])} />);
 
     await fill(user);
