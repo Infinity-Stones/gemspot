@@ -146,7 +146,7 @@ const alertButton = css({
 const list = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '3',
+  gap: '4',
   m: '0',
   p: '0',
   listStyle: 'none',
@@ -284,10 +284,51 @@ const deleteButton = css({
   },
 });
 
+// 한 건이 어디서 시작해 어디서 끝나는지 카드가 말한다. 추출된 값과 그에
+// 딸린 카테고리가 같은 면 위에 있어야 두 건이 섞여 읽히지 않는다.
 const card = css({
   display: 'flex',
   flexDirection: 'column',
+  gap: '3',
+  p: '5',
+  rounded: 'xl',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.200',
+  bg: 'white',
+  boxShadow: 'sm',
+  _dark: {
+    borderColor: 'slate.800',
+    bg: 'slate.900',
+  },
+});
+
+const sectionTitle = css({
+  display: 'flex',
+  alignItems: 'center',
   gap: '2',
+  mb: '3',
+  textStyle: 'md',
+  fontWeight: 'semibold',
+  color: 'violet.700',
+  _dark: { color: 'violet.300' },
+});
+
+// 건수는 색만으로 구분되지 않게 숫자를 그대로 읽힌다. 원은 그 숫자가
+// 제목이 아니라 개수라는 것만 표시한다.
+const countBadge = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '6',
+  height: '6',
+  px: '1',
+  rounded: 'full',
+  bg: 'violet.600',
+  color: 'white',
+  textStyle: 'xs',
+  fontWeight: 'bold',
+  _dark: { bg: 'violet.500' },
 });
 
 const decideRow = css({
@@ -340,11 +381,8 @@ const extracted = css({
   px: '4',
   py: '3',
   rounded: 'lg',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'violet.200',
   bg: 'violet.50',
-  _dark: { borderColor: 'violet.900', bg: 'violet.950' },
+  _dark: { bg: 'violet.950' },
 });
 
 const candidateName = css({
@@ -592,24 +630,31 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
     <section className={shell} aria-label="추출 결과">
       {successes.length > 0 && (
         <section aria-label="주소가 확인된 결과">
+          <h2 className={sectionTitle}>
+            성공 데이터
+            <span className={countBadge}>{successes.length}</span>
+          </h2>
           <ul className={list}>
             {successes.map(candidate => (
               <li className={card} key={candidate.id}>
-                <div className={extracted}>
-                  <h2 className={candidateName}>{candidate.name}</h2>
-                  <p className={address}>{candidate.roadAddress}</p>
-                  {candidate.origin === 'manual' ? (
-                    <p className={manualOrigin}>직접 입력</p>
-                  ) : null}
+                <div className={decideRow}>
+                  <span className={fieldLabel}>추출 정보</span>
+                  <div className={extracted}>
+                    <h3 className={candidateName}>{candidate.name}</h3>
+                    <p className={address}>{candidate.roadAddress}</p>
+                    {candidate.origin === 'manual' ? (
+                      <p className={manualOrigin}>직접 입력</p>
+                    ) : null}
+                  </div>
                 </div>
                 <label className={decideRow}>
-                  <span className={fieldLabel}>카테고리</span>
+                  <span className={fieldLabel}>저장할 카테고리 선택</span>
                   <select
                     className={`${input} ${decideSelect}`}
                     // 카드마다 보이는 글자가 같아서 이름만으로는 어느 가게의
                     // 것인지 읽히지 않는다. 보이는 "카테고리"를 접근명에
                     // 그대로 품어 음성 제어도 같은 말로 집을 수 있게 둔다.
-                    aria-label={`${candidate.name} 카테고리`}
+                    aria-label={`${candidate.name} 저장할 카테고리 선택`}
                     value={categories[candidate.id] ?? DEFAULT_CATEGORY}
                     onChange={event => {
                       chooseCategory(candidate.id, event.target.value);

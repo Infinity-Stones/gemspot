@@ -135,7 +135,9 @@ describe('ExtractionResults', () => {
       screen.getByText('서울 용산구 한강대로 56-1, 2층'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('combobox', { name: '피롤츠 커피하우스 카테고리' }),
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -151,7 +153,9 @@ describe('ExtractionResults', () => {
 
     await user.click(screen.getByRole('button', { name: '목록 보기' }));
     await user.selectOptions(
-      screen.getByRole('combobox', { name: '피롤츠 커피하우스 카테고리' }),
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
       'cafe',
     );
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
