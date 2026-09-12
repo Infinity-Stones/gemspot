@@ -18,12 +18,29 @@ export interface ExtractionResultCandidate extends SpotCandidate {
   readonly uploadImage: UploadImage;
 }
 
+export interface SuccessfulSpotCandidate extends SpotCandidate {
+  readonly roadAddress: string;
+}
+
+/**
+ * STEP 3에서 사용자가 저장하기로 확정한 성공 후보를 STEP 4에 넘기는 경계.
+ *
+ * 이 컴포넌트는 좌표 변환이나 저장을 직접 하지 않는다. T23의 서버 동작이
+ * 생기면 이 콜백 자리에 연결하고, 그 전까지는 화면의 선택 규칙만 독립적으로
+ * 검증할 수 있다.
+ */
+export type ContinueWithCandidates = (
+  candidates: readonly SuccessfulSpotCandidate[],
+) => void;
+
 interface Props {
   /**
    * STEP 2가 만든 확정 전 후보. 이 컴포넌트는 후보를 보여주기만 하며 저장소를
    * 열지 않는다 — 사용자가 저장을 고르는 T15 전에는 스팟이 생기지 않는다.
    */
   candidates: readonly ExtractionResultCandidate[];
+  /** 생략하면 선택은 가능하지만 STEP 4로 넘기는 완료 버튼은 비활성화된다. */
+  onContinue?: ContinueWithCandidates;
 }
 
 type ResultKind = 'success' | 'failure';
@@ -168,6 +185,80 @@ const card = css({
   },
 });
 
+const choices = css({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  gap: '2',
+  mt: '2',
+});
+
+const choice = css({
+  minHeight: '10',
+  px: '4',
+  rounded: 'lg',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'slate.300',
+  color: 'slate.700',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _hover: { borderColor: 'slate.500' },
+  _pressed: {
+    borderColor: 'violet.600',
+    bg: 'violet.50',
+    color: 'violet.800',
+  },
+  _dark: {
+    borderColor: 'slate.700',
+    color: 'slate.300',
+    _hover: { borderColor: 'slate.500' },
+    _pressed: {
+      borderColor: 'violet.400',
+      bg: 'violet.950',
+      color: 'violet.200',
+    },
+  },
+});
+
+const completion = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+  mt: '4',
+});
+
+const completionHint = css({
+  textStyle: 'sm',
+  color: 'slate.600',
+  _dark: { color: 'slate.400' },
+});
+
+const continueButton = css({
+  minHeight: '11',
+  px: '5',
+  rounded: 'lg',
+  bg: 'violet.600',
+  color: 'white',
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  cursor: 'pointer',
+  _hover: { bg: 'violet.700' },
+  _disabled: {
+    bg: 'slate.200',
+    color: 'slate.500',
+    cursor: 'not-allowed',
+  },
+  _dark: {
+    bg: 'violet.500',
+    _hover: { bg: 'violet.400' },
+    _disabled: {
+      bg: 'slate.800',
+      color: 'slate.500',
+    },
+  },
+});
+
 const candidateName = css({
   textStyle: 'md',
   fontWeight: 'semibold',
@@ -197,6 +288,12 @@ const empty = css({
   textStyle: 'sm',
   _dark: { borderColor: 'slate.700', color: 'slate.400' },
 });
+
+function isSuccessfulCandidate(
+  candidate: ExtractionResultCandidate,
+): candidate is ExtractionResultCandidate & SuccessfulSpotCandidate {
+  return candidate.roadAddress !== null;
+}
 
 function candidatesOf(
   candidates: readonly ExtractionResultCandidate[],
@@ -232,8 +329,10 @@ function failureAlbumOf(
   return [...byImage.values()];
 }
 
-export function ExtractionResults({ candidates }: Props) {
-  const successes = candidatesOf(candidates, 'success');
+type CandidateDecision = 'save' | 'delete';
+
+export function ExtractionResults({ candidates, onContinue }: Props) {
+  const successes = candidates.filter(isSuccessfulCandidate);
   const [deletedFailureImageIds, setDeletedFailureImageIds] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -246,10 +345,32 @@ export function ExtractionResults({ candidates }: Props) {
   const [selected, setSelected] = useState<ResultKind>(() =>
     successes.length > 0 ? 'success' : 'failure',
   );
+  const [decisions, setDecisions] = useState<
+    Readonly<Record<string, CandidateDecision>>
+  >({});
   const successTabRef = useRef<HTMLButtonElement>(null);
   const failureTabRef = useRef<HTMLButtonElement>(null);
 
   const panelId = `extraction-${selected}-panel`;
+  const decidedCount = successes.filter(
+    candidate => decisions[candidate.id] !== undefined,
+  ).length;
+  const savedCandidates = successes
+    .filter(candidate => decisions[candidate.id] === 'save')
+    .map(({ id, name, roadAddress, origin }) => ({
+      id,
+      name,
+      roadAddress,
+      origin,
+    }));
+  const canContinue =
+    successes.length > 0 &&
+    decidedCount === successes.length &&
+    onContinue !== undefined;
+
+  function decide(candidateId: string, decision: CandidateDecision) {
+    setDecisions(current => ({ ...current, [candidateId]: decision }));
+  }
 
   function selectAndFocus(kind: ResultKind) {
     setSelected(kind);
@@ -331,6 +452,32 @@ export function ExtractionResults({ candidates }: Props) {
               <li className={card} key={candidate.id}>
                 <h2 className={candidateName}>{candidate.name}</h2>
                 <p className={address}>{candidate.roadAddress}</p>
+                <div
+                  className={choices}
+                  role="group"
+                  aria-label={`${candidate.name} 처리 방법`}
+                >
+                  <button
+                    className={choice}
+                    type="button"
+                    aria-pressed={decisions[candidate.id] === 'save'}
+                    onClick={() => {
+                      decide(candidate.id, 'save');
+                    }}
+                  >
+                    저장
+                  </button>
+                  <button
+                    className={choice}
+                    type="button"
+                    aria-pressed={decisions[candidate.id] === 'delete'}
+                    onClick={() => {
+                      decide(candidate.id, 'delete');
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -365,6 +512,25 @@ export function ExtractionResults({ candidates }: Props) {
             ))}
           </ul>
         )}
+
+        {selected === 'success' && successes.length > 0 ? (
+          <div className={completion}>
+            <p className={completionHint} aria-live="polite">
+              {successes.length}건 중 {decidedCount}건 선택 · 저장 대상{' '}
+              {savedCandidates.length}건
+            </p>
+            <button
+              className={continueButton}
+              type="button"
+              disabled={!canContinue}
+              onClick={() => {
+                onContinue?.(savedCandidates);
+              }}
+            >
+              선택 완료
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
