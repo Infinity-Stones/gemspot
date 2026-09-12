@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { css } from 'styled-system/css';
-import type { RegisterSpotsResult } from '@/app/upload/results/registerState';
+import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { spotResultPath } from '@/shared/routes';
 import { saveFailureMessage } from './spot/saveFailureMessage';
 

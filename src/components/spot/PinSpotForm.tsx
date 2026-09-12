@@ -2,9 +2,9 @@
 
 import { useActionState, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
-import type { PinDraft, PinFormState } from '@/app/spots/new/pinState';
-import { IDLE_PIN_STATE } from '@/app/spots/new/pinState';
-import type { PinFailure } from '@/app/spots/new/pinState';
+import type { PinDraft, PinFormState } from '@/app/(main)/spots/new/pinState';
+import { IDLE_PIN_STATE } from '@/app/(main)/spots/new/pinState';
+import type { PinFailure } from '@/app/(main)/spots/new/pinState';
 import { SPOT_CATEGORIES } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
 import { FloatingActionBar } from '../FloatingActionBar';

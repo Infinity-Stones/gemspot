@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { MAX_SENTENCE_LENGTH } from '@/app/route/planState';
+import { MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import { planFromRequest, planRoute } from '@/domain/route';
 import { loadSpots, toRouteCandidate } from '@/domain/spot';
 import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
