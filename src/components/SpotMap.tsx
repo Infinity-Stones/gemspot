@@ -174,6 +174,29 @@ const locationEdge = css({
   _dark: { borderColor: 'slate.950' },
 });
 
+const SPOT_PIN_WIDTH = 40;
+const SPOT_PIN_HEIGHT = 40;
+
+// 저장된 스팟 핀. 기본 마커는 파란색이라 프라이머리와 어긋나고, 다른 서비스의
+// 지도와 구분되지 않는다. 브랜드 마크가 이미 핀 모양이라 그대로 쓴다.
+const spotPin = css({
+  display: 'block',
+  width: '[40px]',
+  height: '[40px]',
+  // 원본이 512px이라 축소해서 쓴다. 고밀도 화면에서도 뭉개지지 않는다.
+  objectFit: 'contain',
+});
+
+// 스팟 핀은 한 곳에서 만든다. 중심으로 열린 스팟과 목록에서 그린 스팟이 다른
+// 모양이면, 핀을 고르는 순간 같은 자리의 핀이 바뀐 것처럼 보인다.
+function gemPinIcon(maps: NaverMaps) {
+  return {
+    content: `<img class="${spotPin}" src="/brand/gemspot-mark.png" alt="" />`,
+    // 마크의 아래 꼭짓점이 실제 좌표를 가리킨다.
+    anchor: new maps.Point(SPOT_PIN_WIDTH / 2, SPOT_PIN_HEIGHT),
+  };
+}
+
 // 점 뒤에서 번지는 링. 시선을 한 번 끌어 주는 장치라 계속 돈다.
 const locationRing = css({
   position: 'absolute',
@@ -284,7 +307,9 @@ export function SpotMap({
     const position = new maps.LatLng(latitude, longitude);
     const marks: NaverMarker[] = [];
 
-    if (hasMarker) marks.push(new maps.Marker({ position, map }));
+    if (hasMarker) {
+      marks.push(new maps.Marker({ position, map, icon: gemPinIcon(maps) }));
+    }
     if (hasLocationDot) {
       marks.push(
         new maps.Marker({
@@ -327,6 +352,7 @@ export function SpotMap({
             position,
             map,
             title: spot.name,
+            icon: gemPinIcon(maps),
           });
           if (onMarkerSelect !== undefined) {
             maps.Event.addListener(marker, 'click', () => {
