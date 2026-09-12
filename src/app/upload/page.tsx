@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { css } from 'styled-system/css';
 import { UploadForm } from '@/components/UploadForm';
 import { SPOT_NEW_PATH } from '@/shared/routes';
+import { extractAction } from './actions';
 import type { Metadata } from 'next';
 
 /**
@@ -60,7 +61,7 @@ export default function UploadPage() {
         가게 이름과 주소가 찍힌 스크린샷 한 장을 고르세요. 한 장 안에 가게가
         여러 곳이면 각각 따로 뽑습니다.
       </p>
-      <UploadForm />
+      <UploadForm action={extractAction} />
       <p>
         <Link className={altEntry} href={SPOT_NEW_PATH}>
           주소를 알고 있다면 직접 핀 찍기 →
