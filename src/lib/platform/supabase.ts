@@ -52,3 +52,50 @@ export async function selectAllRows(
   if (error !== null) return { ok: false, error: { kind: 'query', message: error.message } };
   return { ok: true, rows: Array.isArray(data) ? (data as unknown[]) : [] };
 }
+
+/**
+ * 생성된 DB 타입이 없어 클라이언트가 `any`를 돌려준다. 여기서 한 번 `unknown`으로
+ * 받아 두면 도메인의 parse 함수가 좁히는 책임을 진다 — `any`가 새어 나가지 않는다.
+ */
+interface QueryResponse {
+  readonly data: unknown;
+  readonly error: { readonly message: string } | null;
+}
+
+/** 행 하나를 넣고 저장된 모양을 돌려받는다(T21 #30의 쓰기). */
+export type InsertRowResult =
+  | { readonly ok: true; readonly row: unknown }
+  | { readonly ok: false; readonly error: { readonly kind: 'unconfigured' } | { readonly kind: 'query'; readonly message: string } };
+
+export async function insertRow(
+  table: string,
+  values: Readonly<Record<string, unknown>>,
+  options: { readonly client?: SupabaseClient | null } = {},
+): Promise<InsertRowResult> {
+  const client = options.client === undefined ? supabaseClient() : options.client;
+  if (client === null) return { ok: false, error: { kind: 'unconfigured' } };
+
+  // 넣은 행을 바로 돌려받는다 — id · created_at은 DB가 채우므로 클라이언트가
+  // 만들어 낸 값으로 화면을 그리면 저장된 것과 다를 수 있다.
+  const response: QueryResponse = await client.from(table).insert(values).select('*').single();
+  if (response.error !== null) return { ok: false, error: { kind: 'query', message: response.error.message } };
+  return { ok: true, row: response.data };
+}
+
+/** id로 행 하나. 없으면 `row: null` — 없음은 오류가 아니다. */
+export type SelectByIdResult =
+  | { readonly ok: true; readonly row: unknown }
+  | { readonly ok: false; readonly error: { readonly kind: 'unconfigured' } | { readonly kind: 'query'; readonly message: string } };
+
+export async function selectRowById(
+  table: string,
+  id: string,
+  options: { readonly client?: SupabaseClient | null } = {},
+): Promise<SelectByIdResult> {
+  const client = options.client === undefined ? supabaseClient() : options.client;
+  if (client === null) return { ok: false, error: { kind: 'unconfigured' } };
+
+  const response: QueryResponse = await client.from(table).select('*').eq('id', id).maybeSingle();
+  if (response.error !== null) return { ok: false, error: { kind: 'query', message: response.error.message } };
+  return { ok: true, row: response.data };
+}

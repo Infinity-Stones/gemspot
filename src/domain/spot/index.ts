@@ -4,8 +4,10 @@
  */
 
 export { toRouteCandidate } from './projection';
-export { loadSpots } from './repository';
-export type { LoadSpotsResult, SpotSource } from './repository';
+export { findSpot, insertSpot, loadSpots } from './repository';
+export type { InsertSpotResult, LoadSpotsResult, NewSpot, SpotSource } from './repository';
+export { locateAddress, saveSpot } from './save';
+export type { LocateAddressResult, SaveSpotFailure, SaveSpotInput, SaveSpotOutcome } from './save';
 export { prepareGeocodedLocation } from './geocoding';
 export type {
   GeocodedSpotLocation,

@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { css } from 'styled-system/css';
 import { UploadForm } from '@/components/UploadForm';
+import { SPOT_NEW_PATH } from '@/shared/routes';
 import type { Metadata } from 'next';
 
 /**
@@ -40,6 +42,14 @@ const lede = css({
   _dark: { color: 'slate.400' },
 });
 
+// 스크린샷이 없어도 들어올 수 있는 두 번째 입구(T51).
+const altEntry = css({
+  textStyle: 'sm',
+  color: 'violet.700',
+  textDecoration: 'underline',
+  _dark: { color: 'violet.300' },
+});
+
 export default function UploadPage() {
   return (
     <main className={shell}>
@@ -51,6 +61,11 @@ export default function UploadPage() {
         있습니다.
       </p>
       <UploadForm />
+      <p>
+        <Link className={altEntry} href={SPOT_NEW_PATH}>
+          주소를 알고 있다면 직접 핀 찍기 →
+        </Link>
+      </p>
     </main>
   );
 }

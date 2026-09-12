@@ -39,6 +39,13 @@ export const UPLOAD_RESULTS_PATH = '/upload/results';
 export const ROUTE_PATH = '/route';
 
 /**
+ * 주소로 핀 찍기(T51). OCR을 거치지 않고 이름 · 주소를 넣어 스팟을 만든다.
+ * 업로드 아래가 아니라 `/spots` 아래인 이유: 이 화면이 만드는 것은 업로드가
+ * 아니라 스팟이고, OCR 실패 건의 직접 입력(T17)도 결국 여기로 들어온다.
+ */
+export const SPOT_NEW_PATH = '/spots/new';
+
+/**
  * URL 세그먼트로 안전한 형태인지 검사한다.
  *
  * slug를 그대로 경로에 붙이면 `..`이나 `/`가 섞였을 때 다른 경로로 튄다.
