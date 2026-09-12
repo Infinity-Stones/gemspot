@@ -10,7 +10,7 @@ const button = css({
   px: '3',
   py: '2',
   rounded: 'full',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'slate.300',
   bg: 'white',
