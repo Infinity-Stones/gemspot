@@ -171,9 +171,21 @@ export interface FindSpotOptions {
 }
 
 /**
- * id로 스팟 하나. 저장소가 없으면 시드에서 찾는다 — 시드 id로 열린 결과
- * 화면이 저장소 없이도 돌아야 한다. 없으면 `null`.
+ * id로 스팟 하나. 저장소에 없으면 번들에 실린 목록에서 찾는다 — 시드 id로
+ * 열린 결과 화면이 저장소와 무관하게 돌아야 한다. 없으면 `null`.
  */
+/**
+ * 번들에 실린 목록에서 찾는다. 동선용 시드와 지도 시연용 스팟을 함께 보는
+ * 이유는, 둘 다 저장소 없이 화면을 돌려 보기 위한 데이터이기 때문이다.
+ */
+function findBundledSpot(id: string): SavedSpot | null {
+  return (
+    SEED_SPOTS.find(spot => spot.id === id) ??
+    DEMO_SPOTS.find(spot => spot.id === id) ??
+    null
+  );
+}
+
 export async function findSpot(
   id: string,
   options: FindSpotOptions = {},
@@ -182,16 +194,11 @@ export async function findSpot(
     options.readRow ?? ((spotId: string) => selectRowById(SPOTS_TABLE, spotId));
   const result = await readRow(id);
   if (!result.ok) {
-    // 저장소가 없으면 번들에 실린 목록에서 찾는다. 동선용 시드와 지도
-    // 시연용 스팟을 함께 보는 이유는, 둘 다 저장소 없이 화면을 돌려 보기
-    // 위한 데이터이기 때문이다.
-    if (result.error.kind === 'unconfigured')
-      return (
-        SEED_SPOTS.find(spot => spot.id === id) ??
-        DEMO_SPOTS.find(spot => spot.id === id) ??
-        null
-      );
-    return null;
+    return result.error.kind === 'unconfigured' ? findBundledSpot(id) : null;
   }
-  return result.row === null ? null : parseSpotRow(result.row);
+  // 저장소가 있어도 그 행이 없으면 번들 목록을 본다. 배포 환경에는 저장소가
+  // 붙어 있지만 지도에 그리는 핀은 아직 번들 데이터라, 여기서 막으면 배포된
+  // 화면에서만 핀을 눌러도 상세가 뜨지 않는다. 목록 조회(T29)가 저장소를
+  // 보게 되면 이 분기는 지운다.
+  return result.row === null ? findBundledSpot(id) : parseSpotRow(result.row);
 }
