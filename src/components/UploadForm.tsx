@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
+import { ACCEPTED_IMAGE_TYPES, screenUploads } from '@/domain/extraction';
+import type { UploadRejection } from '@/domain/extraction';
 
 /**
  * 업로드할 이미지를 고르는 수단.
@@ -160,16 +162,72 @@ const fileName = css({
   _dark: { color: 'slate.400' },
 });
 
+const warning = css({
+  width: 'full',
+  p: '4',
+  rounded: 'md',
+  borderWidth: '1px',
+  borderStyle: 'solid',
+  borderColor: 'red.300',
+  bg: 'red.50',
+  color: 'red.900',
+  _dark: { borderColor: 'red.800', bg: 'red.950', color: 'red.100' },
+});
+
+const warningTitle = css({
+  textStyle: 'sm',
+  fontWeight: 'semibold',
+  mb: '2',
+});
+
+const warningList = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+  m: '0',
+  pl: '5',
+  textStyle: 'sm',
+});
+
 /**
- * 앨범에서 이미지만 보이게 한다. 확장자·용량·장수 가드는 T07(#10)이 붙인다 —
- * 이 속성은 선택창의 **힌트일 뿐이고 강제가 아니다.** 사용자가 "모든 파일"로
- * 바꿔 고를 수 있으므로 받은 뒤에 다시 검사해야 한다.
+ * 선택창에 보일 형식. 가드가 받는 것과 같은 목록이어야 한다 — 선택창에서는
+ * 보이는데 고르면 막히는 파일이 있으면 사용자는 앱이 고장난 줄 안다.
+ *
+ * 다만 이 속성은 **힌트일 뿐이고 강제가 아니다.** 사용자가 "모든 파일"로 바꿔
+ * 고를 수 있으므로 받은 뒤에 `screenUploads`가 다시 검사한다.
  */
-const ACCEPT = 'image/*';
+const ACCEPT = ACCEPTED_IMAGE_TYPES.join(',');
+
+/** 사람에게 보일 형식 이름. `image/png` → `png`. */
+const TYPE_NAMES = ACCEPTED_IMAGE_TYPES.map(type =>
+  type.replace('image/', ''),
+).join(' · ');
+
+function megabytes(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
+
+/**
+ * 막힌 이유를 문장으로 바꾼다.
+ *
+ * 도메인이 구조를 주고 화면이 말투를 정한다. 상한 숫자를 바꾸는 일과 문구를
+ * 다듬는 일이 서로 다른 파일에서 일어나야 한다.
+ */
+function explain(rejection: UploadRejection): string {
+  switch (rejection.kind) {
+    case 'type':
+      return `읽을 수 없는 형식입니다. ${TYPE_NAMES}만 올릴 수 있습니다.`;
+    case 'size':
+      return `${megabytes(rejection.size)}MB로 장당 상한 ${megabytes(rejection.limit)}MB를 넘습니다.`;
+    case 'count':
+      return `한 번에 ${String(rejection.limit)}장까지 올릴 수 있습니다.`;
+  }
+}
 
 export function UploadForm() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<readonly PickedImage[]>([]);
+  const [rejections, setRejections] = useState<readonly UploadRejection[]>([]);
 
   // 언마운트 정리용 거울. 렌더 중에 ref를 쓰지 않고 이펙트에서 맞춘다 —
   // 렌더 중 변경은 React Compiler 진단이 잡는다.
@@ -194,15 +252,30 @@ export function UploadForm() {
   // URL이 하나씩 새고 revokeObjectURL은 두 번 불린다. 업데이터는 앞의 배열에서
   // 뒤의 배열을 계산하는 일만 한다.
   function add(picked: readonly File[]) {
+    // 중복을 먼저 걷어낸다. 이미 담긴 장이 장수 상한의 자리를 두 번 차지하면,
+    // 통과할 수 있었던 새 장이 엉뚱하게 막힌다.
     const seen = new Set(images.map(image => image.fingerprint));
-    const added: PickedImage[] = [];
+    const fresh: File[] = [];
 
     for (const file of picked) {
       const fingerprint = fingerprintOf(file);
       if (seen.has(fingerprint)) continue;
       seen.add(fingerprint);
-      added.push({ fingerprint, file, previewUrl: URL.createObjectURL(file) });
+      fresh.push(file);
     }
+
+    // `File`이 `UploadCandidate`(이름·형식·크기)를 만족하므로 그대로 넘긴다.
+    const { accepted, rejected } = screenUploads(fresh, images.length);
+
+    // 이번 선택의 결과만 보여준다. 앞선 선택의 경고를 쌓아 두면 방금 고친 것도
+    // 여전히 문제인 것처럼 남는다.
+    setRejections(rejected);
+
+    const added = accepted.map(file => ({
+      fingerprint: fingerprintOf(file),
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
 
     if (added.length === 0) return;
     setImages(previous => [...previous, ...added]);
@@ -250,6 +323,23 @@ export function UploadForm() {
       >
         스크린샷 고르기
       </button>
+
+      {rejections.length > 0 && (
+        // role="alert"로 두는 이유: 사용자가 방금 한 행동의 결과라 그 자리에서
+        // 읽혀야 한다. 조용히 목록에서 빠지면 무엇이 왜 없는지 알 수 없다.
+        <div className={warning} role="alert">
+          <p className={warningTitle}>
+            {rejections.length}장을 올릴 수 없습니다
+          </p>
+          <ul className={warningList}>
+            {rejections.map((rejection, index) => (
+              <li key={`${rejection.kind}:${rejection.name}:${String(index)}`}>
+                {rejection.name} — {explain(rejection)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {images.length > 0 && (
         <>
