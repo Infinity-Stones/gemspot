@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { css } from 'styled-system/css';
-import { HOME_PATH, UPLOAD_PATH } from '@/shared/routes';
+import { HOME_PATH, ROUTE_PATH, UPLOAD_PATH } from '@/shared/routes';
 
 const header = css({
   display: 'flex',
@@ -44,15 +44,42 @@ const uploadLink = css({
   _dark: { bg: 'violet.500', color: 'slate.950', _hover: { bg: 'violet.400' } },
 });
 
+// 세컨더리 — 동선 만들기. 업로드가 이 앱의 주 행동이라 프라이머리는 하나만
+// 두고, 동선은 같은 높이·모양의 윤곽 버튼으로 옆에 선다(T44 진입 링크).
+const routeLink = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: '0',
+  minHeight: '11',
+  px: '5',
+  rounded: 'full',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'violet.600',
+  color: 'violet.700',
+  textStyle: 'sm',
+  fontWeight: 'medium',
+  _hover: { bg: 'violet.50' },
+  _dark: { borderColor: 'violet.400', color: 'violet.300', _hover: { bg: 'violet.950' } },
+});
+
+const actions = css({ display: 'flex', alignItems: 'center', gap: '2' });
+
 export function AppHeader() {
   return (
     <header className={header}>
       <Link className={wordmark} href={HOME_PATH}>
         gemspot
       </Link>
-      <Link className={uploadLink} href={UPLOAD_PATH}>
-        업로드
-      </Link>
+      <nav className={actions} aria-label="주요 동작">
+        <Link className={routeLink} href={ROUTE_PATH}>
+          동선 만들기
+        </Link>
+        <Link className={uploadLink} href={UPLOAD_PATH}>
+          업로드
+        </Link>
+      </nav>
     </header>
   );
 }
