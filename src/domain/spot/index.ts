@@ -5,3 +5,8 @@
 
 export { loadSpots } from './repository';
 export type { LoadSpotsResult, SpotSource } from './repository';
+export { prepareGeocodedLocation } from './geocoding';
+export type {
+  GeocodedSpotLocation,
+  PrepareGeocodedLocationResult,
+} from './geocoding';
