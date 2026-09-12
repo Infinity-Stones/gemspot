@@ -37,6 +37,8 @@ export interface GetJsonOptions {
   readonly fetchImpl?: typeof fetch;
 }
 
+export type PostJsonOptions = GetJsonOptions;
+
 /**
  * 기본 타임아웃. 없으면 `fetch`는 OS의 TCP 타임아웃(수십 초)까지 매달려 있고,
  * 그동안 서버 컴포넌트 렌더가 통째로 멈춘다.
@@ -47,9 +49,19 @@ function messageOf(cause: unknown): string {
   return cause instanceof Error ? cause.message : String(cause);
 }
 
-export async function getJson<T>(
+export function httpFailure(kind: 'network' | 'timeout' | 'parse', cause: unknown): HttpFailure {
+  return { kind, message: messageOf(cause) };
+}
+
+/**
+ * GET · POST가 공유하는 본체. 메서드와 본문만 다르고 실패를 접는 방식은 같아야
+ * 하므로 한 함수다 — 둘로 나누면 타임아웃 · 상태 코드 처리가 조용히 어긋난다.
+ */
+async function requestJson<T>(
+  method: 'GET' | 'POST',
   url: string,
-  options: GetJsonOptions = {},
+  body: unknown,
+  options: GetJsonOptions,
 ): Promise<HttpResult<T>> {
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
@@ -63,8 +75,13 @@ export async function getJson<T>(
   let response: Response;
   try {
     response = await fetchImpl(url, {
-      method: 'GET',
-      headers: { accept: 'application/json', ...headers },
+      method,
+      headers: {
+        accept: 'application/json',
+        ...(method === 'POST' ? { 'content-type': 'application/json' } : {}),
+        ...headers,
+      },
+      ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (cause) {
@@ -72,13 +89,7 @@ export async function getJson<T>(
     // 둘을 갈라 두는 이유: 타임아웃은 재시도가 말이 되고 네트워크 끊김은
     // 대개 아니다 — 그 판단을 도메인이 하려면 구분이 있어야 한다.
     const isTimeout = cause instanceof Error && cause.name === 'TimeoutError';
-    return {
-      ok: false,
-      error: {
-        kind: isTimeout ? 'timeout' : 'network',
-        message: messageOf(cause),
-      },
-    };
+    return { ok: false, error: httpFailure(isTimeout ? 'timeout' : 'network', cause) };
   }
 
   if (!response.ok) {
@@ -96,9 +107,25 @@ export async function getJson<T>(
     // `T`는 이 함수가 **검증하지 않은** 약속이다. 응답 본문의 실제 모양을
     // 확인하는 것은 도메인 repository의 일이다(여기서 하면 어댑터가 도메인
     // 스키마를 알게 된다).
-    const body: unknown = await response.json();
-    return { ok: true, data: body as T };
+    const data: unknown = await response.json();
+    return { ok: true, data: data as T };
   } catch (cause) {
-    return { ok: false, error: { kind: 'parse', message: messageOf(cause) } };
+    return { ok: false, error: httpFailure('parse', cause) };
   }
+}
+
+export async function getJson<T>(
+  url: string,
+  options: GetJsonOptions = {},
+): Promise<HttpResult<T>> {
+  return requestJson<T>('GET', url, undefined, options);
+}
+
+/** JSON 본문을 보내고 JSON을 받는다. 실패 모양은 `getJson`과 같다. */
+export async function postJson<T>(
+  url: string,
+  body: unknown,
+  options: PostJsonOptions = {},
+): Promise<HttpResult<T>> {
+  return requestJson<T>('POST', url, body, options);
 }

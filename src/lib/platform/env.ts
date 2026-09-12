@@ -11,6 +11,10 @@
  * 붙이되, `process.env.NEXT_PUBLIC_X`를 **점 접근으로 직접** 써야 한다 —
  * Next의 빌드 타임 치환(DefinePlugin)은 대괄호 접근을 매치하지 못해서, 이
  * 모듈을 거치면 값이 사라진다.
+ *
+ * 전부 "없으면 `null`"이다. 던지지 않는 이유: 키 하나가 없어도 앱은 시드
+ * 모드로 떠야 하고, 그 키가 없을 때 무엇이 맞는지(추정으로 대체 · 기능 숨김 ·
+ * 오류 표시)는 그 키를 쓰는 도메인이 안다.
  */
 
 function readOptional(name: string): string | null {
@@ -37,4 +41,24 @@ export function apiBaseUrl(): string | null {
  */
 export function naverApiKey(): string | null {
   return readOptional('GEMSPOT_NAVER_API_KEY');
+}
+
+/** TMAP 보행자 경로 API의 appKey. 없으면 구간 시간을 직선거리로 추정한다. */
+export function tmapAppKey(): string | null {
+  return readOptional('TMAP_APP_KEY');
+}
+
+/** Gemini API 키. 없으면 동선 가이드가 문장을 해석할 수 없다(기능 비활성). */
+export function geminiApiKey(): string | null {
+  return readOptional('GEMINI_API_KEY');
+}
+
+/**
+ * Gemini 모델 이름. 코드에 박지 않는 이유는 모델이 주기적으로 은퇴하기
+ * 때문이다 — 배포 설정만 바꿔 갈아탈 수 있어야 한다.
+ */
+export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+
+export function geminiModel(): string {
+  return readOptional('GEMINI_MODEL') ?? DEFAULT_GEMINI_MODEL;
 }
