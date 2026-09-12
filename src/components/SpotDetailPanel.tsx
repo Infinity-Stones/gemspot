@@ -33,10 +33,12 @@ const addressRow = css({
   _dark: { color: 'slate.400' },
 });
 
+// 라벨도 본문과 같은 대비를 지킨다. 한 단 흐리게 두면 흰 지면에서 4.5:1을
+// 넘지 못해 밝은 화면에서 읽히지 않는다.
 const addressLabel = css({
   flexShrink: '0',
-  color: 'slate.400',
-  _dark: { color: 'slate.500' },
+  color: 'slate.500',
+  _dark: { color: 'slate.400' },
 });
 
 export function SpotDetailPanel({ placeName, roadAddress, jibunAddress }: Props) {
