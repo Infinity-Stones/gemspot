@@ -27,3 +27,14 @@ function readOptional(name: string): string | null {
 export function apiBaseUrl(): string | null {
   return readOptional('GEMSPOT_API_BASE_URL');
 }
+
+/**
+ * 네이버 Geocoding 시크릿 키. 설정하지 않으면 `null`이고, 호출하는 쪽이
+ * "키가 없다"를 실패로 다룬다 — 여기서 던지면 키 없이 띄워 보는 개발이 막힌다.
+ *
+ * 값은 Vercel 환경 변수(또는 로컬 `.env.local`)에서 온다. 짝이 되는 클라이언트
+ * ID는 감출 수 없는 값이라 `src/shared/naverMap.ts`에 상수로 있다.
+ */
+export function naverApiKey(): string | null {
+  return readOptional('GEMSPOT_NAVER_API_KEY');
+}
