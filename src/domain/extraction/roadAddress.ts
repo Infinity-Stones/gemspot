@@ -1,4 +1,4 @@
-import type { SpotCandidate } from '@/shared/spot';
+import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 
 /**
  * 도로명 주소 판별과 성공·실패 가르기 — 순수 규칙.
@@ -60,6 +60,8 @@ export interface ReadSpot {
   readonly name: string;
   /** 주소. 읽어내지 못했으면 빈 문자열. 도로명인지는 아래에서 가른다. */
   readonly address: string;
+  /** VLM이 프로젝트 고정 목록 안에서 고른 초기 카테고리 제안. */
+  readonly category: SpotCategory;
 }
 
 /**
@@ -81,6 +83,7 @@ export function toSpotCandidates(
     id: `${imageId}:${String(index)}`,
     name: candidate.name,
     roadAddress: isRoadAddress(candidate.address) ? candidate.address : null,
+    suggestedCategory: candidate.category,
     origin: 'ocr',
   }));
 }
