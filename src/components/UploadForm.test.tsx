@@ -8,8 +8,8 @@ import {
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ExtractState } from '@/app/upload/extractState';
-import { IDLE_EXTRACT_STATE } from '@/app/upload/extractState';
+import type { ExtractState } from '@/app/(main)/upload/extractState';
+import { IDLE_EXTRACT_STATE } from '@/app/(main)/upload/extractState';
 import type { ExtractFailureReason } from '@/domain/extraction';
 import { MAX_IMAGE_BYTES } from '@/domain/extraction';
 import { SPOT_NEW_PATH } from '@/shared/routes';

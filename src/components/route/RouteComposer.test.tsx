@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { RoutePlanState } from '@/app/route/planState';
+import type { RoutePlanState } from '@/app/(main)/route/planState';
 import type { PlanOutcome } from '@/domain/route';
 import type { PlanRouteAction } from './RouteComposer';
 import { RouteComposer } from './RouteComposer';

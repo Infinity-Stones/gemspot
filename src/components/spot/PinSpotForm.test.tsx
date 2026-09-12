@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import type { PinFormState } from '@/app/spots/new/pinState';
+import type { PinFormState } from '@/app/(main)/spots/new/pinState';
 import type { PinSpotAction } from './PinSpotForm';
 import { PinSpotForm } from './PinSpotForm';
 

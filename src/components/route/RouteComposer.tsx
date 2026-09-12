@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { css } from 'styled-system/css';
-import type { RoutePlanState } from '@/app/route/planState';
-import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/route/planState';
+import type { RoutePlanState } from '@/app/(main)/route/planState';
+import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import type { PlanFailure } from '@/domain/route';
 import { ItineraryList } from './ItineraryList';
 import { PlanFailureNotice } from './PlanFailureNotice';

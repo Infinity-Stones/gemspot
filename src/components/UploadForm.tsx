@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
 import { FloatingActionBar } from './FloatingActionBar';
-import type { ExtractState } from '@/app/upload/extractState';
+import type { ExtractState } from '@/app/(main)/upload/extractState';
 import {
   CANDIDATES_SESSION_KEY,
   IDLE_EXTRACT_STATE,
-} from '@/app/upload/extractState';
+} from '@/app/(main)/upload/extractState';
 import {
   ACCEPTED_IMAGE_TYPES,
   isRetryable,
