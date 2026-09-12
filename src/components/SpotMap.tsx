@@ -167,16 +167,16 @@ const locationRing = css({
   position: 'absolute',
   top: '[50%]',
   left: '[50%]',
-  // 점과 같은 크기에서 시작해 바깥으로 퍼진다. 점 뒤에 깔아야 원 가장자리를
-  // 덮지 않는다.
-  width: '[14px]',
-  height: '[14px]',
-  marginTop: '[-7px]',
-  marginLeft: '[-7px]',
+  // 점보다 크게 시작해 바깥으로 퍼진다. 점 뒤에 깔아야 원 가장자리를 덮지
+  // 않는다.
+  width: '[24px]',
+  height: '[24px]',
+  marginTop: '[-12px]',
+  marginLeft: '[-12px]',
   zIndex: '[-1]',
   rounded: 'full',
   bg: 'violet.500',
-  opacity: '[0.35]',
+  opacity: '[0.55]',
   animationName: 'ping',
   // 프리셋의 duration은 전환용이라 여기 쓰기엔 짧다. 천천히 번지게 둔다.
   animationDuration: '[2.4s]',
