@@ -12,8 +12,8 @@ const SAMPLE_SPOT = {
   placeName: '피롤츠 커피하우스',
   roadAddress: '서울 용산구 한강대로 56-1, 2층',
   jibunAddress: '서울 용산구 한강로3가 40-999',
-  latitude: '37.5299',
-  longitude: '126.9648',
+  latitude: 37.5299,
+  longitude: 126.9648,
 };
 
 const screen = css({

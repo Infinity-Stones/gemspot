@@ -81,9 +81,9 @@ function loadNaverMaps(): Promise<NaverMaps> {
 type MapStatus = 'loading' | 'ready' | 'failed';
 
 interface Props {
-  /** Geocoding이 문자열로 주는 값을 그대로 받는다. 저장 스키마가 정해지면 맞춘다. */
-  latitude: string;
-  longitude: string;
+  /** 위도 · 경도. 계약이 숫자로 좁혀 두므로 여기서 파싱하지 않는다. */
+  latitude: number;
+  longitude: number;
   placeName: string;
 }
 
@@ -119,13 +119,9 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
 
-  const coordinate = {
-    latitude: Number(latitude),
-    longitude: Number(longitude),
-  };
-  const hasCoordinate =
-    Number.isFinite(coordinate.latitude) &&
-    Number.isFinite(coordinate.longitude);
+  // 계약은 숫자를 약속하지만 NaN도 숫자다. 지도에 넘기기 전에 한 번 거른다 —
+  // NaN이 들어가면 핀이 조용히 사라지고 원인이 이 자리에서 멀어진다.
+  const hasCoordinate = Number.isFinite(latitude) && Number.isFinite(longitude);
 
   useEffect(() => {
     if (!hasCoordinate) return;
@@ -137,10 +133,7 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
         const element = containerRef.current;
         if (cancelled || element === null) return;
 
-        const center = new maps.LatLng(
-          coordinate.latitude,
-          coordinate.longitude,
-        );
+        const center = new maps.LatLng(latitude, longitude);
         const map = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
         new maps.Marker({ position: center, map });
         map.setCenter(center);
@@ -153,7 +146,7 @@ export function SpotMap({ latitude, longitude, placeName }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [hasCoordinate, coordinate.latitude, coordinate.longitude]);
+  }, [hasCoordinate, latitude, longitude]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.
