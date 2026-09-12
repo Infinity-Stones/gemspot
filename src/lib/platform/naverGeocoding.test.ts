@@ -40,6 +40,15 @@ describe('parseGeocodeHit', () => {
   it('좌표가 숫자로 안 바뀌면 그 건은 버린다', () => {
     expect(parseGeocodeHit({ x: 'abc', y: '37' })).toBeNull();
   });
+
+  it('SIDO · SIGUGUN 중 한쪽만 와도 T03 지역 계약에 남은 값을 보존한다', () => {
+    expect(
+      parseGeocodeHit({
+        ...NAVER_RESPONSE.addresses[0],
+        addressElements: [{ types: ['SIDO'], longName: '세종특별자치시' }],
+      }),
+    ).toMatchObject({ region: { sido: '세종특별자치시', sigugun: null } });
+  });
 });
 
 describe('geocodeAddress', () => {

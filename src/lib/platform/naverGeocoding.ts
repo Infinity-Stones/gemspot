@@ -1,4 +1,4 @@
-import type { SpotCoordinates } from '@/shared/spot';
+import type { SpotCoordinates, SpotRegion } from '@/shared/spot';
 import { isSpotCoordinates } from '@/shared/spot';
 import { NAVER_MAP_CLIENT_ID } from '@/shared/naverMap';
 import { naverApiKey } from './env';
@@ -19,7 +19,7 @@ export interface GeocodeHit {
   readonly coord: SpotCoordinates;
   readonly roadAddress: string;
   readonly jibunAddress: string;
-  readonly region: { readonly sido: string; readonly sigugun: string } | null;
+  readonly region: SpotRegion | null;
 }
 
 export interface GeocodeResult {
@@ -72,7 +72,9 @@ export function parseGeocodeHit(raw: unknown): GeocodeHit | null {
     coord,
     roadAddress: typeof roadAddress === 'string' ? roadAddress : '',
     jibunAddress: typeof jibunAddress === 'string' ? jibunAddress : '',
-    region: sido !== null && sigugun !== null ? { sido, sigugun } : null,
+    // T03은 둘 중 하나만 온 응답에서도 남은 지역 값을 보존한다. 둘 다 없을
+    // 때만 지역 자체가 없는 것으로 접는다.
+    region: sido !== null || sigugun !== null ? { sido, sigugun } : null,
   };
 }
 
