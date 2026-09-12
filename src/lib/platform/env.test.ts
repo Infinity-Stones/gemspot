@@ -5,6 +5,7 @@ import {
   openaiModel,
   naverApiKey,
   tmapAppKey,
+  kakaoRestApiKey,
 } from './env';
 
 /**
@@ -20,6 +21,7 @@ describe('env 리더', () => {
 
   it.each([
     ['TMAP_APP_KEY', tmapAppKey],
+    ['KAKAO_REST_API_KEY', kakaoRestApiKey],
     ['OPENAI_API_KEY', openaiApiKey],
     ['OPENAI_BASE_URL', openaiBaseUrl],
     ['OPENAI_MODEL', openaiModel],

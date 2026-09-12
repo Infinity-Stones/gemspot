@@ -4,7 +4,7 @@ import { PinSpotForm } from '@/components/spot/PinSpotForm';
 import { pinSpotAction } from './actions';
 
 /**
- * 주소로 핀 찍기 — T51(#108).
+ * 상호명 검색 → 가게 선택 → 주소 확인 → 핀 저장.
  *
  * OCR을 거치지 않는 두 번째 입구다. 주소를 아는 장소, OCR이 못 읽은 장소는
  * 결국 이름 · 주소를 손으로 넣어 같은 저장 경로로 들어온다.
@@ -14,7 +14,8 @@ import { pinSpotAction } from './actions';
 
 export const metadata: Metadata = {
   title: '핀 찍기',
-  description: '장소 이름과 주소를 넣어 지도에 저장합니다.',
+  description:
+    '상호명으로 가게를 검색하고 주소와 위치를 확인해 지도에 저장합니다.',
 };
 
 const shell = css({
@@ -48,8 +49,8 @@ export default function NewSpotPage() {
         <h1 className={title}>핀 찍기</h1>
       </div>
       <p className={lede}>
-        장소 이름과 주소를 적으면 위치를 찾아 지도에 미리 보여 드립니다. 맞으면
-        저장하세요. 도로명 주소가 가장 정확합니다.
+        상호명으로 검색하고 맞는 가게를 골라 주세요. 주소가 자동으로 채워지면
+        지도에서 위치를 확인하고 핀을 저장할 수 있어요.
       </p>
       <PinSpotForm action={pinSpotAction} />
     </main>

@@ -39,6 +39,8 @@ OPENAI_MODEL=your-vision-model
 모델은 이미지 입력과 `response_format: json_schema`를 지원해야 한다.
 이 형식은 [공식 이미지 입력 문서](https://developers.openai.com/api/docs/guides/images-vision)와
 [구조화 응답 문서](https://developers.openai.com/api/docs/guides/structured-outputs)를 따른다.
+이미지 추출 결과의 카테고리는 프로젝트 고정 코드인 `meal`, `cafe`, `movie`,
+`amusement`, `sports`, `other` 중 하나로 제안되며, 사용자가 저장 전에 수정할 수 있다.
 
 기존 `GEMINI_API_KEY`와 `GEMINI_MODEL`은 더 이상 사용하지 않는다.
 세 값을 모두 설정한 뒤 서버를 재시작한다. 키가 없으면 기존 키 누락 오류로,
@@ -162,13 +164,13 @@ vitest 하나로 돌리되 **환경**만 둘로 나눈다.
 `process.env`를 읽는 **유일한 곳**이다 — 소스 전체에 흩뿌려진 `process.env.X`는
 배포 직전에야 "이 변수도 있었네"로 발견된다.
 
-| 키                                                      | 쓰는 곳                                    | 지금 값이 있나 |
-| ------------------------------------------------------- | ------------------------------------------ | -------------- |
-| `GEMSPOT_NAVER_API_KEY`                                 | 네이버 Geocoding (M4 · M7 출발점)          | 있다           |
-| `SUPABASE_URL` · `SUPABASE_SECRET_KEY`                  | 브라우저별 스팟 저장소 (M4 · M6 · M7 후보) | 아직 없다      |
-| `NAVER_SEARCH_CLIENT_ID` · `NAVER_SEARCH_CLIENT_SECRET` | 가게 이름 검색 (M4 · T52)                  | 아직 없다      |
-| `TMAP_APP_KEY`                                          | 보행자 경로 실측 (M7)                      | 아직 없다      |
-| `AI_GATEWAY_API_KEY`                                    | 요청 해석 · 순서 제안 (M7)                 | 아직 없다      |
+| 키                                     | 쓰는 곳                                    | 지금 값이 있나 |
+| -------------------------------------- | ------------------------------------------ | -------------- |
+| `GEMSPOT_NAVER_API_KEY`                | 네이버 Geocoding (M4 · M7 출발점)          | 있다           |
+| `SUPABASE_URL` · `SUPABASE_SECRET_KEY` | 브라우저별 스팟 저장소 (M4 · M6 · M7 후보) | 아직 없다      |
+| `KAKAO_REST_API_KEY`                   | 카카오 상호명·주소 검색 (M4 · T52)         | 환경별 설정    |
+| `TMAP_APP_KEY`                         | 보행자 경로 실측 (M7)                      | 아직 없다      |
+| `AI_GATEWAY_API_KEY`                   | 요청 해석 · 순서 제안 (M7)                 | 아직 없다      |
 
 **키가 없으면 던지지 않고 `null`을 돌려준다.** 실패로 볼지는 부르는 쪽이 정한다 —
 기동을 막으면 키 없이 화면을 띄워 보는 개발이 막히고, 그 비용을 지금 치를 이유가
@@ -177,6 +179,34 @@ vitest 하나로 돌리되 **환경**만 둘로 나눈다.
 브라우저로 나가는 값은 환경 변수로 두지 않는다. 네이버 지도 클라이언트 ID처럼
 어차피 요청 URL에 실려 감출 수 없는 값은 `src/shared/`의 상수로 둔다 — 감춰지지도
 않는 값에 팀원마다 `.env.local`을 만드는 비용을 치를 이유가 없다.
+
+### 상호명으로 핀 찍기
+
+`/spots/new`에서 상호명(예: `성수 블루보틀`)을 검색하고 결과 중 한 곳을 고른다.
+선택한 가게의 이름과 주소가 자동으로 채워지고, 주소를 Geocoding으로 확인한 핀을
+미리 보여 준다. **이 위치로 저장**을 누르면 서버에서 좌표를 다시 확인해 저장하고
+홈 지도에서 해당 핀을 연다. 주소를 수정하면 위치를 다시 확인해야 저장할 수 있다.
+
+검색은 [카카오 Local 키워드 검색](https://developers.kakao.com/docs/ko/local/dev-guide#search-by-keyword)의
+`GET /v2/local/search/keyword.json`을 사용한다. 상호명·지역·지점명으로 검색하며
+첫 페이지의 최대 15곳을 표시한다. 찾는 곳이 없으면 지역·지점명을 더해 검색하거나
+주소를 직접 입력한다. 도로명이 있으면 도로명, 없으면 지번을 사용한다.
+
+설정 방법:
+
+1. [Kakao Developers](https://developers.kakao.com/)에서 앱을 만들고
+   **카카오맵 → 사용 설정 → 상태 ON**으로 활성화한다.
+2. 앱의 **REST API 키**를 `.env.local`에 `KAKAO_REST_API_KEY=...`로 설정한다.
+   JavaScript 키가 아니며, REST API 키는 브라우저에 공개하지 않는다.
+3. 개발 서버를 재시작한다. 배포 환경에도 같은 변수를 설정한다.
+
+키 미설정과 검색 결과 0건은 서로 다르게 안내한다. 401·403 응답은 REST API 키와
+[카카오맵 활성화 설정](https://developers.kakao.com/docs/ko/kakaomap/common)을 확인한다.
+기존 `NAVER_SEARCH_CLIENT_ID` · `NAVER_SEARCH_CLIENT_SECRET`은 더 이상 사용하지 않는다.
+
+지도 표시와 선택한 주소의 좌표 확인은 기존 네이버 Maps·Geocoding을 사용한다.
+`GEMSPOT_NAVER_API_KEY`는 계속 필요하다. 화면은 spot 도메인의 공개 API만 호출하며,
+외부 API 인증·응답 파싱은 platform 어댑터에서 처리한다.
 
 ## 에이전트
 

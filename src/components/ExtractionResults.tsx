@@ -27,8 +27,8 @@ export interface SuccessfulSpotCandidate extends SpotCandidate {
   /**
    * 사용자가 이 화면에서 고른 카테고리.
    *
-   * `SpotCandidate`에 없는 값이다 — 후보는 OCR이 읽어낸 것이고 분류는 읽어낼
-   * 수 있는 것이 아니다. 저장을 확정하는 이 경계에서 붙는다.
+   * VLM 제안으로 시작하되 사용자가 바꿀 수 있다. 저장을 확정하는 이 경계에서
+   * 제안과 사용자 수정을 최종 카테고리로 붙인다.
    */
   readonly category: SpotCategory;
 }
@@ -55,13 +55,6 @@ interface Props {
 }
 
 type ResultKind = 'success' | 'failure';
-
-/**
- * 고르지 않고 넘어간 건이 받는 값. '기타'는 적합 시간대가 없는 카테고리라
- * 동선 가이드가 시간대로 거르지 않는다 — 모르는 것을 아는 척 분류해 엉뚱한
- * 시간대의 후보로 만드는 것보다 낫다.
- */
-const DEFAULT_CATEGORY: SpotCategory = 'other';
 
 const shell = css({
   display: 'flex',
@@ -687,9 +680,8 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   // 실패 안내는 카드마다 되뇌지 않는다. 같은 말이 카드 수만큼 쌓이면 정작
   // 채워야 할 입력칸을 가린다 — 한 번 지나가고 끝낸다.
   const [isFailureNoticeVisible, setIsFailureNoticeVisible] = useState(false);
-  // 고르지 않은 건은 여기 없다. 기본값을 상태로 미리 채우지 않는 이유는 그
-  // 순간 "사용자가 기타를 골랐다"와 "아직 안 골랐다"가 같은 모양이 되기
-  // 때문이다 — 읽는 자리에서 한 번만 'other'로 접는다.
+  // 사용자가 바꾼 건만 여기 둔다. 기본값을 상태로 미리 채우지 않아야 VLM
+  // 제안과 사용자의 명시적 수정을 구분할 수 있다.
   const [categories, setCategories] = useState<
     Readonly<Record<string, SpotCategory>>
   >({});
@@ -699,14 +691,15 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   }, [isSummaryOpen]);
 
   // 저장·삭제를 건마다 고르게 하지 않는다. 주소가 확인된 건은 그대로 저장
-  // 대상이고, 빼고 싶으면 실패 쪽처럼 이미지를 지우면 된다.
+  // 대상이고, 빼고 싶으면 실패 쪽처럼 그 건을 지우면 된다.
   const savedCandidates = successes.map(
-    ({ id, name, roadAddress, origin }) => ({
+    ({ id, name, roadAddress, suggestedCategory, origin }) => ({
       id,
       name,
       roadAddress,
+      suggestedCategory,
       origin,
-      category: categories[id] ?? DEFAULT_CATEGORY,
+      category: categories[id] ?? suggestedCategory,
     }),
   );
   const canContinue = successes.length > 0 && onContinue !== undefined;
@@ -827,7 +820,9 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
                     // 것인지 읽히지 않는다. 보이는 "카테고리"를 접근명에
                     // 그대로 품어 음성 제어도 같은 말로 집을 수 있게 둔다.
                     aria-label={`${candidate.name} 저장할 카테고리 선택`}
-                    value={categories[candidate.id] ?? DEFAULT_CATEGORY}
+                    value={
+                      categories[candidate.id] ?? candidate.suggestedCategory
+                    }
                     onChange={event => {
                       chooseCategory(candidate.id, event.target.value);
                     }}

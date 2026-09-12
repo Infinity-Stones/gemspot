@@ -127,10 +127,11 @@ export interface SpotRegion {
 /**
  * STEP 3의 확정 전 후보 — OCR이 읽어냈을 뿐 아직 스팟이 아니다.
  *
- * 좌표와 카테고리가 **없는 것이 이 타입의 정의다.** 좌표는 STEP 4의
- * Geocoding이 붙이고, 카테고리는 저장 시점에 붙는다. 그래서 후보를 저장된
- * 스팟이 필요한 자리에 넘기면 타입 검사가 막는다 — "좌표가 없으면 저장하지
- * 않는다"(T22)를 런타임 검사 전에 타입이 한 번 거른다.
+ * 좌표와 확정 카테고리가 **없는 것이 이 타입의 정의다.** 좌표는 STEP 4의
+ * Geocoding이 붙이고, 카테고리는 사용자가 STEP 3에서 VLM 제안을 확인하거나
+ * 고친 뒤 확정한다. 그래서 후보를 저장된 스팟이 필요한 자리에 넘기면 타입
+ * 검사가 막는다 — "좌표가 없으면 저장하지 않는다"(T22)를 런타임 검사 전에
+ * 타입이 한 번 거른다.
  */
 export interface SpotCandidate {
   /** 목록의 선택·삭제 상태를 잇는 키. 저장소의 id가 아니다. */
@@ -143,6 +144,8 @@ export interface SpotCandidate {
    * 동 이름만으로는 핀을 찍을 수 없다.
    */
   readonly roadAddress: string | null;
+  /** VLM이 프로젝트 고정 목록 안에서 고른 초기 제안. 사용자가 확정 전 수정한다. */
+  readonly suggestedCategory: SpotCategory;
   readonly origin: SpotAddressOrigin;
 }
 

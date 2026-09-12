@@ -12,10 +12,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: {
-      // 서버 액션 본문 상한. 기본값이 1MB라 그보다 큰 스크린샷이 화면의 가드를
-      // 지나고도 서버 앞에서 막혔다. 업로드 가드(MAX_IMAGE_BYTES)와 같은 값으로
-      // 둔다 — 둘이 어긋나면 통과시킨 장이 전송에서 죽는다.
-      bodySizeLimit: '10mb',
+      // 파일 상한은 10MiB다. multipart 경계와 파일 메타데이터도 요청 본문에
+      // 들어가므로 서버 액션에는 그보다 조금 넉넉한 전송 상한을 둔다. 파일
+      // 자체의 10MiB 상한은 uploadGuard와 서버 액션이 따로 강제한다.
+      bodySizeLimit: '11mb',
     },
   },
   // 라우트로 인식할 확장자. 기본값에 md/mdx가 없으므로 사실상 동일하지만,

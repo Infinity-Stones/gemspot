@@ -87,8 +87,9 @@ describe('toSpotCandidates', () => {
           {
             name: '피롤츠 커피하우스',
             address: '서울 용산구 한강대로 56-1, 2층',
+            category: 'cafe',
           },
-          { name: '에그앤플라워', address: '용산동2가' },
+          { name: '에그앤플라워', address: '용산동2가', category: 'meal' },
         ],
         'img-1',
       ),
@@ -97,24 +98,40 @@ describe('toSpotCandidates', () => {
         id: 'img-1:0',
         name: '피롤츠 커피하우스',
         roadAddress: '서울 용산구 한강대로 56-1, 2층',
+        suggestedCategory: 'cafe',
         origin: 'ocr',
       },
-      { id: 'img-1:1', name: '에그앤플라워', roadAddress: null, origin: 'ocr' },
+      {
+        id: 'img-1:1',
+        name: '에그앤플라워',
+        roadAddress: null,
+        suggestedCategory: 'meal',
+        origin: 'ocr',
+      },
     ]);
   });
 
   it('id가 이미지와 순서로 결정된다 — 같은 입력이면 같은 id다', () => {
     // 난수로 만들면 다시 읽을 때마다 목록의 선택 상태가 풀린다.
-    const once = toSpotCandidates([{ name: 'a', address: '' }], 'img-9');
-    const twice = toSpotCandidates([{ name: 'a', address: '' }], 'img-9');
+    const once = toSpotCandidates(
+      [{ name: 'a', address: '', category: 'other' }],
+      'img-9',
+    );
+    const twice = toSpotCandidates(
+      [{ name: 'a', address: '', category: 'other' }],
+      'img-9',
+    );
 
     expect(once[0]?.id).toBe(twice[0]?.id);
   });
 
   it('출처를 ocr로 남긴다 — 직접 입력과 구분해야 한다', () => {
-    expect(toSpotCandidates([{ name: 'a', address: '' }], 'i')[0]?.origin).toBe(
-      'ocr',
-    );
+    expect(
+      toSpotCandidates(
+        [{ name: 'a', address: '', category: 'sports' }],
+        'i',
+      )[0],
+    ).toMatchObject({ origin: 'ocr', suggestedCategory: 'sports' });
   });
 });
 
@@ -123,9 +140,13 @@ describe('partitionByRoadAddress', () => {
     const { resolved, unresolved } = partitionByRoadAddress(
       toSpotCandidates(
         [
-          { name: '피롤츠', address: '서울 용산구 한강대로 56-1' },
-          { name: '에그앤플라워', address: '용산동2가' },
-          { name: '이름만', address: '' },
+          {
+            name: '피롤츠',
+            address: '서울 용산구 한강대로 56-1',
+            category: 'cafe',
+          },
+          { name: '에그앤플라워', address: '용산동2가', category: 'meal' },
+          { name: '이름만', address: '', category: 'other' },
         ],
         'img-1',
       ),
@@ -138,8 +159,8 @@ describe('partitionByRoadAddress', () => {
   it('버리지 않는다 — 둘을 합치면 넣은 수다', () => {
     const candidates = toSpotCandidates(
       [
-        { name: 'a', address: '화랑로 608' },
-        { name: 'b', address: '용산구' },
+        { name: 'a', address: '화랑로 608', category: 'other' },
+        { name: 'b', address: '용산구', category: 'other' },
       ],
       'img-1',
     );
@@ -152,8 +173,8 @@ describe('partitionByRoadAddress', () => {
     const { unresolved } = partitionByRoadAddress(
       toSpotCandidates(
         [
-          { name: 'first', address: '용산구' },
-          { name: 'second', address: '한강동' },
+          { name: 'first', address: '용산구', category: 'other' },
+          { name: 'second', address: '한강동', category: 'other' },
         ],
         'img-1',
       ),
@@ -186,7 +207,7 @@ describe('isRoadAddress — 갈래도로', () => {
   });
 
   it('띄어 쓴 갈래도로도 읽는다', () => {
-    // 공식 표기는 붙여 쓰지만 사람이 적으면 띄운다. 시드 데이터가 그 표기다.
+    // 공식 표기는 붙여 쓰지만 사람이 입력할 때는 띄어 쓸 수 있다.
     expect(isRoadAddress('서울 성동구 성수이로 7길 20')).toBe(true);
     expect(isRoadAddress('서울 성동구 성수일로 12길 31')).toBe(true);
   });

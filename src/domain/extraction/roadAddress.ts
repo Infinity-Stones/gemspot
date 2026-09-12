@@ -1,4 +1,4 @@
-import type { SpotCandidate } from '@/shared/spot';
+import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 
 /**
  * 도로명 주소 판별과 성공·실패 가르기 — 순수 규칙.
@@ -38,8 +38,6 @@ import type { SpotCandidate } from '@/shared/spot';
  * 갈래도로(`한강대로15길` · `봉은사로 68번길` · `성수이로 7길`)는 따로 다루지
  * 않아도 잡힌다 — 탐욕 매칭이 `15길` · `68번길` · `7길`을 도로명으로 읽고 그
  * 뒤의 번호를 건물번호로 읽는다. 공백이 끼어 있어도(`성수이로 7길 20`) 같다.
- * 시드 데이터(src/domain/spot/seed.ts)에 그 표기가 실제로 들어 있어서, 여기서
- * 못 읽으면 시드조차 실패로 떨어진다.
  *
  * **지번 주소는 실패다.** `한강로2가 40-1`은 번지가 있어도 도로명이 아니다.
  * 명세가 기준을 "도로명 주소가 찍혀 있는지 하나"로 못 박았고 계약의 필드
@@ -62,6 +60,8 @@ export interface ReadSpot {
   readonly name: string;
   /** 주소. 읽어내지 못했으면 빈 문자열. 도로명인지는 아래에서 가른다. */
   readonly address: string;
+  /** VLM이 프로젝트 고정 목록 안에서 고른 초기 카테고리 제안. */
+  readonly category: SpotCategory;
 }
 
 /**
@@ -83,6 +83,7 @@ export function toSpotCandidates(
     id: `${imageId}:${String(index)}`,
     name: candidate.name,
     roadAddress: isRoadAddress(candidate.address) ? candidate.address : null,
+    suggestedCategory: candidate.category,
     origin: 'ocr',
   }));
 }

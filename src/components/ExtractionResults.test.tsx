@@ -9,6 +9,7 @@ const CANDIDATES: readonly ExtractionResultCandidate[] = [
     id: 'pirouettes',
     name: '피롤츠 커피하우스',
     roadAddress: '서울 용산구 한강대로 56-1, 2층',
+    suggestedCategory: 'cafe',
     origin: 'ocr',
     uploadImage: {
       id: 'upload-pirouettes',
@@ -20,6 +21,7 @@ const CANDIDATES: readonly ExtractionResultCandidate[] = [
     id: 'egg-and-flower',
     name: '에그앤플라워',
     roadAddress: null,
+    suggestedCategory: 'meal',
     origin: 'ocr',
     uploadImage: {
       id: 'upload-egg-and-flower',
@@ -31,6 +33,7 @@ const CANDIDATES: readonly ExtractionResultCandidate[] = [
     id: 'fabri-kitchen',
     name: '파브리키친',
     roadAddress: '서울 용산구 한강대로15길 23-6',
+    suggestedCategory: 'meal',
     origin: 'ocr',
     uploadImage: {
       id: 'upload-fabri-kitchen',
@@ -63,9 +66,18 @@ describe('ExtractionResults', () => {
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
     expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
     expect(screen.getByText('파브리키친')).toBeInTheDocument();
+    // 실패 건도 같은 화면에 있다 — 탭 뒤에 숨지 않는다.
     expect(screen.getByRole('textbox', { name: '상호명' })).toHaveValue(
       '에그앤플라워',
     );
+    expect(
+      screen.getByRole('combobox', {
+        name: '피롤츠 커피하우스 저장할 카테고리 선택',
+      }),
+    ).toHaveValue('cafe');
+    expect(
+      screen.getByRole('combobox', { name: '파브리키친 저장할 카테고리 선택' }),
+    ).toHaveValue('meal');
   });
 
   it('주소를 못 찾았다는 안내는 토스트로 한 번만 지나간다', async () => {
@@ -156,7 +168,7 @@ describe('ExtractionResults', () => {
       screen.getByRole('combobox', {
         name: '피롤츠 커피하우스 저장할 카테고리 선택',
       }),
-      'cafe',
+      'other',
     );
     await user.click(screen.getByRole('button', { name: '선택 완료' }));
 
@@ -166,8 +178,9 @@ describe('ExtractionResults', () => {
         id: 'pirouettes',
         name: '피롤츠 커피하우스',
         roadAddress: '서울 용산구 한강대로 56-1, 2층',
+        suggestedCategory: 'cafe',
         origin: 'ocr',
-        category: 'cafe',
+        category: 'other',
       },
     ]);
   });
@@ -222,8 +235,9 @@ describe('ExtractionResults', () => {
         id: 'egg-and-flower',
         name: '에그 앤 플라워',
         roadAddress: '서울 용산구 신흥로 26길 35',
+        suggestedCategory: 'meal',
         origin: 'manual',
-        category: 'other',
+        category: 'meal',
       },
     ]);
   });

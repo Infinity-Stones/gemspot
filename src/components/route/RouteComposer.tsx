@@ -8,7 +8,6 @@ import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import type { PlanFailure } from '@/domain/route';
 import { ItineraryList } from './ItineraryList';
 import { PlanFailureNotice } from './PlanFailureNotice';
-import type { SpotSource } from '@/domain/spot';
 import { UPLOAD_PATH } from '@/shared/routes';
 
 /**
@@ -26,17 +25,25 @@ import { UPLOAD_PATH } from '@/shared/routes';
  * 않으므로, 페이지가 실제 액션을 꽂고 테스트는 가짜를 꽂는다.
  */
 
-export type PlanRouteAction = (state: RoutePlanState, formData: FormData) => Promise<RoutePlanState>;
+export type PlanRouteAction = (
+  state: RoutePlanState,
+  formData: FormData,
+) => Promise<RoutePlanState>;
 
 interface Props {
   readonly action: PlanRouteAction;
   readonly spotCount: number;
-  readonly spotSource: SpotSource;
+  readonly loadFailed: boolean;
 }
 
 const EXAMPLE = '오늘 2시부터 4시까지 성수동에서 카페 들르면서 걷고 싶어';
 
-const shell = css({ display: 'flex', flexDirection: 'column', gap: '6', width: 'full' });
+const shell = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '6',
+  width: 'full',
+});
 
 const form = css({ display: 'flex', flexDirection: 'column', gap: '3' });
 
@@ -54,12 +61,27 @@ const textarea = css({
   textStyle: 'md',
   resize: 'vertical',
   _placeholder: { color: 'slate.400' },
-  _dark: { borderColor: 'slate.700', bg: 'slate.900', color: 'slate.100', _placeholder: { color: 'slate.500' } },
+  _dark: {
+    borderColor: 'slate.700',
+    bg: 'slate.900',
+    color: 'slate.100',
+    _placeholder: { color: 'slate.500' },
+  },
 });
 
-const row = css({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '3' });
+const row = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '3',
+});
 
-const counter = css({ textStyle: 'sm', color: 'slate.500', fontFamily: 'mono', _dark: { color: 'slate.400' } });
+const counter = css({
+  textStyle: 'sm',
+  color: 'slate.500',
+  fontFamily: 'mono',
+  _dark: { color: 'slate.400' },
+});
 
 const button = css({
   display: 'inline-flex',
@@ -130,23 +152,40 @@ const asked = css({
   _dark: { bg: 'slate.800', color: 'slate.100' },
 });
 
-const link = css({ color: 'violet.700', textDecoration: 'underline', _dark: { color: 'violet.300' } });
+const link = css({
+  color: 'violet.700',
+  textDecoration: 'underline',
+  _dark: { color: 'violet.300' },
+});
 
 /** 되묻기 상태인가 — 이때만 이전 문장을 이어 붙인다. */
-function clarificationOf(state: RoutePlanState): Extract<PlanFailure, { kind: 'needs_clarification' }> | null {
+function clarificationOf(
+  state: RoutePlanState,
+): Extract<PlanFailure, { kind: 'needs_clarification' }> | null {
   if (state.status !== 'done' || state.outcome.kind !== 'failed') return null;
   const { failure } = state.outcome;
   return failure.kind === 'needs_clarification' ? failure : null;
 }
 
-export function RouteComposer({ action, spotCount, spotSource }: Props) {
+export function RouteComposer({ action, spotCount, loadFailed }: Props) {
   const [state, submit, pending] = useActionState(action, IDLE_STATE);
   const [draft, setDraft] = useState('');
 
   const clarification = clarificationOf(state);
   // 되묻기 중이면 지금까지의 문장이 history다. 결과가 나왔거나 실패했으면
   // 다음 문장은 새 요청이다 — 이전 문장을 끌고 가면 "아까 그 시간"이 섞인다.
-  const history = clarification !== null && state.status === 'done' ? state.sentence : '';
+  const history =
+    clarification !== null && state.status === 'done' ? state.sentence : '';
+
+  if (loadFailed) {
+    return (
+      <div className={shell}>
+        <p className={notice} role="alert">
+          저장한 스팟을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
+        </p>
+      </div>
+    );
+  }
 
   if (spotCount === 0) {
     return (
@@ -166,12 +205,6 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
 
   return (
     <div className={shell}>
-      {spotSource === 'seed' && (
-        <p className={notice} role="status">
-          시드 데이터 — 저장된 스팟이 아니라 예시 스팟으로 동선을 만들고 있어요.
-        </p>
-      )}
-
       {clarification !== null && state.status === 'done' && (
         <ol className={transcript} aria-label="지금까지의 대화">
           {state.sentence.split('\n').map((line, index) => (
@@ -203,7 +236,9 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
           onChange={event => {
             setDraft(event.target.value.slice(0, MAX_SENTENCE_LENGTH));
           }}
-          placeholder={clarification === null ? EXAMPLE : clarification.question}
+          placeholder={
+            clarification === null ? EXAMPLE : clarification.question
+          }
           maxLength={MAX_SENTENCE_LENGTH}
           disabled={pending}
         />
@@ -213,7 +248,11 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
             {String(draft.length)} / {String(MAX_SENTENCE_LENGTH)}
           </span>
           <button type="submit" className={button} disabled={!canSubmit}>
-            {pending ? '동선을 짜고 있어요…' : clarification === null ? '동선 만들기' : '이어서 답하기'}
+            {pending
+              ? '동선을 짜고 있어요…'
+              : clarification === null
+                ? '동선 만들기'
+                : '이어서 답하기'}
           </button>
         </div>
       </form>
@@ -221,6 +260,12 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
       {state.status === 'invalid' && (
         <p className={notice} role="alert">
           {state.message}
+        </p>
+      )}
+
+      {state.status === 'load_failed' && (
+        <p className={notice} role="alert">
+          저장한 스팟을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
       )}
 
@@ -232,11 +277,11 @@ export function RouteComposer({ action, spotCount, spotSource }: Props) {
         />
       )}
 
-      {state.status === 'done' && state.outcome.kind === 'failed' && clarification === null && (
-        <PlanFailureNotice failure={state.outcome.failure} />
-      )}
+      {state.status === 'done' &&
+        state.outcome.kind === 'failed' &&
+        clarification === null && (
+          <PlanFailureNotice failure={state.outcome.failure} />
+        )}
     </div>
   );
 }
-
-

@@ -12,9 +12,8 @@
  * Next의 빌드 타임 치환(DefinePlugin)은 대괄호 접근을 매치하지 못해서, 이
  * 모듈을 거치면 값이 사라진다.
  *
- * 전부 "없으면 `null`"이다. 던지지 않는 이유: 키 하나가 없어도 앱은 시드
- * 모드로 떠야 하고, 그 키가 없을 때 무엇이 맞는지(추정으로 대체 · 기능 숨김 ·
- * 오류 표시)는 그 키를 쓰는 도메인이 안다.
+ * 전부 "없으면 `null`"이다. 던지지 않는 이유: 키가 없을 때 무엇이 맞는지
+ * (추정으로 대체 · 기능 숨김 · 오류 표시)는 그 키를 쓰는 도메인이 안다.
  */
 
 function readOptional(name: string): string | null {
@@ -85,20 +84,15 @@ export function supabaseSecretKey(): string | null {
 }
 
 /**
- * 네이버 **검색** Local API 키 — 가게 이름으로 업체를 찾는다(T52).
+ * 카카오 Local REST API 키 — 가게 이름으로 업체와 주소를 찾는다.
  *
- * Maps(Geocoding)와 **다른 서비스, 다른 콘솔, 다른 키**다. Maps는 네이버 클라우드
- * 플랫폼(NCP)에서, 이 둘은 developers.naver.com에서 발급한다. 한쪽 키를 다른 쪽에
- * 넣으면 401이 난다 — 이름을 `NAVER_SEARCH_*`로 못박아 둔 이유다.
+ * Kakao Developers에서 발급한 REST API 키를 사용한다.
+ * JavaScript 키와 다르며 NEXT_PUBLIC_ 접두사로 브라우저에 공개하지 않는다.
  *
- * 둘 다 없으면 이름 검색이 비활성이고, 주소 검색 경로는 그대로 동작한다.
+ * 없으면 이름 검색이 불가능하고, 주소 검색 경로는 그대로 동작한다.
  */
-export function naverSearchClientId(): string | null {
-  return readOptional('NAVER_SEARCH_CLIENT_ID');
-}
-
-export function naverSearchClientSecret(): string | null {
-  return readOptional('NAVER_SEARCH_CLIENT_SECRET');
+export function kakaoRestApiKey(): string | null {
+  return readOptional('KAKAO_REST_API_KEY');
 }
 
 /**
