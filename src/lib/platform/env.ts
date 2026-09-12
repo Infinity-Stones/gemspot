@@ -68,6 +68,25 @@ export function geminiModel(): string {
 }
 
 /**
+ * Supabase 프로젝트 URL과 **시크릿** 키 — D06(#26)의 스팟 저장소.
+ *
+ * 시크릿 키는 RLS를 우회하므로 서버에서만 읽는다. `NEXT_PUBLIC_` 접두사가 붙은
+ * publishable 키 경로는 두지 않는다 — 기본 1인 사용에 인증이 없어 브라우저가
+ * 직접 붙을 이유가 없고, 붙는 순간 RLS 정책이 없는 테이블이 그대로 열린다.
+ *
+ * 키 이름을 둘 읽는 이유: 대시보드에서 발급하는 새 형식 키는 `sb_secret_…`이고
+ * 관례상 SUPABASE_SECRET_KEY로 두지만, Vercel 마켓플레이스 연동은 변수 이름을
+ * 고를 수 없이 SUPABASE_SERVICE_ROLE_KEY로 넣는다. 둘은 같은 권한의 키다.
+ */
+export function supabaseUrl(): string | null {
+  return readOptional('SUPABASE_URL');
+}
+
+export function supabaseSecretKey(): string | null {
+  return readOptional('SUPABASE_SECRET_KEY') ?? readOptional('SUPABASE_SERVICE_ROLE_KEY');
+}
+
+/**
  * Vercel AI Gateway 키.
  *
  * 게이트웨이를 지나면 제공자 교체가 모델 이름 문자열 하나로 끝난다. 아직 쓰는
