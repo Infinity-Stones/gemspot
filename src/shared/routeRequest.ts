@@ -26,6 +26,8 @@ export interface RouteRequest {
     readonly name: string;
     /** Geocoding으로 얻은 출발점. */
     readonly center: SpotCoordinates;
+    /** 좌표 조회에서 확인한 출발점 주소. 동네 대표 좌표임을 결과에 표시한다. */
+    readonly label?: string;
   };
   /** 가중치로만 쓴다. 후보를 거르지 않는다. 비어 있으면 선호 없음. */
   readonly preferredCategories: readonly SpotCategory[];
@@ -50,7 +52,9 @@ export const MAX_WINDOW_SECONDS = 12 * 3_600;
 export type TimeWindowProblem = 'unparseable' | 'not_after_start' | 'too_long';
 
 /** 유효하면 `null`, 아니면 무엇이 문제인지. 화면과 엔진이 같은 판정을 쓴다. */
-export function timeWindowProblem(window: TimeWindow): TimeWindowProblem | null {
+export function timeWindowProblem(
+  window: TimeWindow,
+): TimeWindowProblem | null {
   if (parseIso(window.start) === null || parseIso(window.end) === null) {
     return 'unparseable';
   }
@@ -62,4 +66,12 @@ export function timeWindowProblem(window: TimeWindow): TimeWindowProblem | null 
 
 export function isValidTimeWindow(window: TimeWindow): boolean {
   return timeWindowProblem(window) === null;
+}
+
+/** 조건 직접 수정 화면이 보내는 값. 출발 좌표는 서버가 다시 조회한다. */
+export interface RouteConditions {
+  readonly window: TimeWindow;
+  readonly areaName: string;
+  readonly preferredCategories: readonly SpotCategory[];
+  readonly requiredSpotIds: readonly string[];
 }
