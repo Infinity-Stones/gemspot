@@ -29,6 +29,14 @@ export const UPLOAD_PATH = '/upload';
  */
 export const UPLOAD_RESULTS_PATH = '/upload/results';
 
+ * 동선 만들기 화면(M7). 한 문장을 받아 저장된 스팟으로 여정을 제안한다.
+ *
+ * 지도(`/`)와 갈라 둔 이유는 진입 의도가 다르기 때문이다 — 지도는 "무엇을
+ * 저장했나"를 보고, 여기는 "오늘 어디를 갈까"를 묻는다. 한 화면에 두면 둘 중
+ * 하나는 스크롤 아래로 밀린다.
+ */
+export const ROUTE_PATH = '/route';
+
 /**
  * URL 세그먼트로 안전한 형태인지 검사한다.
  *
