@@ -9,6 +9,12 @@
 export { extractCandidates } from './extractCandidates';
 export type { ExtractedCandidate } from './extractCandidates';
 export {
+  isRoadAddress,
+  partitionByRoadAddress,
+  toSpotCandidates,
+} from './roadAddress';
+export type { RoadAddressPartition } from './roadAddress';
+export {
   ACCEPTED_IMAGE_TYPES,
   MAX_IMAGE_BYTES,
   MAX_IMAGE_COUNT,
