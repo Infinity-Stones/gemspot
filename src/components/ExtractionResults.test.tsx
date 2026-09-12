@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ExtractionResultCandidate } from './ExtractionResults';
 import { ExtractionResults } from './ExtractionResults';
 
@@ -27,6 +27,17 @@ const CANDIDATES: readonly ExtractionResultCandidate[] = [
       alt: '에그앤플라워 스크린샷',
     },
   },
+  {
+    id: 'fabri-kitchen',
+    name: '파브리키친',
+    roadAddress: '서울 용산구 한강대로15길 23-6',
+    origin: 'ocr',
+    uploadImage: {
+      id: 'upload-fabri-kitchen',
+      src: 'blob:fabri-kitchen',
+      alt: '파브리키친 스크린샷',
+    },
+  },
 ];
 
 describe('ExtractionResults', () => {
@@ -34,13 +45,14 @@ describe('ExtractionResults', () => {
     render(<ExtractionResults candidates={CANDIDATES} />);
 
     expect(
-      screen.getByText('주소 확인 1건 · 주소 입력 필요 1건'),
+      screen.getByText('주소 확인 2건 · 주소 입력 필요 1건'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '성공 1' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '성공 2' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
     expect(screen.getByText('피롤츠 커피하우스')).toBeInTheDocument();
+    expect(screen.getByText('파브리키친')).toBeInTheDocument();
     expect(screen.queryByText('에그앤플라워')).not.toBeInTheDocument();
   });
 
@@ -64,7 +76,7 @@ describe('ExtractionResults', () => {
     const user = userEvent.setup();
     render(<ExtractionResults candidates={CANDIDATES} />);
 
-    const successTab = screen.getByRole('tab', { name: '성공 1' });
+    const successTab = screen.getByRole('tab', { name: '성공 2' });
     successTab.focus();
     await user.keyboard('{ArrowRight}');
 
@@ -92,12 +104,87 @@ describe('ExtractionResults', () => {
     ).toBeInTheDocument();
   });
 
-  it('확정 전 화면에는 저장 동작이 없다', () => {
-    render(<ExtractionResults candidates={CANDIDATES} />);
+  it('성공 건마다 상호명과 주소를 보여주고 저장 또는 삭제를 고르게 한다', () => {
+    render(<ExtractionResults candidates={CANDIDATES} onContinue={vi.fn()} />);
 
     expect(
-      screen.queryByRole('button', { name: /저장/ }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('group', { name: '피롤츠 커피하우스 처리 방법' }),
+    ).toHaveTextContent('저장삭제');
+    expect(
+      screen.getByRole('group', { name: '파브리키친 처리 방법' }),
+    ).toHaveTextContent('저장삭제');
+    expect(
+      screen.getByText('서울 용산구 한강대로 56-1, 2층'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('서울 용산구 한강대로15길 23-6'),
+    ).toBeInTheDocument();
+  });
+
+  it('모든 성공 건을 고르기 전에는 STEP 4 전달을 막는다', async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    render(
+      <ExtractionResults candidates={CANDIDATES} onContinue={onContinue} />,
+    );
+
+    const complete = screen.getByRole('button', { name: '선택 완료' });
+    expect(complete).toBeDisabled();
+
+    const pirouettes = screen.getByRole('group', {
+      name: '피롤츠 커피하우스 처리 방법',
+    });
+    await user.click(within(pirouettes).getByRole('button', { name: '저장' }));
+
+    expect(
+      screen.getByText('2건 중 1건 선택 · 저장 대상 1건'),
+    ).toBeInTheDocument();
+    expect(complete).toBeDisabled();
+    expect(onContinue).not.toHaveBeenCalled();
+  });
+
+  it('저장을 고른 성공 후보만 STEP 4 경계로 넘긴다', async () => {
+    const user = userEvent.setup();
+    const onContinue = vi.fn();
+    render(
+      <ExtractionResults candidates={CANDIDATES} onContinue={onContinue} />,
+    );
+
+    const pirouettes = screen.getByRole('group', {
+      name: '피롤츠 커피하우스 처리 방법',
+    });
+    const fabri = screen.getByRole('group', {
+      name: '파브리키친 처리 방법',
+    });
+    await user.click(within(pirouettes).getByRole('button', { name: '저장' }));
+    await user.click(within(fabri).getByRole('button', { name: '삭제' }));
+    await user.click(screen.getByRole('button', { name: '선택 완료' }));
+
+    expect(
+      within(pirouettes).getByRole('button', { name: '저장' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(within(fabri).getByRole('button', { name: '삭제' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(onContinue).toHaveBeenCalledOnce();
+    expect(onContinue).toHaveBeenCalledWith([
+      {
+        id: 'pirouettes',
+        name: '피롤츠 커피하우스',
+        roadAddress: '서울 용산구 한강대로 56-1, 2층',
+        origin: 'ocr',
+      },
+    ]);
+  });
+
+  it('전달 경계가 없으면 선택 완료를 비활성화해 저장을 가장하지 않는다', async () => {
+    const user = userEvent.setup();
+    render(<ExtractionResults candidates={[CANDIDATES[0]]} />);
+
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    expect(screen.getByRole('button', { name: '선택 완료' })).toBeDisabled();
   });
 
   it('실패 이미지를 업로드 이미지 id로 묶어 앨범에 한 번만 보여준다', () => {
