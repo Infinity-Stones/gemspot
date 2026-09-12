@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { MapMarker } from './SpotMap';
 import { SpotMap } from './SpotMap';
@@ -55,9 +56,18 @@ const retryButton = css({
 });
 
 export function HomeMap({ spot, markers }: Props) {
+  const router = useRouter();
   const [current, setCurrent] = useState<Coordinates | null>(null);
   const [status, setStatus] = useState<LocationStatus>('asking');
   const [attempt, setAttempt] = useState(0);
+
+  // 고른 핀은 주소에 남긴다. 뒤로가기로 닫히고 링크로 공유된다(T53 · #115).
+  const selectMarker = useCallback(
+    (id: string) => {
+      router.push(`/?spot=${encodeURIComponent(id)}`, { scroll: false });
+    },
+    [router],
+  );
 
   // 결과로 열렸으면 볼 좌표가 이미 있다. 그때는 위치를 묻지 않는다 — 확인하러
   // 들어온 사람에게 권한 창을 먼저 띄울 이유가 없다.
@@ -103,6 +113,7 @@ export function HomeMap({ spot, markers }: Props) {
         longitude={spot.longitude}
         placeName={spot.placeName}
         markers={markers}
+        onMarkerSelect={selectMarker}
       />
     );
   }
@@ -146,6 +157,7 @@ export function HomeMap({ spot, markers }: Props) {
       hasMarker={false}
       hasLocationDot
       markers={markers}
+      onMarkerSelect={selectMarker}
     />
   );
 }

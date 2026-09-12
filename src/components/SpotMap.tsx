@@ -43,7 +43,11 @@ interface NaverMaps {
     icon?: { content: string; anchor: NaverPoint };
   }) => NaverMarker;
   Event: {
-    addListener(target: NaverMap, event: string, handler: () => void): void;
+    addListener(
+      target: NaverMap | NaverMarker,
+      event: string,
+      handler: () => void,
+    ): void;
   };
 }
 
@@ -119,6 +123,8 @@ interface Props {
   hasMarker?: boolean;
   /** 저장된 스팟들. 지금 보이는 영역에 드는 것만 그린다. */
   markers?: readonly MapMarker[];
+  /** 마커를 고르면 그 id를 올린다. */
+  onMarkerSelect?: (id: string) => void;
   /** 중심을 현재 위치로 표시할지. 스팟 마커가 아니라 맥동하는 점으로 그린다. */
   hasLocationDot?: boolean;
 }
@@ -208,6 +214,7 @@ export function SpotMap({
   hasMarker = true,
   markers = [],
   hasLocationDot = false,
+  onMarkerSelect,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<MapStatus>('loading');
@@ -257,10 +264,17 @@ export function SpotMap({
             const existing = drawn.get(spot.id);
 
             if (isVisible && existing === undefined) {
-              drawn.set(
-                spot.id,
-                new maps.Marker({ position, map, title: spot.name }),
-              );
+              const marker = new maps.Marker({
+                position,
+                map,
+                title: spot.name,
+              });
+              if (onMarkerSelect !== undefined) {
+                maps.Event.addListener(marker, 'click', () => {
+                  onMarkerSelect(spot.id);
+                });
+              }
+              drawn.set(spot.id, marker);
               continue;
             }
             if (!isVisible && existing !== undefined) {
@@ -281,7 +295,15 @@ export function SpotMap({
     return () => {
       cancelled = true;
     };
-  }, [hasCoordinate, latitude, longitude, hasMarker, markers, hasLocationDot]);
+  }, [
+    hasCoordinate,
+    latitude,
+    longitude,
+    hasMarker,
+    markers,
+    hasLocationDot,
+    onMarkerSelect,
+  ]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.
