@@ -133,6 +133,7 @@ describe('ExtractionResultsFromSession', () => {
         candidateId: 'c1',
         name: '피롤츠 커피하우스',
         address: '서울 용산구 한강대로 56-1',
+        category: 'other',
       },
     ]);
   });

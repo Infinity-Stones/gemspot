@@ -117,6 +117,7 @@ export function ExtractionResultsFromSession() {
             candidateId: candidate.id,
             name: candidate.name,
             address: candidate.roadAddress,
+            category: candidate.category,
           })),
         );
         setResult(outcome);
