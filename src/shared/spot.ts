@@ -51,8 +51,8 @@ export type SpotCategory = (typeof SPOT_CATEGORIES)[number];
  * 목록에 없는 값이 `SpotCategory`인 척 흘러가고, 그 스팟은 시간대 표에서
  * 아무 행에도 걸리지 않아 후보 선별에서 조용히 사라진다.
  */
-export function isSpotCategory(value: string): value is SpotCategory {
-  return (SPOT_CATEGORIES as readonly string[]).includes(value);
+export function isSpotCategory(value: unknown): value is SpotCategory {
+  return typeof value === 'string' && (SPOT_CATEGORIES as readonly string[]).includes(value);
 }
 
 /**
@@ -82,6 +82,24 @@ export interface SpotCoordinates {
   readonly longitude: number;
   /** 위도. 네이버 Geocoding 응답의 `y`. */
   readonly latitude: number;
+}
+
+/**
+ * 바깥에서 온 값이 좌표 계약을 지키는지. 위경도 범위 안의 **유한수**만
+ * 통과시킨다 — `NaN` · `Infinity`는 `typeof`가 'number'라 그것만으로는 못
+ * 거른다. 어댑터(T19 · T40)와 서버 진입점이 같은 판정을 쓴다.
+ */
+export function isSpotCoordinates(value: unknown): value is SpotCoordinates {
+  if (typeof value !== 'object' || value === null) return false;
+  const { latitude, longitude } = value as { latitude?: unknown; longitude?: unknown };
+  return (
+    typeof latitude === 'number' &&
+    typeof longitude === 'number' &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Math.abs(latitude) <= 90 &&
+    Math.abs(longitude) <= 180
+  );
 }
 
 /**

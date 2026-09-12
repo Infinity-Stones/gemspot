@@ -11,6 +11,10 @@
  * 붙이되, `process.env.NEXT_PUBLIC_X`를 **점 접근으로 직접** 써야 한다 —
  * Next의 빌드 타임 치환(DefinePlugin)은 대괄호 접근을 매치하지 못해서, 이
  * 모듈을 거치면 값이 사라진다.
+ *
+ * 전부 "없으면 `null`"이다. 던지지 않는 이유: 키 하나가 없어도 앱은 시드
+ * 모드로 떠야 하고, 그 키가 없을 때 무엇이 맞는지(추정으로 대체 · 기능 숨김 ·
+ * 오류 표시)는 그 키를 쓰는 도메인이 안다.
  */
 
 function readOptional(name: string): string | null {
@@ -27,31 +31,51 @@ function readOptional(name: string): string | null {
  * 값은 Vercel 환경 변수(또는 로컬 `.env.local`)에서 온다. 짝이 되는 클라이언트
  * ID는 감출 수 없는 값이라 `src/shared/naverMap.ts`에 상수로 있다.
  *
- * 읽는 이름이 `SECRET_KEY`인 것은 **버셀에 그 이름으로 등록되어 있기 때문이다.**
- * 코드가 `GEMSPOT_NAVER_API_KEY`를 보는 동안 배포 환경에서는 이 함수가 늘
- * `null`이었다 — 키가 있는데도 Geocoding이 전부 "키 없음"으로 떨어진다.
+ * 이름을 둘 읽는 이유: 배포 프로젝트마다 등록된 이름이 다르다.
+ * `juhee200s-projects/gemspot`(현재 프로덕션)에는 `GEMSPOT_NAVER_API_KEY`로,
+ * 다른 프로젝트에는 `SECRET_KEY`로 들어가 있다. 한쪽만 읽으면 다른 배포에서
+ * 키가 있는데도 Geocoding이 전부 "키 없음"으로 떨어진다. 이름이 하나로
+ * 정리되면 남는 쪽 하나만 지우면 된다.
  */
 export function naverApiKey(): string | null {
-  return readOptional('SECRET_KEY');
+  return readOptional('GEMSPOT_NAVER_API_KEY') ?? readOptional('SECRET_KEY');
 }
 
 /**
  * TMAP 보행자 경로 앱 키 (M7 구간 실측 · T40).
  *
- * 아직 발급되지 않아 지금은 늘 `null`이다. 그래도 여기 이름을 올려 두는 이유는
- * 필요한 키의 목록이 한 화면에 있어야 한다는 것이다 — 쓰는 코드가 생길 때
- * `process.env`를 새로 찾아 뒤지면 그때 또 흩어진다.
+ * 없으면 구간 도보 시간을 직선거리로 추정한다(T41). 그래도 여기 이름을 올려
+ * 두는 이유는 필요한 키의 목록이 한 화면에 있어야 한다는 것이다.
  */
 export function tmapAppKey(): string | null {
   return readOptional('TMAP_APP_KEY');
 }
 
 /**
- * Vercel AI Gateway 키 (M7 요청 해석 · 순서 제안 · T35 · T38).
+ * Gemini API 키 (D12 결정 · M7 요청 해석 · 순서 제안 · T35 · T38).
+ * 없으면 동선 가이드가 문장을 해석할 수 없다(기능 비활성). 구조화된 요청을
+ * 직접 주는 경로는 키 없이도 돈다.
+ */
+export function geminiApiKey(): string | null {
+  return readOptional('GEMINI_API_KEY');
+}
+
+/**
+ * Gemini 모델 이름. 코드에 박지 않는 이유는 모델이 주기적으로 은퇴하기
+ * 때문이다 — 배포 설정만 바꿔 갈아탈 수 있어야 한다.
+ */
+export const DEFAULT_GEMINI_MODEL = 'gemini-3-flash-preview';
+
+export function geminiModel(): string {
+  return readOptional('GEMINI_MODEL') ?? DEFAULT_GEMINI_MODEL;
+}
+
+/**
+ * Vercel AI Gateway 키.
  *
- * 게이트웨이를 지나면 제공자 교체가 모델 이름 문자열 하나로 끝난다. 명세가
- * "어댑터 한 파일에서만 바뀐다"고 못 박은 조건에 그 경로가 가장 가깝다.
- * 아직 발급되지 않아 지금은 늘 `null`이다.
+ * 게이트웨이를 지나면 제공자 교체가 모델 이름 문자열 하나로 끝난다. 아직 쓰는
+ * 코드는 없다 — LLM 어댑터(`llm.ts`)는 D12 결정대로 Gemini를 직접 부른다.
+ * 게이트웨이로 옮기기로 하면 그 파일 하나만 바뀐다.
  */
 export function aiGatewayApiKey(): string | null {
   return readOptional('AI_GATEWAY_API_KEY');

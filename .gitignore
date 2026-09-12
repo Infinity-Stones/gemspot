@@ -31,3 +31,6 @@ coverage/
 
 # Claude Code 로컬 설정 (스킬은 커밋한다 — 저장소 규약의 일부다)
 .claude/settings.local.json
+
+# Vercel CLI가 vercel link로 만드는 프로젝트 연결 정보. 계정마다 다르다.
+.vercel
