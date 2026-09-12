@@ -186,7 +186,6 @@ export function PinSpotForm({ action }: Props) {
             defaultValue={draft?.name ?? ''}
             placeholder="피롤츠 커피하우스"
             maxLength={200}
-            required
             disabled={pending}
           />
           <button type="submit" name="intent" value="search_place" className={secondary} disabled={pending}>
@@ -209,7 +208,6 @@ export function PinSpotForm({ action }: Props) {
           className={control}
           defaultValue={draft?.address ?? ''}
           placeholder="서울 용산구 한강대로 56-1"
-          required
           disabled={pending}
         />
         <p className={hint}>
@@ -304,7 +302,11 @@ export function PinSpotForm({ action }: Props) {
             />
           </div>
           <div className={previewText}>
-            <p className={label}>{located.draft.name}</p>
+            {/* 주소부터 찾은 사람은 아직 이름이 없다. 저장이 막히는 이유를
+                여기서 미리 말한다 — 눌러 보고 알게 하지 않는다. */}
+            <p className={label}>
+              {located.draft.name.length > 0 ? located.draft.name : '저장하려면 위에 가게 이름을 적어 주세요'}
+            </p>
             <p className={hint}>
               {located.location.roadAddress.length > 0 ? located.location.roadAddress : located.location.jibunAddress}
             </p>
