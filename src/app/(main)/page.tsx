@@ -1,7 +1,7 @@
 import { css } from 'styled-system/css';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
-import { PinFab } from '@/components/spot/PinFab';
+import { BrandLink } from '@/components/BrandLink';
 import { findSpot, loadSpots } from '@/domain/spot';
 import { HOME_PATH } from '@/shared/routes';
 
@@ -26,35 +26,64 @@ interface ResolvedSpot {
 }
 
 const screen = css({
-  position: 'relative',
+  width: 'full',
+  maxWidth: 'page',
+  mx: 'auto',
+  px: { base: '5', md: '8' },
+  pt: { base: '5', md: '8' },
+  pb: '[calc(104px + env(safe-area-inset-bottom))]',
   display: 'grid',
-  gridTemplateRows: '1fr auto',
-  // 모바일 주소창이 접히고 펴져도 지도가 잘리지 않게 dvh를 쓴다 — 프리셋에
-  // 대응 토큰이 없어 이스케이프한다.
-  // 헤더가 레이아웃으로 올라갔으므로 그 높이를 뺀다.
-  height: '[calc(100dvh - 64px)]',
+  gridTemplateRows: 'auto minmax(320px, 1fr) auto',
+  gap: '8',
+  minHeight: '[100dvh]',
 });
-
-// 지도와 그 위에 뜨는 것(플로팅 버튼)의 기준 상자. minHeight 0은 grid 자식이
-// 내용 높이만큼 늘어나 지도가 화면을 넘치는 것을 막는다.
-const mapArea = css({ position: 'relative', minHeight: '0' });
-
-const dataNotice = css({
-  position: 'absolute',
-  top: '3',
-  left: '[50%]',
-  zIndex: 'overlay',
-  maxWidth: '[calc(100% - token(spacing.6))]',
-  transform: 'translateX(-50%)',
+const intro = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'flex-end',
+  justifyContent: 'space-between',
+  gap: '4',
+});
+const title = css({
+  mt: '4',
+  textStyle: { base: 'heading', md: 'display' },
+  textWrap: 'balance',
+});
+const description = css({ mt: '5', color: 'ui.subtle', textStyle: 'body' });
+const count = css({
+  color: 'ui.onTag',
+  bg: 'ui.tag',
+  rounded: 'badge',
   px: '4',
   py: '2',
-  rounded: 'full',
-  bg: 'white',
-  color: 'slate.700',
-  boxShadow: 'md',
+  textStyle: 'bodySm',
+  fontWeight: 'medium',
+  whiteSpace: 'nowrap',
+});
+const mapArea = css({
+  position: 'relative',
+  minHeight: '0',
+  overflow: 'hidden',
+  rounded: 'panel',
+  bg: 'ui.surface',
+  boxShadow: 'card',
+});
+const dataNotice = css({
+  position: 'absolute',
+  top: '4',
+  left: '4',
+  right: '4',
+  width: 'fit',
+  mx: 'auto',
+  zIndex: 'docked',
+  px: '5',
+  py: '3',
+  rounded: 'nav',
+  bg: 'ui.surface',
+  color: 'ui.subtle',
+  boxShadow: 'floating',
   textAlign: 'center',
-  textStyle: 'sm',
-  _dark: { bg: 'slate.800', color: 'slate.200' },
+  textStyle: 'bodySm',
 });
 
 interface Props {
@@ -116,6 +145,16 @@ export default async function HomePage({ searchParams }: Props) {
 
   return (
     <main className={screen}>
+      <header className={intro}>
+        <div>
+          <BrandLink />
+          <h1 className={title}>다음 산책은 어디로?</h1>
+          <p className={description}>
+            저장한 장소를 둘러보고, 나만의 동선을 만들어 보세요.
+          </p>
+        </div>
+        <p className={count}>저장한 장소 {spots.length}곳</p>
+      </header>
       <div className={mapArea}>
         <HomeMap spot={spot} markers={markers} />
         {error !== null && (
@@ -123,7 +162,6 @@ export default async function HomePage({ searchParams }: Props) {
             저장한 스팟을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
           </p>
         )}
-        <PinFab />
       </div>
       {spot !== null && (
         <SpotDetailPanel

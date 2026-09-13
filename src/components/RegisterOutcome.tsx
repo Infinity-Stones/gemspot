@@ -28,17 +28,17 @@ const shell = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '4',
-  p: '5',
-  rounded: 'xl',
-  borderWidth: 'hairline',
+  p: '6',
+  rounded: 'panel',
+  borderWidth: '0',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
-  _dark: { borderColor: 'slate.800', bg: 'slate.900' },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  boxShadow: 'floating',
 });
 
 const groupTitle = css({
-  textStyle: 'sm',
+  textStyle: 'subheading',
   fontWeight: 'semibold',
 });
 
@@ -57,7 +57,7 @@ const row = css({
   flexWrap: 'wrap',
   alignItems: 'baseline',
   gap: '2',
-  textStyle: 'sm',
+  textStyle: 'bodySm',
 });
 
 const registeredName = css({
@@ -65,29 +65,25 @@ const registeredName = css({
 });
 
 const mapLink = css({
-  color: 'violet.700',
+  color: 'ui.accentText',
   textDecoration: 'underline',
-  fontWeight: 'semibold',
-  _dark: { color: 'violet.300' },
+  fontWeight: 'medium',
 });
 
 const rejectedGroup = css({
   pt: '4',
-  borderTopWidth: 'hairline',
+  borderTopWidth: '1px',
   borderTopStyle: 'solid',
-  borderTopColor: 'slate.200',
-  _dark: { borderTopColor: 'slate.800' },
+  borderTopColor: 'ui.line',
 });
 
 const rejectedName = css({
   fontWeight: 'medium',
-  color: 'red.700',
-  _dark: { color: 'red.300' },
+  color: 'ui.ink',
 });
 
 const reason = css({
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  color: 'ui.subtle',
 });
 
 export function RegisterOutcome({ result }: Props) {

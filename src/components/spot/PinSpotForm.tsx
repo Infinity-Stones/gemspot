@@ -43,41 +43,37 @@ const form = css({
   flexDirection: 'column',
   gap: '5',
   width: 'full',
+  p: { base: '6', md: '8' },
+  bg: 'ui.surface',
+  rounded: 'panel',
+  boxShadow: 'preview',
 });
 
 const field = css({ display: 'flex', flexDirection: 'column', gap: '2' });
 
 const label = css({
-  textStyle: 'sm',
+  textStyle: 'bodySm',
   fontWeight: 'medium',
-  color: 'slate.700',
-  _dark: { color: 'slate.300' },
+  color: 'ui.ink',
 });
 
 const control = css({
   width: 'full',
   px: '4',
   py: '3',
-  rounded: 'lg',
+  rounded: 'input',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.900',
-  textStyle: 'md',
-  _placeholder: { color: 'slate.400' },
-  _dark: {
-    borderColor: 'slate.700',
-    bg: 'slate.900',
-    color: 'slate.100',
-    _placeholder: { color: 'slate.500' },
-  },
+  borderColor: 'ui.border',
+  bg: 'ui.input',
+  color: 'ui.ink',
+  textStyle: 'body',
+  _placeholder: { color: 'ui.subtle' },
 });
 
 const hint = css({
-  textStyle: 'sm',
-  color: 'slate.500',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 // 플로팅 자리의 버튼은 줄을 꽉 채운다 — 화면 아래에서 좌우로 흔들리지 않는다.
@@ -92,22 +88,17 @@ const primary = css({
   alignItems: 'center',
   px: '5',
   py: '3',
-  rounded: 'lg',
+  rounded: 'control',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
-  bg: 'violet.600',
-  color: 'white',
+  borderColor: 'ui.action',
+  bg: 'ui.action',
+  color: 'ui.onAction',
   cursor: 'pointer',
-  textStyle: 'md',
+  textStyle: 'button',
   fontWeight: 'semibold',
-  _hover: { bg: 'violet.700', borderColor: 'violet.700' },
+  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: {
-    borderColor: 'violet.500',
-    bg: 'violet.500',
-    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
-  },
 });
 
 /**
@@ -119,34 +110,28 @@ const secondary = css({
   alignItems: 'center',
   px: '5',
   py: '3',
-  rounded: 'lg',
+  rounded: 'control',
   borderWidth: '[1.5px]',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
+  borderColor: 'ui.border',
   bg: 'transparent',
-  color: 'violet.700',
+  color: 'ui.ink',
   cursor: 'pointer',
-  textStyle: 'md',
+  textStyle: 'bodySm',
   fontWeight: 'medium',
-  _hover: { bg: 'violet.50' },
+  _hover: { bg: 'ui.muted' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: {
-    borderColor: 'violet.400',
-    color: 'violet.300',
-    _hover: { bg: 'violet.950' },
-  },
 });
 
 const preview = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '3',
-  rounded: 'lg',
+  rounded: 'panel',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
+  borderColor: 'ui.line',
   overflow: 'hidden',
-  _dark: { borderColor: 'slate.800' },
 });
 
 const mapFrame = css({ height: '64', width: 'full' });
@@ -176,7 +161,7 @@ const inlineAction = css({
   flexShrink: '0',
   justifyContent: 'center',
   // 입력 칸과 높이를 맞추고, 글자가 접히지 않을 만큼은 넓힌다.
-  minWidth: '24',
+  minWidth: { base: '16', sm: '24' },
   minHeight: '12',
   whiteSpace: 'nowrap',
 });
@@ -198,31 +183,24 @@ const candidateButton = css({
   width: 'full',
   px: '4',
   py: '3',
-  rounded: 'lg',
+  rounded: 'nav',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
-  color: 'slate.900',
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  color: 'ui.ink',
   textAlign: 'left',
   cursor: 'pointer',
-  _hover: { borderColor: 'violet.500', bg: 'violet.50' },
-  _dark: {
-    borderColor: 'slate.800',
-    bg: 'slate.900',
-    color: 'slate.100',
-    _hover: { bg: 'violet.950', borderColor: 'violet.400' },
-  },
+  _hover: { borderColor: 'ui.accent', bg: 'ui.muted' },
 });
 
 const alert = css({
   px: '4',
   py: '3',
-  rounded: 'lg',
-  bg: 'slate.100',
-  color: 'slate.800',
-  textStyle: 'sm',
-  _dark: { bg: 'slate.900', color: 'slate.200' },
+  rounded: 'nav',
+  bg: 'ui.muted',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
 /**

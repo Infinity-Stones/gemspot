@@ -45,28 +45,30 @@ const shell = css({
   width: 'full',
 });
 
-const form = css({ display: 'flex', flexDirection: 'column', gap: '3' });
+const form = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3',
+  bg: 'ui.surface',
+  rounded: 'panel',
+  p: { base: '6', md: '8' },
+  boxShadow: 'preview',
+});
 
 const textarea = css({
   width: 'full',
-  minHeight: '28',
-  px: '4',
-  py: '3',
-  rounded: 'lg',
+  minHeight: '48',
+  px: '5',
+  py: '5',
+  rounded: 'input',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.900',
-  textStyle: 'md',
+  borderColor: 'ui.border',
+  bg: 'ui.input',
+  color: 'ui.ink',
+  textStyle: 'body',
   resize: 'vertical',
-  _placeholder: { color: 'slate.400' },
-  _dark: {
-    borderColor: 'slate.700',
-    bg: 'slate.900',
-    color: 'slate.100',
-    _placeholder: { color: 'slate.500' },
-  },
+  _placeholder: { color: 'ui.subtle' },
 });
 
 const row = css({
@@ -77,10 +79,9 @@ const row = css({
 });
 
 const counter = css({
-  textStyle: 'sm',
-  color: 'slate.500',
-  fontFamily: 'mono',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
+  fontFamily: 'sans',
 });
 
 const button = css({
@@ -89,33 +90,27 @@ const button = css({
   gap: '2',
   px: '5',
   py: '3',
-  rounded: 'lg',
+  rounded: 'control',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
-  bg: 'violet.600',
-  color: 'white',
+  borderColor: 'ui.action',
+  bg: 'ui.action',
+  color: 'ui.onAction',
   cursor: 'pointer',
-  textStyle: 'md',
+  textStyle: 'button',
   fontWeight: 'semibold',
   transition: 'colors',
-  _hover: { bg: 'violet.700', borderColor: 'violet.700' },
+  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: {
-    borderColor: 'violet.500',
-    bg: 'violet.500',
-    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
-  },
 });
 
 const notice = css({
-  px: '4',
-  py: '3',
-  rounded: 'lg',
-  bg: 'slate.100',
-  color: 'slate.700',
-  textStyle: 'sm',
-  _dark: { bg: 'slate.900', color: 'slate.300' },
+  px: '6',
+  py: '8',
+  rounded: 'panel',
+  bg: 'ui.blueWash',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
 const transcript = css({
@@ -132,12 +127,11 @@ const said = css({
   maxWidth: '[85%]',
   px: '4',
   py: '2',
-  rounded: 'xl',
-  bg: 'violet.100',
-  color: 'violet.900',
-  textStyle: 'sm',
+  rounded: 'nav',
+  bg: 'ui.tag',
+  color: 'ui.onTag',
+  textStyle: 'bodySm',
   whiteSpace: 'pre-wrap',
-  _dark: { bg: 'violet.950', color: 'violet.100' },
 });
 
 const asked = css({
@@ -145,18 +139,13 @@ const asked = css({
   maxWidth: '[85%]',
   px: '4',
   py: '2',
-  rounded: 'xl',
-  bg: 'slate.100',
-  color: 'slate.900',
-  textStyle: 'md',
-  _dark: { bg: 'slate.800', color: 'slate.100' },
+  rounded: 'nav',
+  bg: 'ui.blueWash',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
-const link = css({
-  color: 'violet.700',
-  textDecoration: 'underline',
-  _dark: { color: 'violet.300' },
-});
+const link = css({ color: 'ui.accentText', textDecoration: 'underline' });
 
 /** 되묻기 상태인가 — 이때만 이전 문장을 이어 붙인다. */
 function clarificationOf(

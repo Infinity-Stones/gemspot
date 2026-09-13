@@ -90,8 +90,7 @@ const shell = css({
 /**
  * 화면 안에서 끝나는 동작 — 파일 선택. 눌러도 이 화면에 그대로 남는다.
  *
- * 제출 버튼과 같은 무게로 두면 무엇을 먼저 눌러야 하는지가 사라진다. 색은
- * 같은 프라이머리를 쓰되 면을 채우지 않아 한 단 뒤로 물러난다.
+ * 제출 버튼보다 가볍게, 중립색 외곽선을 두른 캡슐로 표시한다.
  */
 const button = css({
   display: 'inline-flex',
@@ -100,24 +99,19 @@ const button = css({
   gap: '2',
   minHeight: '11',
   px: '5',
-  rounded: 'lg',
+  rounded: 'control',
   // 1px은 이 크기에서 묻힌다.
   borderWidth: '[1.5px]',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
+  borderColor: 'ui.border',
   // 면을 채우지 않는다. 상자 바탕이 그대로 비쳐 제출 버튼보다 한 단 뒤로 간다.
   bg: 'transparent',
-  color: 'violet.700',
+  color: 'ui.ink',
   cursor: 'pointer',
-  textStyle: 'md',
-  fontWeight: 'semibold',
+  textStyle: 'bodySm',
+  fontWeight: 'medium',
   transition: 'colors',
-  _hover: { bg: 'violet.50' },
-  _dark: {
-    borderColor: 'violet.400',
-    color: 'violet.300',
-    _hover: { bg: 'violet.950' },
-  },
+  _hover: { bg: 'ui.muted' },
 });
 
 /**
@@ -131,11 +125,7 @@ const button = css({
  */
 const visuallyHidden = css({ srOnly: true });
 
-// 고르기 전의 자리. 버튼만 덩그러니 두면 무엇을 놓는 자리인지 드러나지
-// 않는다 — 테두리로 영역을 보이고 그 안에 버튼을 둔다.
-//
-// 테두리를 CSS `dashed`가 아니라 SVG로 그리는 이유: `dashed`는 점과 간격을
-// 정할 수 없고 두께에 따라 알아서 정해진다. 여기서는 간격을 넓게 두고 싶다.
+// 업로드할 이미지 한 장의 자리. 흰 카드와 넓은 확산 그림자를 쓴다.
 const dropZone = css({
   position: 'relative',
   // 폼은 왼쪽 정렬이지만 이 상자는 화면 가운데에 둔다 — 고르는 자리가
@@ -145,23 +135,32 @@ const dropZone = css({
   alignItems: 'center',
   justifyContent: 'center',
   width: 'full',
-  maxWidth: 'sm',
-  // 고른 뒤의 미리보기와 같은 크기다. 상자 크기가 달라지면 고르는 순간
-  // 화면이 한 번 튄다.
-  aspectRatio: 'square',
+  // 고른 뒤에는 정사각형 미리보기로 전환한다.
+  aspectRatio: '[5 / 4]',
+  flexDirection: 'column',
+  gap: '5',
   px: '6',
-  rounded: 'md',
-  bg: 'slate.50',
-  color: 'slate.300',
-  _dark: { bg: 'slate.900', color: 'slate.700' },
+  rounded: 'panel',
+  borderWidth: '0',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  color: 'ui.subtle',
+  boxShadow: 'preview',
 });
 
-const dropZoneEdge = css({
-  position: 'absolute',
-  inset: '0',
-  width: 'full',
-  height: 'full',
-  pointerEvents: 'none',
+const uploadIcon = css({
+  width: '20',
+  height: '20',
+  p: '4',
+  rounded: 'input',
+  bg: 'ui.tag',
+  color: 'ui.onTag',
+});
+const formatHint = css({
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
+  textAlign: 'center',
 });
 
 const cell = css({
@@ -170,14 +169,13 @@ const cell = css({
   // 한 장이라 격자가 필요 없다. 세로로 긴 스크린샷이 화면을 다 먹지 않게
   // 폭만 제한한다.
   width: 'full',
-  maxWidth: 'sm',
-  rounded: 'md',
+  rounded: 'panel',
   overflow: 'hidden',
-  borderWidth: '1px',
+  borderWidth: '0',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'slate.100',
-  _dark: { borderColor: 'slate.800', bg: 'slate.900' },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  boxShadow: 'card',
 });
 
 const thumb = css({
@@ -190,57 +188,51 @@ const thumb = css({
 
 const removeButton = css({
   position: 'absolute',
-  top: '1',
-  right: '1',
+  top: '3',
+  right: '3',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '6',
-  height: '6',
-  rounded: 'full',
+  width: '11',
+  height: '11',
+  rounded: 'control',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.600',
+  borderColor: 'ui.border',
+  bg: 'ui.surface',
+  color: 'ui.subtle',
   cursor: 'pointer',
-  textStyle: 'sm',
+  textStyle: 'bodySm',
   lineHeight: 'none',
-  _hover: { borderColor: 'red.600', color: 'red.600' },
-  _dark: {
-    borderColor: 'slate.600',
-    bg: 'slate.900',
-    color: 'slate.400',
-    _hover: { borderColor: 'red.400', color: 'red.400' },
-  },
+  _hover: { borderColor: 'ui.border', color: 'ui.subtle' },
+  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
+  boxShadow: 'floating',
 });
 
 const fileName = css({
-  px: '2',
-  py: '1',
-  textStyle: 'xs',
-  color: 'slate.600',
+  px: '6',
+  py: '5',
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-  _dark: { color: 'slate.400' },
 });
 
 const warning = css({
   width: 'full',
-  p: '4',
-  rounded: 'md',
+  p: '6',
+  rounded: 'panel',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'red.300',
-  bg: 'red.50',
-  color: 'red.900',
-  _dark: { borderColor: 'red.800', bg: 'red.950', color: 'red.100' },
+  borderColor: 'ui.border',
+  bg: 'ui.muted',
+  color: 'ui.ink',
 });
 
 const warningTitle = css({
-  textStyle: 'sm',
-  fontWeight: 'semibold',
+  textStyle: 'bodySm',
+  fontWeight: 'medium',
   mb: '2',
 });
 
@@ -250,7 +242,7 @@ const warningList = css({
   gap: '1',
   m: '0',
   pl: '5',
-  textStyle: 'sm',
+  textStyle: 'bodySm',
 });
 
 /**
@@ -267,44 +259,34 @@ const fallbackActions = css({
   mt: '3',
 });
 
-/**
- * 붉은 바탕 위에 서는 버튼이라 폼의 제출 버튼(slate)과 색이 다르다. 경고
- * 상자의 바탕이 라이트에서 `red.50`, 다크에서 `red.950`이므로 명암을 뒤집어
- * 든다 — 한쪽만 맞추면 반대 테마에서 글자가 바탕에 묻는다.
- */
+/** 실패 안내와 복구 동작도 중립색 지면 위에 둔다. */
 const retryButton = css({
   display: 'inline-flex',
   alignItems: 'center',
   px: '3',
   py: '2',
-  rounded: 'md',
+  rounded: 'control',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'red.700',
-  bg: 'red.700',
-  color: 'white',
+  borderColor: 'ui.border',
+  bg: 'ui.muted',
+  color: 'ui.ink',
   cursor: 'pointer',
-  textStyle: 'sm',
-  fontWeight: 'semibold',
+  textStyle: 'bodySm',
+  fontWeight: 'medium',
   transition: 'colors',
-  _hover: { bg: 'red.800', borderColor: 'red.800' },
+  _hover: { bg: 'ui.surface', borderColor: 'ui.border' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: {
-    borderColor: 'red.300',
-    bg: 'red.300',
-    color: 'red.950',
-    _hover: { bg: 'red.200', borderColor: 'red.200' },
-  },
+  minHeight: '11',
 });
 
 /** 상자의 글자색을 그대로 쓰고 밑줄로만 링크임을 드러낸다. */
 const fallbackLink = css({
-  textStyle: 'sm',
-  fontWeight: 'semibold',
-  color: 'red.900',
+  textStyle: 'bodySm',
+  fontWeight: 'medium',
+  color: 'ui.ink',
   textDecoration: 'underline',
-  _hover: { color: 'red.700' },
-  _dark: { color: 'red.100', _hover: { color: 'white' } },
+  _hover: { color: 'ui.ink' },
 });
 
 /**
@@ -370,27 +352,21 @@ const submitButton = css({
   gap: '2',
   // 고른 뒤 눌러야 하는 유일한 버튼이다. 미리보기 폭에 맞춰 크게 둔다.
   width: 'full',
-  boxShadow: 'lg',
+
   minHeight: '12',
   px: '5',
-  rounded: 'lg',
+  rounded: 'control',
   borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
-  bg: 'violet.600',
-  color: 'white',
+  borderColor: 'ui.action',
+  bg: 'ui.action',
+  color: 'ui.onAction',
   cursor: 'pointer',
-  textStyle: 'md',
+  textStyle: 'button',
   fontWeight: 'semibold',
   transition: 'colors',
-  _hover: { bg: 'violet.700', borderColor: 'violet.700' },
+  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  _dark: {
-    borderColor: 'violet.500',
-    bg: 'violet.500',
-    color: 'slate.950',
-    _hover: { bg: 'violet.400', borderColor: 'violet.400' },
-  },
 });
 
 export function UploadForm({ action }: Props) {
@@ -561,22 +537,22 @@ export function UploadForm({ action }: Props) {
       />
       {image === null && (
         <div className={dropZone}>
-          <svg className={dropZoneEdge} aria-hidden="true">
-            <rect
-              x="1"
-              y="1"
-              width="calc(100% - 2px)"
-              height="calc(100% - 2px)"
-              rx="8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeDasharray="10 9"
-            />
+          <svg
+            className={uploadIcon}
+            viewBox="0 0 64 64"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden="true"
+          >
+            <rect x="13" y="9" width="38" height="46" rx="8" />
+            <path d="M22 39l8-9 12 13M36 36l6-6 9 10" />
+            <circle cx="38" cy="21" r="4" />
           </svg>
           <button type="button" className={button} onClick={openPicker}>
             스크린샷 고르기
           </button>
+          <p className={formatHint}>가게 이름과 주소가 보이는 한 장</p>
         </div>
       )}
 

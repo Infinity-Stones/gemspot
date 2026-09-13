@@ -1,5 +1,6 @@
 import { css } from 'styled-system/css';
 import { BackLink } from '@/components/BackLink';
+import { BrandLink } from '@/components/BrandLink';
 import { ExtractionResultsFromSession } from '@/components/ExtractionResultsFromSession';
 import { UPLOAD_PATH } from '@/shared/routes';
 import type { Metadata } from 'next';
@@ -11,10 +12,11 @@ export const metadata: Metadata = {
 
 const shell = css({
   width: 'full',
-  maxWidth: '2xl',
+  maxWidth: '3xl',
   mx: 'auto',
   px: '6',
-  py: '10',
+  pt: { base: '5', md: '10' },
+  pb: '[calc(104px + env(safe-area-inset-bottom))]',
   display: 'flex',
   flexDirection: 'column',
   gap: '8',
@@ -23,19 +25,16 @@ const shell = css({
 const heading = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '2',
+  gap: '5',
 });
 
 const title = css({
-  textStyle: '3xl',
-  fontWeight: 'bold',
-  letterSpacing: 'tight',
+  textStyle: { base: 'heading', md: 'display' },
 });
 
 const lede = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 /**
@@ -51,6 +50,7 @@ const lede = css({
 export default function UploadResultsPage() {
   return (
     <main className={shell}>
+      <BrandLink />
       <BackLink href={UPLOAD_PATH} label="업로드로 돌아가기" />
       <header className={heading}>
         <h1 className={title}>추출 결과</h1>

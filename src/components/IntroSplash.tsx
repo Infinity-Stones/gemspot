@@ -33,20 +33,19 @@ const splash = css({
   alignItems: 'center',
   justifyContent: 'center',
   gap: '5',
-  bg: 'white',
+  bg: 'ui.surface',
   transition: 'opacity',
   transitionDuration: 'slow',
-  _dark: { bg: 'slate.950' },
+
   _motionReduce: { transitionDuration: '[0ms]' },
 });
 
 const hidden = css({ opacity: '[0]', pointerEvents: 'none' });
 
 const slogan = css({
-  textStyle: 'md',
+  textStyle: 'bodySm',
   fontWeight: 'medium',
-  color: 'slate.700',
-  _dark: { color: 'slate.200' },
+  color: 'ui.ink',
 });
 
 const logoLight = css({

@@ -23,15 +23,14 @@ const shell = css({
 const mark = css({ width: '[72px]', height: 'auto', opacity: '[0.6]' });
 
 const title = css({
-  textStyle: '2xl',
-  fontWeight: 'bold',
+  textStyle: 'heading',
+  fontWeight: 'extrabold',
   letterSpacing: 'tight',
 });
 
 const message = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 const homeLink = css({
@@ -40,14 +39,13 @@ const homeLink = css({
   justifyContent: 'center',
   minHeight: '12',
   px: '6',
-  rounded: 'full',
-  bg: 'violet.600',
-  color: 'white',
-  textStyle: 'md',
+  rounded: 'control',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'button',
   fontWeight: 'semibold',
   transition: 'colors',
-  _hover: { bg: 'violet.700' },
-  _dark: { bg: 'violet.500', color: 'slate.950', _hover: { bg: 'violet.400' } },
+  _hover: { bg: 'ui.actionHover' },
 });
 
 export default function NotFound() {

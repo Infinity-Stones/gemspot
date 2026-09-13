@@ -149,8 +149,7 @@ const frame = css({
   position: 'relative',
   width: 'full',
   height: 'full',
-  bg: 'slate.100',
-  _dark: { bg: 'slate.900' },
+  bg: 'ui.muted',
 });
 
 const canvas = css({
@@ -165,9 +164,7 @@ const locationDot = css({
   width: '[14px]',
   height: '[14px]',
   rounded: 'full',
-  bg: 'violet.600',
-  boxShadow: 'sm',
-  _dark: { bg: 'violet.400' },
+  bg: 'ui.accent',
 });
 
 // 흰 선은 안쪽에 넣는다. 바깥 테두리로 두면 점이 그만큼 커져 지도 위에서
@@ -180,8 +177,7 @@ const locationEdge = css({
   // 원을 먹는다. 이 한 자리만 사이 값으로 둔다.
   borderWidth: '[1.5px]',
   borderStyle: 'solid',
-  borderColor: 'white',
-  _dark: { borderColor: 'slate.950' },
+  borderColor: 'ui.surface',
 });
 
 const SPOT_PIN_WIDTH = 40;
@@ -220,7 +216,7 @@ const locationRing = css({
   marginLeft: '[-12px]',
   zIndex: '[-1]',
   rounded: 'full',
-  bg: 'violet.500',
+  bg: 'ui.accent',
   opacity: '[0.55]',
   animationName: 'ping',
   // 프리셋의 duration은 전환용이라 여기 쓰기엔 짧다. 천천히 번지게 둔다.
@@ -241,9 +237,8 @@ const overlay = css({
   gap: '2',
   px: '6',
   textAlign: 'center',
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 export function SpotMap({

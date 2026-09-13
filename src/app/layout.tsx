@@ -1,14 +1,29 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import localFont from 'next/font/local';
 import '@/styles/globals.css';
 import { THEME_INIT_SCRIPT } from './theme-script';
+
+const inter = localFont({
+  src: './fonts/inter-latin.woff2',
+  variable: '--font-inter',
+  weight: '400 800',
+  display: 'swap',
+});
+const interTight = localFont({
+  src: './fonts/inter-tight-latin.woff2',
+  variable: '--font-inter-tight',
+  weight: '500 800',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
     default: 'gemspot',
     template: '%s · gemspot',
   },
-  description: '레이어 경계와 디자인 토큰을 lint로 강제하는 Next.js 스캐폴드.',
+  description:
+    '가고 싶은 장소를 스크린샷으로 모으고, 나만의 산책 동선을 만들어 보세요.',
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -19,7 +34,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     // 시점의 DOM이 이 속성 하나에서 다른 것은 **의도된 것**이고, 이게 없으면
     // React가 매 로드마다 경고를 찍는다. <html> 엘리먼트에만 걸리므로 자식
     // 트리의 진짜 불일치는 그대로 보고된다.
-    <html lang="ko" data-theme="light" suppressHydrationWarning>
+    <html
+      lang="ko"
+      data-theme="light"
+      className={`${inter.variable} ${interTight.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
