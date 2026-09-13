@@ -4,8 +4,7 @@ import { css } from 'styled-system/css';
 /**
  * 하위 화면에서 돌아가는 길(T54 · #130).
  *
- * `AppHeader`는 홈에만 붙어 있어서, 홈에서 들어간 화면에는 앱 안으로 돌아올
- * 수단이 없다. 그 자리를 채운다.
+ * 이전 단계가 명확한 화면에서 로고의 홈 링크보다 구체적인 복귀 경로를 제공한다.
  *
  * 목적지를 `href`로 받는다 — `router.back()`이 아닌 이유는 history가 앱 바깥까지
  * 세기 때문이다. 공유 링크나 북마크로 바로 들어온 탭에는 앞선 앱 항목이 없어서
@@ -32,11 +31,10 @@ const backLink = css({
   minWidth: '11',
   minHeight: '11',
   ml: '[-10px]',
-  textStyle: 'sm',
-  color: 'violet.700',
+  textStyle: 'bodySm',
+  color: 'ui.accentText',
   textDecoration: 'none',
   _hover: { textDecoration: 'underline' },
-  _dark: { color: 'violet.300' },
 });
 
 const arrow = css({ display: 'block' });

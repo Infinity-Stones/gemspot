@@ -22,14 +22,13 @@ const toast = css({
   maxWidth: 'sm',
   px: '4',
   py: '3',
-  rounded: 'lg',
-  bg: 'slate.900',
-  color: 'slate.50',
-  textStyle: 'sm',
+  rounded: 'control',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'bodySm',
   fontWeight: 'medium',
   textAlign: 'center',
-  boxShadow: 'lg',
-  _dark: { bg: 'slate.100', color: 'slate.900' },
+  boxShadow: 'floating',
 });
 
 /**

@@ -17,16 +17,14 @@ const box = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '2',
-  px: '4',
-  py: '4',
-  rounded: 'lg',
-  bg: 'slate.100',
-  color: 'slate.800',
-  textStyle: 'md',
-  _dark: { bg: 'slate.900', color: 'slate.200' },
+  p: '6',
+  rounded: 'panel',
+  bg: 'ui.muted',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
-const detail = css({ textStyle: 'sm', color: 'slate.600', _dark: { color: 'slate.400' } });
+const detail = css({ textStyle: 'bodySm', color: 'ui.subtle' });
 
 const droppedList = css({
   display: 'flex',
@@ -35,9 +33,8 @@ const droppedList = css({
   listStyle: 'none',
   p: '0',
   m: '0',
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 interface Props {
@@ -51,20 +48,25 @@ export function PlanFailureNotice({ failure }: Props) {
     return (
       <div className={box} role="alert">
         <p>
-          {formatSeoulHourMinute(failure.window.start)}~{formatSeoulHourMinute(failure.window.end)}에{' '}
-          {failure.areaName}에서 갈 만한 스팟이 없어요.
+          {formatSeoulHourMinute(failure.window.start)}~
+          {formatSeoulHourMinute(failure.window.end)}에 {failure.areaName}에서
+          갈 만한 스팟이 없어요.
         </p>
         {failure.dropped.length > 0 && (
           <ul className={droppedList}>
             {failure.dropped.map(item => (
               <li key={`${item.candidate.id}-${item.reason}`}>
                 {item.candidate.name} ({labelOf(item.candidate.category)}) —{' '}
-                {item.reason === 'outside_window' ? '이 시간대엔 문을 열지 않아요' : '그 동네에서 멀어요'}
+                {item.reason === 'outside_window'
+                  ? '이 시간대엔 문을 열지 않아요'
+                  : '그 동네에서 멀어요'}
               </li>
             ))}
           </ul>
         )}
-        <p className={detail}>시간대를 바꾸거나 다른 동네로 다시 말해 주세요.</p>
+        <p className={detail}>
+          시간대를 바꾸거나 다른 동네로 다시 말해 주세요.
+        </p>
       </div>
     );
   }
@@ -73,7 +75,10 @@ export function PlanFailureNotice({ failure }: Props) {
     return (
       <div className={box} role="alert">
         <p>&apos;{failure.areaName}&apos;의 위치를 찾지 못했어요.</p>
-        <p className={detail}>동네 이름을 다시 알려 주세요. 구 이름을 붙이면(예: 성동구 성수동) 더 잘 찾습니다.</p>
+        <p className={detail}>
+          동네 이름을 다시 알려 주세요. 구 이름을 붙이면(예: 성동구 성수동) 더
+          잘 찾습니다.
+        </p>
       </div>
     );
   }
@@ -82,7 +87,10 @@ export function PlanFailureNotice({ failure }: Props) {
     return (
       <div className={box} role="alert">
         <p>요청을 이해하지 못했어요.</p>
-        <p className={detail}>언제, 어디서 걷고 싶은지를 넣어 다시 말해 주세요. 예: 오늘 저녁 7시부터 9시까지 성수동에서 카페 들르면서.</p>
+        <p className={detail}>
+          언제, 어디서 걷고 싶은지를 넣어 다시 말해 주세요. 예: 오늘 저녁
+          7시부터 9시까지 성수동에서 카페 들르면서.
+        </p>
       </div>
     );
   }
@@ -92,8 +100,8 @@ export function PlanFailureNotice({ failure }: Props) {
       <div className={box} role="alert">
         <p>지금은 동선을 만들 수 없어요.</p>
         <p className={detail}>
-          {failure.service === 'llm' ? '요청을 해석하는' : '동네 위치를 찾는'} 기능이 응답하지 않습니다. 잠시 후 다시
-          시도해 주세요.
+          {failure.service === 'llm' ? '요청을 해석하는' : '동네 위치를 찾는'}{' '}
+          기능이 응답하지 않습니다. 잠시 후 다시 시도해 주세요.
         </p>
       </div>
     );

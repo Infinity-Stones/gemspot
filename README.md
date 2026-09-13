@@ -124,24 +124,40 @@ route에 넘긴다. 도메인끼리 여는 것이 정답이었던 적은 아직 
 
 ## 스타일
 
-Panda CSS. **토큰은 직접 만들지 않는다** — 팔레트·타이포·radii·spacing은 전부
-공식 프리셋(`@pandacss/dev/presets`)에서 온다. `panda.config.ts`가 다루는 것은
-파이프라인뿐이다(무엇을 스캔하고, 어디로 생성하고, 어떤 값을 금지하는가).
+Panda CSS. 시각 기준은 `DESIGN.md`의 Jitter 레퍼런스다. 오프화이트 지면과
+흰 카드, 굵고 촘촘한 제목, 캡슐형 버튼, 넓고 부드러운 그림자를 따른다.
 
-그 프리셋에는 시맨틱 층이 없다. 그래서 컴포넌트는 팔레트 이름을 직접 고르고,
-라이트/다크 짝을 `_dark` 조건으로 함께 든다.
+`panda.config.ts`는 공식 프리셋을 바탕으로 문서에 지정된 `design.*` 색상,
+20/26/40/50px 모서리, 1200px 지면 폭, 타이포 스케일과 그림자를 더한다. 컴포넌트에서는
+`ui.canvas`, `ui.surface`, `ui.ink`, `ui.subtle`, `ui.accent` 같은 시맨틱 토큰을 쓴다.
+라이트/다크 짝은 `semanticTokens`에서 관리한다. 색상을 소스에 직접 쓰거나
+이스케이프로 우회하지 않는다.
 
 ```ts
 const card = css({
-  bg: 'white',
-  color: 'slate.900',
-  _dark: { bg: 'slate.900', color: 'slate.100' },
+  bg: 'ui.surface',
+  color: 'ui.ink',
+  rounded: 'panel',
+  boxShadow: 'card',
 });
 ```
 
-거래는 명확하다 — 유지할 토큰 파일이 없어지는 대신, 팔레트를 갈아끼우면 색을
-쓰는 자리를 전부 고쳐야 한다. 역할 이름이 다시 필요해지면 그때
-`semanticTokens`를 얹는다.
+주요 버튼은 `ui.action`과 `ui.onAction`으로 대비를 확보한다. 플로팅 메뉴의
+열기·업로드 버튼은 `ui.floatingAction`의 연보라색과 `ui.onFloatingAction`의
+짙은 글자를 사용한다. 나머지 세부 버튼은 `ui.surface/80`의 반투명 배경을 쓴다.
+제목은 Inter Tight, 본문은 Inter를 사용한다.
+라이선스와 Latin 가변 폰트를 `src/app/fonts/`에 보관하고 `next/font/local`로
+제공한다. 한글은 Apple SD Gothic Neo·Malgun Gothic 등 시스템 글꼴로 표시한다.
+지도와 업로드 이미지가 앱의 주요 시각 자료이므로 레퍼런스의 마케팅용 3D 장식,
+푸터, 영문 예시 문구는 가져오지 않는다. `WorkflowPage`는 입력 화면의 설명과
+폼을 데스크톱에서 나란히, 모바일에서 세로로 배치한다. 업로드 화면은
+`layout="stacked"`로 모든 화면 크기에서 설명 아래에 업로드 영역을 배치한다.
+
+상단바 대신 각 화면의 소개 영역에 `BrandLink`를 둔다. `FloatingNavigation`은
+공통 레이아웃에서 한 번 렌더링하고, 스크롤과 관계없이 화면 하단에서 24px과
+안전 영역만큼 띄워 표시한다. 버튼을 누르면 동선 만들기·
+업로드·핀 찍기·테마 전환이 펼쳐지고, 다시 누르거나 바깥 클릭·Escape로 접힌다.
+모바일 검색·저장 바의 오른쪽은 메뉴 공간으로 비워 서로 겹치지 않게 한다.
 
 테마는 `<html data-theme>`으로 전환한다. 첫 페인트 **전에** 도는 인라인 스크립트
 (`src/app/theme-script.ts`)가 localStorage → 시스템 설정 순으로 값을 정하므로

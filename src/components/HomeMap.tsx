@@ -30,14 +30,12 @@ const notice = css({
   height: 'full',
   px: '6',
   textAlign: 'center',
-  bg: 'slate.100',
-  _dark: { bg: 'slate.900' },
+  bg: 'ui.muted',
 });
 
 const noticeText = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 const retryButton = css({
@@ -46,14 +44,13 @@ const retryButton = css({
   justifyContent: 'center',
   minHeight: '11',
   px: '5',
-  rounded: 'full',
-  borderWidth: 'hairline',
+  rounded: 'control',
+  borderWidth: '1px',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  textStyle: 'sm',
+  borderColor: 'ui.border',
+  bg: 'ui.surface',
+  textStyle: 'bodySm',
   cursor: 'pointer',
-  _dark: { borderColor: 'slate.700', bg: 'slate.900' },
 });
 
 export function HomeMap({ spot, markers }: Props) {

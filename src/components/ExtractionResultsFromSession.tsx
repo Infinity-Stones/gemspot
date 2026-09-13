@@ -10,6 +10,7 @@ import {
 import { css } from 'styled-system/css';
 import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
 import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
+import { previewSpotLocationAction } from '@/app/(main)/upload/results/previewAction';
 import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { UPLOAD_PATH } from '@/shared/routes';
 import { isSpotCategory, type SpotCandidate } from '@/shared/spot';
@@ -46,27 +47,24 @@ const empty = css({
   gap: '3',
   alignItems: 'flex-start',
   p: '6',
-  rounded: 'md',
+  rounded: 'panel',
   borderWidth: '1px',
   borderStyle: 'dashed',
-  borderColor: 'slate.300',
-  color: 'slate.600',
-  textStyle: 'sm',
-  _dark: { borderColor: 'slate.700', color: 'slate.400' },
+  borderColor: 'ui.border',
+  color: 'ui.subtle',
+  textStyle: 'bodySm',
 });
 
 const savingNote = css({
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 const link = css({
-  color: 'violet.600',
+  color: 'ui.accentText',
   textDecoration: 'none',
-  fontWeight: 'semibold',
+  fontWeight: 'medium',
   _hover: { textDecoration: 'underline' },
-  _dark: { color: 'violet.400' },
 });
 
 /** 세션은 이 화면이 사는 동안 바뀌지 않는다. 구독할 것이 없다. */
@@ -140,7 +138,11 @@ export function ExtractionResultsFromSession() {
 
   return (
     <>
-      <ExtractionResults candidates={candidates} onContinue={register} />
+      <ExtractionResults
+        candidates={candidates}
+        onContinue={register}
+        locateAddress={previewSpotLocationAction}
+      />
       {saving && <p className={savingNote}>지도에 등록하는 중…</p>}
       {result !== null && !saving && <RegisterOutcome result={result} />}
     </>

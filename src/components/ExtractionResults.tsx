@@ -8,6 +8,8 @@ import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
 import type { FormEvent } from 'react';
+import { SpotLocationPreview } from './spot/SpotLocationPreview';
+import type { LocateSpotAddress } from './spot/SpotLocationPreview';
 
 export interface UploadImage {
   /** 업로드 한 장의 식별자. 후보 id와 달리 한 이미지에서 나온 후보들이 공유한다. */
@@ -52,6 +54,8 @@ interface Props {
   candidates: readonly ExtractionResultCandidate[];
   /** 생략하면 선택은 가능하지만 STEP 4로 넘기는 완료 버튼은 비활성화된다. */
   onContinue?: ContinueWithCandidates;
+  /** 주소를 저장하지 않고 지도에서 미리 확인하는 경계. */
+  locateAddress?: LocateSpotAddress;
 }
 
 type ResultKind = 'success' | 'failure';
@@ -69,7 +73,7 @@ const alertBackdrop = css({
   display: 'grid',
   placeItems: 'center',
   p: '6',
-  bg: 'slate.950/60',
+  bg: 'design.ink/30',
 });
 
 const alertCard = css({
@@ -79,18 +83,13 @@ const alertCard = css({
   flexDirection: 'column',
   gap: '5',
   p: '6',
-  rounded: '2xl',
+  rounded: 'panel',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
-  color: 'slate.900',
-  shadow: 'xl',
-  _dark: {
-    borderColor: 'slate.700',
-    bg: 'slate.900',
-    color: 'slate.100',
-  },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  color: 'ui.ink',
+  boxShadow: 'floating',
 });
 
 const alertCopy = css({
@@ -100,42 +99,33 @@ const alertCopy = css({
 });
 
 const alertTitle = css({
-  textStyle: 'xl',
+  textStyle: 'subheading',
   fontWeight: 'bold',
 });
 
 const alertDescription = css({
-  textStyle: 'sm',
-  color: 'slate.600',
-  _dark: { color: 'slate.300' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 const alertCounts = css({
   p: '4',
-  rounded: 'xl',
-  bg: 'violet.50',
-  color: 'violet.800',
+  rounded: 'panel',
+  bg: 'ui.tag',
+  color: 'ui.onTag',
   textAlign: 'center',
   fontWeight: 'semibold',
-  _dark: {
-    bg: 'violet.950',
-    color: 'violet.200',
-  },
 });
 
 const alertButton = css({
   minHeight: '11',
   px: '5',
-  rounded: 'lg',
-  bg: 'violet.600',
-  color: 'white',
+  rounded: 'control',
+  bg: 'ui.action',
+  color: 'ui.onAction',
   fontWeight: 'semibold',
   cursor: 'pointer',
-  _hover: { bg: 'violet.700' },
-  _dark: {
-    bg: 'violet.500',
-    _hover: { bg: 'violet.400' },
-  },
+  _hover: { bg: 'ui.actionHover' },
 });
 
 const list = css({
@@ -160,16 +150,12 @@ const albumCard = css({
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  rounded: 'xl',
+  rounded: 'panel',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
-  boxShadow: 'sm',
-  _dark: {
-    borderColor: 'slate.800',
-    bg: 'slate.900',
-  },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  boxShadow: 'floating',
 });
 
 // 원본은 주소를 옮겨 적을 때만 필요하다. 카드마다 큰 사진을 펼쳐 두면
@@ -177,20 +163,15 @@ const albumCard = css({
 const previewButton = css({
   minHeight: '11',
   px: '3',
-  rounded: 'md',
+  rounded: 'control',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  color: 'slate.700',
-  textStyle: 'sm',
+  borderColor: 'ui.border',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
   fontWeight: 'semibold',
   cursor: 'pointer',
-  _hover: { borderColor: 'slate.500', bg: 'slate.50' },
-  _dark: {
-    borderColor: 'slate.700',
-    color: 'slate.200',
-    _hover: { borderColor: 'slate.500', bg: 'slate.800' },
-  },
+  _hover: { borderColor: 'ui.accent', bg: 'ui.muted' },
 });
 
 const previewDialog = css({
@@ -201,16 +182,15 @@ const previewDialog = css({
   width: 'full',
   maxWidth: 'lg',
   p: '0',
-  rounded: 'xl',
+  rounded: 'panel',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
   overflow: 'hidden',
-  _dark: { borderColor: 'slate.800', bg: 'slate.900' },
   // 딤은 뒤를 가리는 게 아니라 앞을 띄우는 장치다. 꽉 채우면 원본이 어느
   // 화면 위에 떠 있는지 사라진다.
-  '&::backdrop': { bg: 'slate.950/60' },
+  '&::backdrop': { bg: 'design.ink/30' },
 });
 
 const previewImage = css({
@@ -219,8 +199,7 @@ const previewImage = css({
   height: 'auto',
   maxHeight: '[70dvh]',
   objectFit: 'contain',
-  bg: 'slate.100',
-  _dark: { bg: 'slate.950' },
+  bg: 'ui.muted',
 });
 
 const previewFooter = css({
@@ -232,13 +211,12 @@ const previewFooter = css({
 const previewClose = css({
   minHeight: '11',
   px: '4',
-  rounded: 'md',
-  bg: 'slate.900',
-  color: 'white',
-  textStyle: 'sm',
+  rounded: 'control',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'bodySm',
   fontWeight: 'semibold',
   cursor: 'pointer',
-  _dark: { bg: 'slate.100', color: 'slate.900' },
 });
 
 const albumDetails = css({
@@ -265,12 +243,11 @@ const manualForm = css({
   gap: '3',
   width: 'full',
   p: '4',
-  rounded: 'lg',
+  rounded: 'nav',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'slate.50',
-  _dark: { borderColor: 'slate.800', bg: 'slate.950' },
+  borderColor: 'ui.line',
+  bg: 'ui.muted',
 });
 
 const field = css({
@@ -281,50 +258,39 @@ const field = css({
 });
 
 const fieldLabel = css({
-  textStyle: 'sm',
+  textStyle: 'bodySm',
   fontWeight: 'semibold',
-  color: 'slate.700',
-  _dark: { color: 'slate.300' },
+  color: 'ui.ink',
 });
 
 const input = css({
   width: 'full',
   minHeight: '11',
   px: '3',
-  rounded: 'md',
+  rounded: 'input',
   // 1px은 이 크기에서 묻혀 입력칸이 있는지조차 보이지 않는다.
   borderWidth: '[1.5px]',
   borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.900',
-  textStyle: 'sm',
-  _dark: {
-    borderColor: 'slate.700',
-    bg: 'slate.950',
-    color: 'slate.100',
-  },
+  borderColor: 'ui.border',
+  bg: 'ui.surface',
+  color: 'ui.ink',
+  textStyle: 'body',
 });
 
 const addButton = css({
   width: 'full',
   minHeight: '11',
   px: '4',
-  rounded: 'md',
+  rounded: 'control',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'violet.600',
-  bg: 'violet.600',
-  color: 'white',
-  textStyle: 'sm',
+  borderColor: 'ui.action',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'button',
   fontWeight: 'semibold',
   cursor: 'pointer',
-  _hover: { borderColor: 'violet.700', bg: 'violet.700' },
-  _dark: {
-    borderColor: 'violet.500',
-    bg: 'violet.500',
-    _hover: { borderColor: 'violet.400', bg: 'violet.400' },
-  },
+  _hover: { borderColor: 'ui.action', bg: 'ui.actionHover' },
 });
 
 // 아이콘은 작지만 누를 자리는 44px을 지킨다. 그 여백이 카드 안에서 빈칸처럼
@@ -339,14 +305,10 @@ const deleteButton = css({
   mt: '-2',
   mb: '-3',
   mr: '-2',
-  rounded: 'md',
-  color: 'red.600',
+  rounded: 'control',
+  color: 'ui.accentText',
   cursor: 'pointer',
-  _hover: { color: 'red.700', bg: 'red.50' },
-  _dark: {
-    color: 'red.400',
-    _hover: { color: 'red.300', bg: 'red.950' },
-  },
+  _hover: { color: 'ui.accentText', bg: 'ui.tag' },
 });
 
 // 한 건이 어디서 시작해 어디서 끝나는지 카드가 말한다. 추출된 값과 그에
@@ -355,17 +317,13 @@ const card = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '3',
-  p: '5',
-  rounded: 'xl',
+  p: '6',
+  rounded: 'panel',
   borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  bg: 'white',
-  boxShadow: 'sm',
-  _dark: {
-    borderColor: 'slate.800',
-    bg: 'slate.900',
-  },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  boxShadow: 'floating',
 });
 
 const sectionTitle = css({
@@ -373,10 +331,9 @@ const sectionTitle = css({
   alignItems: 'center',
   gap: '2',
   mb: '3',
-  textStyle: 'md',
+  textStyle: 'body',
   fontWeight: 'semibold',
-  color: 'violet.700',
-  _dark: { color: 'violet.300' },
+  color: 'ui.accentText',
 });
 
 // 건수는 색만으로 구분되지 않게 숫자를 그대로 읽힌다. 원은 그 숫자가
@@ -389,11 +346,10 @@ const countBadge = css({
   height: '6',
   px: '1',
   rounded: 'full',
-  bg: 'violet.600',
-  color: 'white',
-  textStyle: 'xs',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'caption',
   fontWeight: 'bold',
-  _dark: { bg: 'violet.500' },
 });
 
 const failureSectionTitle = css({
@@ -401,10 +357,9 @@ const failureSectionTitle = css({
   alignItems: 'center',
   gap: '2',
   mb: '3',
-  textStyle: 'md',
+  textStyle: 'body',
   fontWeight: 'semibold',
-  color: 'red.700',
-  _dark: { color: 'red.300' },
+  color: 'ui.accentText',
 });
 
 const failureCountBadge = css({
@@ -415,11 +370,10 @@ const failureCountBadge = css({
   height: '6',
   px: '1',
   rounded: 'full',
-  bg: 'red.600',
-  color: 'white',
-  textStyle: 'xs',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'caption',
   fontWeight: 'bold',
-  _dark: { bg: 'red.500' },
 });
 
 const decideRow = css({
@@ -434,25 +388,17 @@ const continueButton = css({
   width: 'full',
   minHeight: '11',
   px: '5',
-  rounded: 'lg',
-  bg: 'violet.600',
-  color: 'white',
-  textStyle: 'sm',
+  rounded: 'control',
+  bg: 'ui.action',
+  color: 'ui.onAction',
+  textStyle: 'button',
   fontWeight: 'semibold',
   cursor: 'pointer',
-  _hover: { bg: 'violet.700' },
+  _hover: { bg: 'ui.actionHover' },
   _disabled: {
-    bg: 'slate.200',
-    color: 'slate.500',
+    bg: 'ui.muted',
+    color: 'ui.subtle',
     cursor: 'not-allowed',
-  },
-  _dark: {
-    bg: 'violet.500',
-    _hover: { bg: 'violet.400' },
-    _disabled: {
-      bg: 'slate.800',
-      color: 'slate.500',
-    },
   },
 });
 
@@ -465,28 +411,24 @@ const extracted = css({
   gap: '1',
   px: '4',
   py: '3',
-  rounded: 'lg',
-  bg: 'violet.50',
-  _dark: { bg: 'violet.950' },
+  rounded: 'nav',
+  bg: 'ui.tag',
 });
 
 const candidateName = css({
-  textStyle: 'md',
+  textStyle: 'body',
   fontWeight: 'semibold',
-  color: 'violet.900',
-  _dark: { color: 'violet.100' },
+  color: 'ui.onTag',
 });
 
 const address = css({
-  textStyle: 'sm',
-  color: 'violet.700',
-  _dark: { color: 'violet.300' },
+  textStyle: 'bodySm',
+  color: 'ui.accentText',
 });
 
 const manualOrigin = css({
-  textStyle: 'xs',
-  color: 'violet.700',
-  _dark: { color: 'violet.300' },
+  textStyle: 'caption',
+  color: 'ui.accentText',
 });
 
 function isSuccessfulCandidate(
@@ -657,7 +599,11 @@ function receiptKey(candidates: readonly ExtractionResultCandidate[]): string {
   return JSON.stringify(candidates);
 }
 
-function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
+function ExtractionResultsReceipt({
+  candidates,
+  onContinue,
+  locateAddress,
+}: Props) {
   // OCR 후보와 사용자가 확정한 수동 입력 후보가 함께 사는 STEP 3의 목록 상태.
   // 서버 저장은 T15의 명시적인 저장 선택 뒤에만 일어나며 여기서는 호출하지 않는다.
   const [reviewCandidates, setReviewCandidates] = useState(candidates);
@@ -812,6 +758,13 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
                     ) : null}
                   </div>
                 </div>
+                {locateAddress !== undefined && (
+                  <SpotLocationPreview
+                    name={candidate.name}
+                    address={candidate.roadAddress}
+                    locate={locateAddress}
+                  />
+                )}
                 <label className={decideRow}>
                   <span className={fieldLabel}>저장할 카테고리 선택</span>
                   <select
@@ -896,12 +849,8 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   );
 }
 
-export function ExtractionResults({ candidates, onContinue }: Props) {
+export function ExtractionResults(props: Props) {
   return (
-    <ExtractionResultsReceipt
-      key={receiptKey(candidates)}
-      candidates={candidates}
-      {...(onContinue === undefined ? {} : { onContinue })}
-    />
+    <ExtractionResultsReceipt key={receiptKey(props.candidates)} {...props} />
   );
 }

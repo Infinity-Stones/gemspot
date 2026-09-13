@@ -17,50 +17,55 @@ const shell = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '4',
-  px: '4',
-  py: '4',
-  rounded: 'lg',
-  borderWidth: '1px',
+  px: '6',
+  py: '6',
+  rounded: 'panel',
+  borderWidth: '0',
   borderStyle: 'solid',
-  borderColor: 'slate.200',
-  _dark: { borderColor: 'slate.800' },
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  boxShadow: 'floating',
 });
 
 const head = css({ display: 'flex', flexDirection: 'column', gap: '1' });
-const headline = css({ textStyle: 'lg', fontWeight: 'semibold' });
-const muted = css({ textStyle: 'sm', color: 'slate.600', _dark: { color: 'slate.400' } });
+const headline = css({ textStyle: 'subheading', fontWeight: 'medium' });
+const muted = css({ textStyle: 'bodySm', color: 'ui.subtle' });
 
 const badge = css({
   px: '3',
   py: '2',
-  rounded: 'lg',
-  bg: 'slate.100',
-  color: 'slate.700',
-  textStyle: 'sm',
-  _dark: { bg: 'slate.900', color: 'slate.300' },
+  rounded: 'nav',
+  bg: 'ui.blueWash',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
 // 종료 시각 초과는 정보가 아니라 경고다. 회색에 섞어 두면 지나친다.
 const warning = css({
   px: '3',
   py: '2',
-  rounded: 'lg',
-  bg: 'amber.100',
-  color: 'amber.900',
-  textStyle: 'sm',
-  _dark: { bg: 'amber.950', color: 'amber.200' },
+  rounded: 'nav',
+  bg: 'ui.muted',
+  color: 'ui.ink',
+  textStyle: 'bodySm',
 });
 
-const list = css({ display: 'flex', flexDirection: 'column', gap: '3', listStyle: 'none', p: '0', m: '0' });
+const list = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '3',
+  listStyle: 'none',
+  p: '0',
+  m: '0',
+});
 
 const legLine = css({
   display: 'flex',
   alignItems: 'center',
   gap: '2',
   pl: '9',
-  textStyle: 'sm',
-  color: 'slate.500',
-  _dark: { color: 'slate.400' },
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
 });
 
 const stopRow = css({ display: 'flex', alignItems: 'flex-start', gap: '3' });
@@ -73,19 +78,33 @@ const number = css({
   width: '6',
   height: '6',
   rounded: 'full',
-  bg: 'violet.600',
-  color: 'white',
-  textStyle: 'sm',
-  fontWeight: 'semibold',
-  _dark: { bg: 'violet.500', color: 'slate.950' },
+  bg: 'ui.tag',
+  color: 'ui.onTag',
+  textStyle: 'caption',
+  fontWeight: 'medium',
 });
 
 const stopBody = css({ display: 'flex', flexDirection: 'column', gap: '1' });
-const stopTitle = css({ textStyle: 'md', fontWeight: 'medium' });
-const edge = css({ textStyle: 'sm', color: 'slate.600', fontWeight: 'medium', _dark: { color: 'slate.400' } });
+const stopTitle = css({ textStyle: 'body', fontWeight: 'semibold' });
+const edge = css({
+  textStyle: 'bodySm',
+  color: 'ui.subtle',
+  fontWeight: 'medium',
+});
 
-const droppedSection = css({ display: 'flex', flexDirection: 'column', gap: '2' });
-const droppedList = css({ display: 'flex', flexDirection: 'column', gap: '1', listStyle: 'none', p: '0', m: '0' });
+const droppedSection = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+});
+const droppedList = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '1',
+  listStyle: 'none',
+  p: '0',
+  m: '0',
+});
 
 const DROP_REASON_TEXT: Readonly<Record<DroppedSpot['reason'], string>> = {
   outside_window: '이 시간대엔 문을 열지 않아요',
@@ -105,7 +124,11 @@ interface Props {
   readonly unmatchedRequiredNames?: readonly string[];
 }
 
-export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = [] }: Props) {
+export function ItineraryList({
+  itinerary,
+  areaName,
+  unmatchedRequiredNames = [],
+}: Props) {
   const { stops, legs, dropped } = itinerary;
   const overMinutes = Math.ceil(itinerary.overBySeconds / 60);
 
@@ -113,10 +136,12 @@ export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = []
     <section className={shell} aria-label="제안된 동선">
       <header className={head}>
         <p className={headline}>
-          {formatSeoulHourMinute(itinerary.window.start)}~{formatSeoulHourMinute(itinerary.window.end)} · {areaName}
+          {formatSeoulHourMinute(itinerary.window.start)}~
+          {formatSeoulHourMinute(itinerary.window.end)} · {areaName}
         </p>
         <p className={muted}>
-          총 도보 {String(itinerary.totalWalkMinutes)}분 · {kilometers(itinerary.totalDistanceM)} km
+          총 도보 {String(itinerary.totalWalkMinutes)}분 ·{' '}
+          {kilometers(itinerary.totalDistanceM)} km
           {itinerary.hasEstimatedLegs ? ' · 일부 구간 추정' : ''}
         </p>
       </header>
@@ -129,7 +154,8 @@ export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = []
 
       {itinerary.overBySeconds > 0 && (
         <p className={warning} role="status">
-          꼭 갈 곳만 남겨도 종료 시각을 {String(overMinutes)}분 넘어요. 한 곳을 빼거나 시간을 늘려 주세요.
+          꼭 갈 곳만 남겨도 종료 시각을 {String(overMinutes)}분 넘어요. 한 곳을
+          빼거나 시간을 늘려 주세요.
         </p>
       )}
 
@@ -139,7 +165,9 @@ export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = []
         </p>
       )}
 
-      <p className={edge}>{formatSeoulHourMinute(itinerary.start.departAt)} 출발</p>
+      <p className={edge}>
+        {formatSeoulHourMinute(itinerary.start.departAt)} 출발
+      </p>
 
       <ol className={list}>
         {stops.map((stop, index) => {
@@ -148,7 +176,8 @@ export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = []
             <li key={stop.candidate.id}>
               {leg !== undefined && (
                 <p className={legLine}>
-                  도보 {String(Math.round(leg.durationS / 60))}분 · {String(leg.distanceM)}m
+                  도보 {String(Math.round(leg.durationS / 60))}분 ·{' '}
+                  {String(leg.distanceM)}m
                   {leg.source === 'estimate' ? ' (추정)' : ''}
                 </p>
               )}
@@ -161,10 +190,13 @@ export function ItineraryList({ itinerary, areaName, unmatchedRequiredNames = []
                     {formatSeoulHourMinute(stop.arriveAt)} {stop.candidate.name}
                   </p>
                   <p className={muted}>
-                    {labelOf(stop.candidate.category)} · 체류 {String(stop.dwellMinutes)}분
+                    {labelOf(stop.candidate.category)} · 체류{' '}
+                    {String(stop.dwellMinutes)}분
                     {stop.required ? ' · 꼭 갈 곳' : ''}
                   </p>
-                  {stop.reason !== null && <p className={muted}>{stop.reason}</p>}
+                  {stop.reason !== null && (
+                    <p className={muted}>{stop.reason}</p>
+                  )}
                 </div>
               </div>
             </li>

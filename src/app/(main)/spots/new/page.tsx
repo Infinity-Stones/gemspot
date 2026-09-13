@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { css } from 'styled-system/css';
+import { WorkflowPage } from '@/components/WorkflowPage';
 import { PinSpotForm } from '@/components/spot/PinSpotForm';
 import { pinSpotAction } from './actions';
 
@@ -18,41 +18,14 @@ export const metadata: Metadata = {
     '상호명으로 가게를 검색하고 주소와 위치를 확인해 지도에 저장합니다.',
 };
 
-const shell = css({
-  maxWidth: '2xl',
-  mx: 'auto',
-  px: '6',
-  pt: '12',
-  // 플로팅 버튼이 덮는 만큼 아래를 비운다.
-  pb: '28',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8',
-});
-
-const title = css({
-  textStyle: '3xl',
-  fontWeight: 'bold',
-  letterSpacing: 'tight',
-});
-
-const lede = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
-});
-
 export default function NewSpotPage() {
   return (
-    <main className={shell}>
-      <div>
-        <h1 className={title}>핀 찍기</h1>
-      </div>
-      <p className={lede}>
-        상호명으로 검색하고 맞는 가게를 골라 주세요. 주소가 자동으로 채워지면
-        지도에서 위치를 확인하고 핀을 저장할 수 있어요.
-      </p>
+    <WorkflowPage
+      title="핀 찍기"
+      description="기억해 두고 싶은 곳이 있나요? 가게를 찾고, 지도에서 위치를 확인한 뒤 나만의 장소로 저장하세요."
+      guidance="가게 이름으로 검색하거나, 알고 있는 주소를 직접 입력할 수 있어요."
+    >
       <PinSpotForm action={pinSpotAction} />
-    </main>
+    </WorkflowPage>
   );
 }

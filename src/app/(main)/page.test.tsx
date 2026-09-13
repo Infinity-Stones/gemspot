@@ -8,9 +8,6 @@ const domain = vi.hoisted(() => ({
 }));
 
 vi.mock('@/domain/spot', () => domain);
-vi.mock('@/components/AppHeader', () => ({
-  AppHeader: () => <div data-testid="header" />,
-}));
 vi.mock('@/components/HomeMap', () => ({
   HomeMap: ({
     markers,
@@ -34,11 +31,12 @@ vi.mock('@/components/HomeMap', () => ({
 vi.mock('@/components/SpotDetailPanel', () => ({
   SpotDetailPanel: () => <div data-testid="spot-detail" />,
 }));
-vi.mock('@/components/spot/PinFab', () => ({
-  PinFab: () => <div data-testid="pin-fab" />,
+vi.mock('@/components/FloatingNavigation', () => ({
+  FloatingNavigation: () => <div data-testid="floating-navigation" />,
 }));
 
 import HomePage from './page';
+import MainLayout from './layout';
 
 const STORED_SPOT: SavedSpot = {
   id: 'stored-1',
@@ -51,10 +49,11 @@ const STORED_SPOT: SavedSpot = {
   origin: 'manual',
 };
 
-function renderHome(
+async function renderHome(
   searchParams: Record<string, string | string[] | undefined> = {},
 ) {
-  return HomePage({ searchParams: Promise.resolve(searchParams) }).then(render);
+  const page = await HomePage({ searchParams: Promise.resolve(searchParams) });
+  return render(<MainLayout>{page}</MainLayout>);
 }
 
 describe('HomePage 저장 스팟 목록', () => {
@@ -78,6 +77,8 @@ describe('HomePage 저장 스팟 목록', () => {
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    const menu = screen.getByTestId('floating-navigation');
+    expect(screen.getByRole('main')).not.toContainElement(menu);
   });
 
   it('저장소 읽기가 실패하면 빈 지도 데이터와 오류 안내만 보인다', async () => {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { css } from 'styled-system/css';
+import { WorkflowPage } from '@/components/WorkflowPage';
 import { RouteComposer } from '@/components/route/RouteComposer';
 import { loadSpots } from '@/domain/spot';
 import { planRouteAction } from './actions';
@@ -20,45 +20,20 @@ export const metadata: Metadata = {
   description: '한 문장으로 저장한 스팟을 오늘의 산책 동선으로 엮습니다.',
 };
 
-const shell = css({
-  maxWidth: '2xl',
-  mx: 'auto',
-  px: '6',
-  py: '12',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8',
-});
-
-const title = css({
-  textStyle: '3xl',
-  fontWeight: 'bold',
-  letterSpacing: 'tight',
-});
-
-const lede = css({
-  textStyle: 'md',
-  color: 'slate.600',
-  _dark: { color: 'slate.400' },
-});
-
 export default async function RoutePage() {
   const { spots, error } = await loadSpots();
 
   return (
-    <main className={shell}>
-      <div>
-        <h1 className={title}>동선 만들기</h1>
-      </div>
-      <p className={lede}>
-        언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 말해 주세요. 저장한 스팟 중
-        그 조건에 맞는 곳을 골라 도보 시간에 맞는 순서로 제안합니다.
-      </p>
+    <WorkflowPage
+      title="동선 만들기"
+      description="모아 둔 장소를 오늘의 산책으로. 언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 들려주세요."
+      guidance="가고 싶은 동네와 시간을 알려주면, 저장한 장소를 걷기 좋은 순서로 이어 드려요."
+    >
       <RouteComposer
         action={planRouteAction}
         spotCount={spots.length}
         loadFailed={error !== null}
       />
-    </main>
+    </WorkflowPage>
   );
 }

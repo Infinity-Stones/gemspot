@@ -6,32 +6,19 @@ import { useTheme } from '@/hooks/useTheme';
 const button = css({
   display: 'inline-flex',
   alignItems: 'center',
-  gap: '2',
-  px: '3',
-  py: '2',
-  rounded: 'full',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'slate.300',
-  bg: 'white',
-  color: 'slate.600',
+  justifyContent: 'center',
+  flexShrink: '0',
+  width: '12',
+  height: '12',
+  rounded: 'control',
+  bg: 'ui.surface/80',
+  color: 'ui.ink',
+  backdropFilter: 'auto',
+  backdropBlur: 'md',
   cursor: 'pointer',
-  textStyle: 'sm',
-  transition: 'colors',
-  _hover: {
-    borderColor: 'slate.400',
-    color: 'slate.900',
-  },
-  _dark: {
-    borderColor: 'slate.700',
-    bg: 'slate.900',
-    color: 'slate.400',
-    _hover: {
-      borderColor: 'slate.600',
-      color: 'slate.100',
-    },
-  },
+  _hover: { bg: 'ui.surface/90' },
 });
+const icon = css({ width: '5', height: '5' });
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -47,8 +34,23 @@ export function ThemeToggle() {
       // 동작을 가리켜야 한다.
       aria-label={`${next} 테마로 전환`}
     >
-      <span aria-hidden="true">{theme === 'dark' ? '☾' : '☀'}</span>
-      <span>{next}</span>
+      <svg
+        className={icon}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        aria-hidden="true"
+      >
+        {theme === 'dark' ? (
+          <>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+          </>
+        ) : (
+          <path d="M20 15.2A8.6 8.6 0 0 1 8.8 4 8.6 8.6 0 1 0 20 15.2Z" />
+        )}
+      </svg>
     </button>
   );
 }
