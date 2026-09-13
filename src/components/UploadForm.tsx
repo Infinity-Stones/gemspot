@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
 import { FloatingActionBar } from './FloatingActionBar';
+import { UploadAnalysisStatus, UploadScanOverlay } from './UploadAnalysis';
 import type { ExtractState } from '@/app/(main)/upload/extractState';
 import {
   CANDIDATES_SESSION_KEY,
@@ -185,6 +186,8 @@ const thumb = css({
   aspectRatio: 'square',
   objectFit: 'cover',
 });
+
+const imageFrame = css({ position: 'relative' });
 
 const removeButton = css({
   position: 'absolute',
@@ -391,6 +394,7 @@ export function UploadForm({ action }: Props) {
    * 자리에서 다음 행동이 끝나야 한다.
    */
   const retryInWarning =
+    !pending &&
     !isFailureDismissed &&
     state.status === 'failed' &&
     isRetryable(state.reason) &&
@@ -423,10 +427,8 @@ export function UploadForm({ action }: Props) {
   // 드러내려는 의도된 동작이다), 그 안에서 createObjectURL을 부르면 URL이
   // 하나씩 새고 revokeObjectURL은 두 번 불린다.
   function choose(picked: readonly File[]) {
-    // 다시 고르는 순간 앞선 실패는 지나간 일이 된다. 남겨 두면 방금 고친 것도
-    // 여전히 문제인 것처럼 읽힌다.
+    if (pending) return;
     setIsFailureDismissed(true);
-
     // 드래그 앤 드롭이나 공유하기로 여러 장이 들어와도 **첫 장만** 본다.
     // 멀티 업로드를 지원하지 않으므로 나머지는 볼 이유가 없다.
     const [file] = picked;
@@ -468,17 +470,16 @@ export function UploadForm({ action }: Props) {
    * 그 둘이 갈라질 수 있고, 갈라진 자리가 이 버그였다.
    */
   function sendPickedImage() {
-    // 다시 보내는 순간부터는 새 결과를 기다린다.
+    if (pending) return;
     setIsFailureDismissed(false);
-
     const formData = new FormData();
     if (image !== null) formData.append('image', image.file);
     submit(formData);
   }
 
   function clear() {
+    if (pending) return;
     setIsFailureDismissed(true);
-
     const going = imageRef.current;
     if (going === null) return;
 
@@ -528,6 +529,7 @@ export function UploadForm({ action }: Props) {
         aria-label="스크린샷 파일 선택"
         accept={ACCEPT}
         name="image"
+        disabled={pending}
         onChange={event => {
           choose(Array.from(event.target.files ?? []));
           // 여기서 값을 비우지 않아도 된다. 보내는 것은 이 입력이 아니라
@@ -569,7 +571,8 @@ export function UploadForm({ action }: Props) {
         </div>
       )}
 
-      {!isFailureDismissed &&
+      {!pending &&
+        !isFailureDismissed &&
         (state.status === 'failed' || state.status === 'invalid') && (
           <div className={warning}>
             {/*
@@ -596,13 +599,8 @@ export function UploadForm({ action }: Props) {
                   사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던
                   적은 없다.
                 */
-                  <button
-                    type="submit"
-                    className={retryButton}
-                    disabled={pending}
-                    aria-busy={pending}
-                  >
-                    {pending ? '읽는 중…' : '다시 시도'}
+                  <button type="submit" className={retryButton}>
+                    다시 시도
                   </button>
                 )}
                 {/*
@@ -619,6 +617,7 @@ export function UploadForm({ action }: Props) {
 
       {image !== null && (
         <>
+          {pending && <UploadAnalysisStatus />}
           <div className={cell}>
             {/*
               blob URL은 Next의 이미지 최적화를 지날 수 없다(서버가 받을 수 없는
@@ -626,16 +625,20 @@ export function UploadForm({ action }: Props) {
               없다. 그래서 순수 img를 쓴다 — 그 예외는 eslint.config.mts에
               스코프로 적어 두었다.
             */}
-            <img
-              className={thumb}
-              src={image.previewUrl}
-              alt={image.file.name}
-            />
+            <div className={imageFrame} aria-busy={pending}>
+              <img
+                className={thumb}
+                src={image.previewUrl}
+                alt={image.file.name}
+              />
+              {pending && <UploadScanOverlay />}
+            </div>
             <p className={fileName}>{image.file.name}</p>
             <button
               type="button"
               className={removeButton}
               onClick={clear}
+              disabled={pending}
               aria-label={`${image.file.name} 빼기`}
             >
               ×

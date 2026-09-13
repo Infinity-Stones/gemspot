@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -9,7 +10,10 @@ import {
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExtractState } from '@/app/(main)/upload/extractState';
-import { IDLE_EXTRACT_STATE } from '@/app/(main)/upload/extractState';
+import {
+  CANDIDATES_SESSION_KEY,
+  IDLE_EXTRACT_STATE,
+} from '@/app/(main)/upload/extractState';
 import type { ExtractFailureReason } from '@/domain/extraction';
 import { MAX_IMAGE_BYTES } from '@/domain/extraction';
 import { SPOT_NEW_PATH } from '@/shared/routes';
@@ -130,6 +134,72 @@ afterEach(() => {
 });
 
 describe('UploadForm', () => {
+  it('분석 중에는 진행 안내를 보여주고 이미지 변경·삭제와 중복 제출을 막는다', async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<ExtractState>();
+    const action = vi.fn(() => pending.promise);
+    render(<UploadForm action={action} />);
+
+    await user.upload(picker(), screenshot('pending.png'));
+    await user.click(screen.getByRole('button', { name: '주소 읽기' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '스크린샷 속 장소를 찾고 있어요',
+    );
+    expect(picker()).toBeDisabled();
+    const remove = screen.getByRole('button', { name: 'pending.png 빼기' });
+    const submit = screen.getByRole('button', { name: '읽는 중…' });
+    expect(remove).toBeDisabled();
+    expect(submit).toBeDisabled();
+    await user.click(remove);
+    await user.click(submit);
+    expect(action).toHaveBeenCalledTimes(1);
+    expect(revoke).not.toHaveBeenCalled();
+
+    await act(async () => {
+      pending.resolve({ status: 'done', candidates: [] });
+      await pending.promise;
+    });
+
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+    expect(push).toHaveBeenCalledWith('/upload/results');
+    expect(
+      JSON.parse(sessionStorage.getItem(CANDIDATES_SESSION_KEY) ?? '{}'),
+    ).toMatchObject({
+      uploadImage: { src: created[0], alt: 'pending.png' },
+    });
+  });
+
+  it('재시도 중에는 이전 오류를 걷고 분석 안내를 다시 보여준다', async () => {
+    const user = userEvent.setup();
+    const pending = Promise.withResolvers<ExtractState>();
+    const action = vi
+      .fn<ExtractAction>()
+      .mockResolvedValueOnce({ status: 'failed', reason: 'network' })
+      .mockReturnValueOnce(pending.promise);
+    render(<UploadForm action={action} />);
+    await failOnce(user);
+
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      '스크린샷 속 장소를 찾고 있어요',
+    );
+    expect(screen.getByRole('timer')).toHaveTextContent('0초 경과');
+
+    await act(async () => {
+      pending.resolve({ status: 'failed', reason: 'timeout' });
+      await pending.promise;
+    });
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '읽는 데 너무 오래 걸렸습니다',
+    );
+    expect(picker()).toBeEnabled();
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled();
+  });
+
   it('버튼이 감춰진 파일 입력을 대신 누른다', async () => {
     const user = userEvent.setup();
     render(<UploadForm action={idleAction()} />);
