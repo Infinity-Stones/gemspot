@@ -7,7 +7,10 @@ const START = { latitude: 37.5447, longitude: 127.0557 };
 
 const BASE: Itinerary = {
   start: { coord: START, departAt: '2026-09-12T14:00:00+09:00' },
-  window: { start: '2026-09-12T14:00:00+09:00', end: '2026-09-12T16:00:00+09:00' },
+  window: {
+    start: '2026-09-12T14:00:00+09:00',
+    end: '2026-09-12T16:00:00+09:00',
+  },
   stops: [
     {
       candidate: { id: 'a', name: '편집숍 A', category: 'other', coord: START },
@@ -27,8 +30,22 @@ const BASE: Itinerary = {
     },
   ],
   legs: [
-    { fromId: 'start', toId: 'a', distanceM: 600, durationS: 480, source: 'tmap', path: [] },
-    { fromId: 'a', toId: 'b', distanceM: 500, durationS: 360, source: 'estimate', path: [] },
+    {
+      fromId: 'start',
+      toId: 'a',
+      distanceM: 600,
+      durationS: 480,
+      source: 'tmap',
+      path: [],
+    },
+    {
+      fromId: 'a',
+      toId: 'b',
+      distanceM: 500,
+      durationS: 360,
+      source: 'estimate',
+      path: [],
+    },
   ],
   endAt: '2026-09-12T15:24:00+09:00',
   overBySeconds: 0,
@@ -36,7 +53,10 @@ const BASE: Itinerary = {
   totalDistanceM: 1100,
   hasEstimatedLegs: true,
   dropped: [
-    { candidate: { id: 'd', name: '밥집 D', category: 'meal', coord: START }, reason: 'outside_window' },
+    {
+      candidate: { id: 'd', name: '밥집 D', category: 'meal', coord: START },
+      reason: 'outside_window',
+    },
   ],
   ordering: 'llm',
 };
@@ -68,26 +88,50 @@ describe('ItineraryList', () => {
   });
 
   it('규칙 기반 순서면 그 사실을 배지로 말한다 — 조용히 대체하지 않는다', () => {
-    render(<ItineraryList itinerary={{ ...BASE, ordering: 'rule' }} areaName="성수동" />);
+    render(
+      <ItineraryList
+        itinerary={{ ...BASE, ordering: 'rule' }}
+        areaName="성수동"
+      />,
+    );
     expect(screen.getByText(/규칙 기반 순서/)).toBeInTheDocument();
   });
 
   it('종료 시각을 넘으면 경고한다', () => {
-    render(<ItineraryList itinerary={{ ...BASE, overBySeconds: 900 }} areaName="성수동" />);
+    render(
+      <ItineraryList
+        itinerary={{ ...BASE, overBySeconds: 900 }}
+        areaName="성수동"
+      />,
+    );
     expect(screen.getByText(/15분 넘어요/)).toBeInTheDocument();
   });
 
   it('빠진 스팟은 이유와 함께, 없으면 그 섹션 자체가 없다', () => {
-    const { unmount } = render(<ItineraryList itinerary={BASE} areaName="성수동" />);
-    expect(screen.getByText(/밥집 D — 이 시간대엔 문을 열지 않아요/)).toBeInTheDocument();
+    const { unmount } = render(
+      <ItineraryList itinerary={BASE} areaName="성수동" />,
+    );
+    expect(
+      screen.getByText(/밥집 D — 요청 시간대와 기본 체류 시간에 맞지 않아요/),
+    ).toBeInTheDocument();
     unmount();
 
-    render(<ItineraryList itinerary={{ ...BASE, dropped: [] }} areaName="성수동" />);
-    expect(screen.queryByRole('region', { name: '빠진 스팟' })).not.toBeInTheDocument();
+    render(
+      <ItineraryList itinerary={{ ...BASE, dropped: [] }} areaName="성수동" />,
+    );
+    expect(
+      screen.queryByRole('region', { name: '빠진 스팟' }),
+    ).not.toBeInTheDocument();
   });
 
   it('짝이 안 맞은 필수 스팟 이름을 알린다 — 조용히 흘리지 않는다', () => {
-    render(<ItineraryList itinerary={BASE} areaName="성수동" unmatchedRequiredNames={['없는가게']} />);
+    render(
+      <ItineraryList
+        itinerary={BASE}
+        areaName="성수동"
+        unmatchedRequiredNames={['없는가게']}
+      />,
+    );
     expect(screen.getByText(/찾지 못한 이름: 없는가게/)).toBeInTheDocument();
   });
 });

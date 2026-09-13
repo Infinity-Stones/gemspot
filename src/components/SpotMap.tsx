@@ -2,65 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
-import { NAVER_MAP_CLIENT_ID } from '@/shared/naverMap';
-
-/**
- * 지도 SDK가 window에 심는 것 중 이 화면이 쓰는 만큼만 적는다. 전체를 받아
- * 적으면 SDK가 올라갈 때마다 여기가 따라 틀어진다.
- */
-interface NaverLatLng {
-  readonly _brand: 'naverLatLng';
-}
-
-interface NaverBounds {
-  hasLatLng(position: NaverLatLng): boolean;
-}
-
-interface NaverMap {
-  setCenter(position: NaverLatLng): void;
-  setZoom(zoom: number): void;
-  fitBounds(
-    bounds: NaverLatLng[],
-    options: { top: number; right: number; bottom: number; left: number },
-  ): void;
-  getBounds(): NaverBounds;
-  destroy(): void;
-}
-
-interface NaverEventListener {
-  readonly _brand: 'naverEventListener';
-}
-
-interface NaverMarker {
-  setMap(map: NaverMap | null): void;
-}
-
-interface NaverPoint {
-  readonly _brand: 'naverPoint';
-}
-
-interface NaverMaps {
-  LatLng: new (latitude: number, longitude: number) => NaverLatLng;
-  Point: new (x: number, y: number) => NaverPoint;
-  Map: new (
-    element: HTMLElement,
-    options: { center: NaverLatLng; zoom: number },
-  ) => NaverMap;
-  Marker: new (options: {
-    position: NaverLatLng;
-    map: NaverMap;
-    title?: string;
-    icon?: { content: string; anchor: NaverPoint };
-  }) => NaverMarker;
-  Event: {
-    addListener(
-      target: NaverMap | NaverMarker,
-      event: string,
-      handler: () => void,
-    ): NaverEventListener;
-    removeListener(listener: NaverEventListener): void;
-  };
-}
+import { loadNaverMaps, readNaverMaps } from './naverMaps';
+import type { NaverMap, NaverMaps, NaverMarker } from './naverMaps';
 
 /** 지도에 찍을 한 건. 도메인 모양을 그대로 받지 않는다 — 지도는 좌표와 이름만 안다. */
 export interface MapMarker {
@@ -70,71 +13,8 @@ export interface MapMarker {
   longitude: number;
 }
 
-const SCRIPT_ID = 'naver-maps-sdk';
-const SCRIPT_SOURCE = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAP_CLIENT_ID}`;
-
 const DEFAULT_ZOOM = 16;
 const FIT_BOUNDS_PADDING = 48;
-
-function readNaverMaps(): NaverMaps | null {
-  const candidate = (globalThis as { naver?: { maps?: NaverMaps } }).naver
-    ?.maps;
-  return candidate ?? null;
-}
-
-/**
- * SDK를 한 번만 싣는다. 같은 화면을 다시 열거나 두 지도가 함께 뜰 때
- * `<script>`를 또 붙이면 SDK가 두 번 초기화되면서 마커가 사라진다.
- */
-function loadNaverMaps(): Promise<NaverMaps> {
-  const loaded = readNaverMaps();
-  if (loaded !== null) return Promise.resolve(loaded);
-
-  return new Promise((resolve, reject) => {
-    const existing = document.getElementById(SCRIPT_ID);
-    // 인증 실패로 전역 객체가 비워졌어도 이미 실린 script의 load 이벤트는
-    // 다시 오지 않는다. 재진입을 영원히 기다리게 하지 않고 실패로 판정한다.
-    if (
-      existing instanceof HTMLScriptElement &&
-      existing.dataset['state'] !== 'loading'
-    ) {
-      reject(new Error('지도 SDK를 사용할 수 없습니다'));
-      return;
-    }
-    const script =
-      existing instanceof HTMLScriptElement
-        ? existing
-        : document.createElement('script');
-
-    const handleLoad = () => {
-      script.dataset['state'] = 'loaded';
-      const maps = readNaverMaps();
-      if (maps === null) {
-        reject(new Error('지도 SDK가 실렸지만 naver.maps가 없습니다'));
-        return;
-      }
-      resolve(maps);
-    };
-
-    script.addEventListener('load', handleLoad, { once: true });
-    script.addEventListener(
-      'error',
-      () => {
-        script.dataset['state'] = 'failed';
-        reject(new Error('지도 SDK를 받지 못했습니다'));
-      },
-      { once: true },
-    );
-
-    if (existing === null) {
-      script.id = SCRIPT_ID;
-      script.dataset['state'] = 'loading';
-      script.src = SCRIPT_SOURCE;
-      script.async = true;
-      document.head.appendChild(script);
-    }
-  });
-}
 
 type MapStatus = 'loading' | 'ready' | 'failed';
 

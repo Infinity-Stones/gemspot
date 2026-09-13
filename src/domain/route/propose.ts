@@ -25,25 +25,44 @@ export interface ProposeInput {
   readonly requiredSpotIds: readonly string[];
   readonly preferredCategories: readonly SpotCategory[];
   /** T42 재질의 때만. 직전 제안이 얼마나 넘었는지. */
-  readonly feedback?: { readonly overByMinutes: number; readonly previousOrder: readonly string[] };
+  readonly feedback?: {
+    readonly overByMinutes: number;
+    readonly previousOrder: readonly string[];
+  };
   readonly generate?: GenerateJson;
 }
 
 export type ProposeResult =
-  | { readonly kind: 'llm'; readonly order: readonly RouteCandidate[]; readonly reasons: ReadonlyMap<string, string> }
-  | { readonly kind: 'failed'; readonly error: Extract<GenerateJsonResult, { ok: false }>['error'] | { kind: 'invalid_schema' } };
+  | {
+      readonly kind: 'llm';
+      readonly order: readonly RouteCandidate[];
+      readonly reasons: ReadonlyMap<string, string>;
+    }
+  | {
+      readonly kind: 'failed';
+      readonly error:
+        | Extract<GenerateJsonResult, { ok: false }>['error']
+        | { kind: 'invalid_schema' };
+    };
 
 export const PROPOSAL_SCHEMA: Readonly<Record<string, unknown>> = {
   type: 'object',
   properties: {
-    order: { type: 'array', items: { type: 'string' }, description: '방문할 스팟 id를 순서대로' },
+    order: {
+      type: 'array',
+      items: { type: 'string' },
+      description: '방문할 스팟 id를 순서대로',
+    },
     reasons: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
           id: { type: 'string' },
-          reason: { type: 'string', description: '왜 이 자리에 오는지 한 문장' },
+          reason: {
+            type: 'string',
+            description: '왜 이 자리에 오는지 한 문장',
+          },
         },
         required: ['id', 'reason'],
       },
@@ -52,7 +71,9 @@ export const PROPOSAL_SCHEMA: Readonly<Record<string, unknown>> = {
   required: ['order', 'reasons'],
 };
 
-const WALK_METERS_PER_MINUTE = Math.round((WALK_SPEED_MPS * 60) / WALK_DETOUR_FACTOR);
+const WALK_METERS_PER_MINUTE = Math.round(
+  (WALK_SPEED_MPS * 60) / WALK_DETOUR_FACTOR,
+);
 
 export function buildProposalSystemPrompt(): string {
   return [
@@ -64,20 +85,23 @@ export function buildProposalSystemPrompt(): string {
     '- 선호 카테고리는 우선하되 그것만 고르지는 않는다.',
     '- 출발점(start)에서 가까운 곳부터 크게 돌아 지그재그가 없게 한다.',
     '- reasons에는 order의 모든 id에 대해 왜 그 자리인지 한 문장씩 적는다. 거리·시간대·선호 중 근거를 댄다.',
+    '- reason 문장은 사용자에게 그대로 보인다. id나 start 같은 내부 식별자 대신 장소 이름과 출발점이라는 말을 쓴다. 거리표는 직선거리이므로 실제 보행 거리를 확인했다고 말하지 않는다.',
     '- order에는 주어진 후보 id만 쓴다.',
   ].join('\n');
 }
 
 export function buildProposalUserPrompt(input: ProposeInput): string {
-  const budgetMinutes = Math.round(diffSeconds(input.window.start, input.window.end) / 60);
+  const budgetMinutes = Math.round(
+    diffSeconds(input.window.start, input.window.end) / 60,
+  );
   const label = (id: string): string => {
     if (id === START_ID) return 'start';
-    const c = input.candidates.find((x) => x.id === id);
+    const c = input.candidates.find(x => x.id === id);
     return c === undefined ? id : `${c.id}`;
   };
   const candidates = input.candidates
     .map(
-      (c) =>
+      c =>
         `- ${c.id}: ${c.name} (${labelOf(c.category)}, 체류 ${String(dwellMinutesOf(c.category))}분)${
           input.requiredSpotIds.includes(c.id) ? ' [꼭 갈 곳]' : ''
         }`,
@@ -115,9 +139,12 @@ export function parseProposal(
   raw: unknown,
   candidates: readonly RouteCandidate[],
   requiredSpotIds: readonly string[],
-): { order: readonly RouteCandidate[]; reasons: ReadonlyMap<string, string> } | null {
+): {
+  order: readonly RouteCandidate[];
+  reasons: ReadonlyMap<string, string>;
+} | null {
   if (!isRecord(raw) || !Array.isArray(raw['order'])) return null;
-  const byId = new Map(candidates.map((c) => [c.id, c] as const));
+  const byId = new Map(candidates.map(c => [c.id, c] as const));
 
   const seen = new Set<string>();
   const order: RouteCandidate[] = [];
@@ -144,13 +171,16 @@ export function parseProposal(
       const id = item['id'];
       const reason = item['reason'];
       if (typeof id !== 'string' || typeof reason !== 'string') continue;
-      if (seen.has(id) && reason.trim().length > 0) reasons.set(id, reason.trim());
+      if (seen.has(id) && reason.trim().length > 0)
+        reasons.set(id, reason.trim());
     }
   }
   return { order, reasons };
 }
 
-export async function proposeOrder(input: ProposeInput): Promise<ProposeResult> {
+export async function proposeOrder(
+  input: ProposeInput,
+): Promise<ProposeResult> {
   const generate = input.generate ?? defaultGenerateJson;
   const result = await generate({
     system: buildProposalSystemPrompt(),
@@ -159,7 +189,12 @@ export async function proposeOrder(input: ProposeInput): Promise<ProposeResult> 
   });
   if (!result.ok) return { kind: 'failed', error: result.error };
 
-  const parsed = parseProposal(result.data, input.candidates, input.requiredSpotIds);
-  if (parsed === null) return { kind: 'failed', error: { kind: 'invalid_schema' } };
+  const parsed = parseProposal(
+    result.data,
+    input.candidates,
+    input.requiredSpotIds,
+  );
+  if (parsed === null)
+    return { kind: 'failed', error: { kind: 'invalid_schema' } };
   return { kind: 'llm', order: parsed.order, reasons: parsed.reasons };
 }

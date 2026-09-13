@@ -9,7 +9,12 @@
  */
 
 export { planFromRequest, planRoute, reschedule } from './planner';
-export type { PlanFromRequestInput, PlanRouteInput, RescheduleInput } from './planner';
+export { resolveArea } from './startPoint';
+export type {
+  PlanFromRequestInput,
+  PlanRouteInput,
+  RescheduleInput,
+} from './planner';
 export type {
   DroppedSpot,
   DropReason,

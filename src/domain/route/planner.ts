@@ -10,7 +10,14 @@ import { proposeOrder } from './propose';
 import { schedule, withoutLastOptional } from './schedule';
 import type { GeocodeFn } from './startPoint';
 import { resolveArea } from './startPoint';
-import type { DroppedSpot, Itinerary, OrderingSource, PlanOutcome, PlanSuccess } from './types';
+import type {
+  DroppedSpot,
+  InterpretationDraft,
+  Itinerary,
+  OrderingSource,
+  PlanOutcome,
+  PlanSuccess,
+} from './types';
 import { START_ID } from './types';
 
 /**
@@ -31,6 +38,7 @@ export interface PlannerDeps {
 
 export interface PlanRouteInput {
   readonly sentence: string;
+  readonly previousDraft?: InterpretationDraft;
   /** 요청 시각. 오프셋 있는 ISO. */
   readonly now: string;
   readonly spots: readonly RouteCandidate[];
@@ -48,8 +56,8 @@ export function matchRequiredSpots(
   for (const name of names) {
     const n = norm(name);
     const hit =
-      spots.find((s) => norm(s.name) === n) ??
-      spots.find((s) => norm(s.name).includes(n) || n.includes(norm(s.name)));
+      spots.find(s => norm(s.name) === n) ??
+      spots.find(s => norm(s.name).includes(n) || n.includes(norm(s.name)));
     if (hit === undefined) unmatched.push(name);
     else if (!ids.includes(hit.id)) ids.push(hit.id);
   }
@@ -62,14 +70,18 @@ export async function planRoute(input: PlanRouteInput): Promise<PlanOutcome> {
   const interpretation = await interpret({
     sentence: input.sentence,
     now: input.now,
-    spotNames: input.spots.map((s) => s.name),
+    spotNames: input.spots.map(s => s.name),
+    ...(input.previousDraft === undefined
+      ? {}
+      : { previousDraft: input.previousDraft }),
     ...(deps.generate === undefined ? {} : { generate: deps.generate }),
   });
   if (interpretation.kind === 'failed') {
     return {
       kind: 'failed',
       failure:
-        interpretation.error.kind === 'no_api_key'
+        interpretation.error.kind !== 'parse' &&
+        interpretation.error.kind !== 'invalid_schema'
           ? { kind: 'service_unavailable', service: 'llm' }
           : { kind: 'interpretation_failed' },
     };
@@ -89,22 +101,30 @@ export async function planRoute(input: PlanRouteInput): Promise<PlanOutcome> {
   const { draft } = interpretation;
   const area = await resolveArea(draft.areaName, deps.geocode);
   if (area.kind === 'not_found') {
-    return { kind: 'failed', failure: { kind: 'area_not_found', areaName: draft.areaName } };
+    return {
+      kind: 'failed',
+      failure: { kind: 'area_not_found', areaName: draft.areaName },
+    };
   }
   if (area.kind === 'failed') {
-    return { kind: 'failed', failure: { kind: 'service_unavailable', service: 'geocoding' } };
+    return {
+      kind: 'failed',
+      failure: { kind: 'service_unavailable', service: 'geocoding' },
+    };
   }
 
   const matched = matchRequiredSpots(draft.requiredSpotNames, input.spots);
   const request: RouteRequest = {
     window: draft.window,
-    area: { name: draft.areaName, center: area.center },
+    area: { name: draft.areaName, center: area.center, label: area.label },
     preferredCategories: draft.preferredCategories,
     requiredSpotIds: matched.ids,
   };
 
   const outcome = await planFromRequest({ request, spots: input.spots, deps });
-  return outcome.kind === 'ok' ? { ...outcome, unmatchedRequiredNames: matched.unmatched } : outcome;
+  return outcome.kind === 'ok'
+    ? { ...outcome, unmatchedRequiredNames: matched.unmatched }
+    : outcome;
 }
 
 export interface PlanFromRequestInput {
@@ -113,7 +133,9 @@ export interface PlanFromRequestInput {
   readonly deps?: PlannerDeps;
 }
 
-export async function planFromRequest(input: PlanFromRequestInput): Promise<PlanOutcome> {
+export async function planFromRequest(
+  input: PlanFromRequestInput,
+): Promise<PlanOutcome> {
   const { request, spots } = input;
   const deps = input.deps ?? {};
 
@@ -132,7 +154,7 @@ export async function planFromRequest(input: PlanFromRequestInput): Promise<Plan
 
   const table = distanceTable([
     { id: START_ID, coord: request.area.center },
-    ...selection.candidates.map((c) => ({ id: c.id, coord: c.coord })),
+    ...selection.candidates.map(c => ({ id: c.id, coord: c.coord })),
   ]);
   const proposeInput = {
     start: request.area.center,
@@ -147,15 +169,20 @@ export async function planFromRequest(input: PlanFromRequestInput): Promise<Plan
   // 1차 순서: LLM, 실패면 규칙(가까운 곳부터). ordering은 여기서만 정해진다 —
   // 'llm'은 ProposeResult.kind === 'llm'에서만 나온다(T39).
   const proposal = await proposeOrder(proposeInput);
-  let ordering: OrderingSource = proposal.kind === 'llm' ? 'llm' : 'rule';
+  const ordering: OrderingSource = proposal.kind === 'llm' ? 'llm' : 'rule';
   let order: readonly RouteCandidate[] =
-    proposal.kind === 'llm' ? proposal.order : orderByNearest(selection.candidates, table);
-  let reasons: ReadonlyMap<string, string> = proposal.kind === 'llm' ? proposal.reasons : new Map();
+    proposal.kind === 'llm'
+      ? proposal.order
+      : orderByNearest(selection.candidates, table);
+  let reasons: ReadonlyMap<string, string> =
+    proposal.kind === 'llm' ? proposal.reasons : new Map();
 
   const cache: LegCache = new Map();
   const dropped: DroppedSpot[] = [...selection.dropped];
 
-  const build = async (current: readonly RouteCandidate[]): Promise<Itinerary> => {
+  const build = async (
+    current: readonly RouteCandidate[],
+  ): Promise<Itinerary> => {
     const legs = await measureLegs({
       start: request.area.center,
       order: current,
@@ -184,10 +211,15 @@ export async function planFromRequest(input: PlanFromRequestInput): Promise<Plan
       ...proposeInput,
       feedback: {
         overByMinutes: Math.ceil(itinerary.overBySeconds / 60),
-        previousOrder: order.map((c) => c.id),
+        previousOrder: order.map(c => c.id),
       },
     });
     if (retry.kind === 'llm') {
+      const retained = new Set(retry.order.map(candidate => candidate.id));
+      for (const candidate of order) {
+        if (!retained.has(candidate.id))
+          dropped.push({ candidate, reason: 'over_time' });
+      }
       order = retry.order;
       reasons = retry.reasons;
       itinerary = await build(order);
@@ -204,8 +236,24 @@ export async function planFromRequest(input: PlanFromRequestInput): Promise<Plan
     itinerary = await build(order);
   }
 
-  ordering = itinerary.ordering;
-  const success: PlanSuccess = { kind: 'ok', request, itinerary, unmatchedRequiredNames: [] };
+  if (itinerary.stops.length === 0) {
+    return {
+      kind: 'failed',
+      failure: {
+        kind: 'no_candidates',
+        window: request.window,
+        areaName: request.area.name,
+        dropped,
+      },
+    };
+  }
+
+  const success: PlanSuccess = {
+    kind: 'ok',
+    request,
+    itinerary,
+    unmatchedRequiredNames: [],
+  };
   return success;
 }
 
@@ -231,10 +279,14 @@ export interface RescheduleInput {
 export async function reschedule(input: RescheduleInput): Promise<Itinerary> {
   const deps = input.deps ?? {};
   const cache: LegCache = new Map();
-  for (const leg of input.previousLegs) cache.set(`${leg.fromId}>${leg.toId}`, leg);
+  for (const leg of input.previousLegs)
+    cache.set(`${leg.fromId}>${leg.toId}`, leg);
 
   const reasons = new Map<string, string>();
-  if (input.previousReasons !== undefined && input.previousOrderIds !== undefined) {
+  if (
+    input.previousReasons !== undefined &&
+    input.previousOrderIds !== undefined
+  ) {
     input.order.forEach((candidate, i) => {
       const prevId = input.previousOrderIds?.[i];
       const prevBefore = i === 0 ? START_ID : input.previousOrderIds?.[i - 1];
@@ -254,7 +306,10 @@ export async function reschedule(input: RescheduleInput): Promise<Itinerary> {
     ...(deps.route === undefined ? {} : { route: deps.route }),
   });
   return schedule({
-    start: { coord: input.request.area.center, departAt: input.request.window.start },
+    start: {
+      coord: input.request.area.center,
+      departAt: input.request.window.start,
+    },
     window: input.request.window,
     order: input.order,
     legs,

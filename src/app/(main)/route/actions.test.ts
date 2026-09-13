@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlanOutcome } from '@/domain/route';
 import type { SavedSpot } from '@/shared/spot';
+import type { RoutePlanState } from './planState';
 
 const domain = vi.hoisted(() => ({
   loadSpots: vi.fn(),
@@ -79,6 +80,71 @@ describe('planRouteAction 스팟 저장소', () => {
     expect(domain.toRouteCandidate).toHaveBeenCalledWith(SPOT, 0, [SPOT]);
     expect(domain.planRoute).toHaveBeenCalledWith(
       expect.objectContaining({ spots: [candidate] }),
+    );
+  });
+});
+
+describe('되묻기 답변과 재시도 (#165)', () => {
+  const context = {
+    window: null,
+    areaName: '성수동',
+    preferredCategories: ['cafe'] as const,
+    requiredSpotNames: ['저장한 카페'],
+  };
+  const previous: RoutePlanState = {
+    status: 'done',
+    sentence: '성수동에서 걷고 싶어'.padEnd(500, '가'),
+    outcome: {
+      kind: 'failed',
+      failure: {
+        kind: 'needs_clarification',
+        missing: ['window'],
+        question: '몇 시부터 몇 시까지요?',
+        draft: context,
+      },
+    },
+  };
+
+  beforeEach(() => {
+    domain.loadSpots
+      .mockReset()
+      .mockResolvedValue({ spots: [SPOT], error: null });
+    domain.planRoute.mockReset().mockResolvedValue(FAILED_OUTCOME);
+    domain.toRouteCandidate.mockReset().mockReturnValue({
+      id: SPOT.id,
+      name: SPOT.name,
+      category: 'cafe',
+      coord: SPOT.coordinates,
+    });
+  });
+
+  it('이전 입력이 500자여도 새 시간 답변과 확인한 동네·선호·필수를 모두 전달한다', async () => {
+    const data = routeForm();
+    data.set('sentence', '내일 오후 2시부터 4시');
+    await planRouteAction(previous, data);
+    expect(domain.planRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sentence: '내일 오후 2시부터 4시',
+        previousDraft: context,
+      }),
+    );
+  });
+
+  it('조회 실패 뒤 같은 답변을 재시도해도 이전 조건을 잃지 않는다', async () => {
+    domain.loadSpots.mockResolvedValueOnce({
+      spots: [],
+      error: { kind: 'query', message: 'failure' },
+    });
+    const data = routeForm();
+    data.set('sentence', '내일 오후 2시부터 4시');
+    const failed = await planRouteAction(previous, data);
+    expect(failed).toEqual({ status: 'load_failed', context });
+    await planRouteAction(failed, data);
+    expect(domain.planRoute).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sentence: '내일 오후 2시부터 4시',
+        previousDraft: context,
+      }),
     );
   });
 });
