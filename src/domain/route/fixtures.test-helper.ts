@@ -54,7 +54,7 @@ export const PARK_F: RouteCandidate = {
 
 export const ALL_SPOTS = [SHOP_A, CAFE_B, BOOK_C, FOOD_D, DESSERT_E, PARK_F];
 
-export const REQUEST_14_16: RouteRequest = {
+export const REQUEST_14_16 = {
   window: {
     start: '2026-09-12T14:00:00+09:00',
     end: '2026-09-12T16:00:00+09:00',
@@ -62,7 +62,7 @@ export const REQUEST_14_16: RouteRequest = {
   area: { name: '성수동', center: START },
   preferredCategories: ['cafe'],
   requiredSpotIds: [],
-};
+} satisfies RouteRequest;
 
 /** 명세 예시 구간(초). key는 `from>to`. */
 export const SPEC_LEG_SECONDS: Readonly<Record<string, number>> = {

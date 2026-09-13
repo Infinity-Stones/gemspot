@@ -11,6 +11,7 @@ import type {
   RouteCandidate,
   RouteConditions,
   RouteRequest,
+  TimeWindow,
 } from '@/shared/routeRequest';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -20,19 +21,18 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 export function readConditions(value: unknown): RouteConditions | null {
   if (!isRecord(value)) return null;
   const { window, areaName, preferredCategories, requiredSpotIds } = value;
-  if (
-    !isRecord(window) ||
-    typeof window['start'] !== 'string' ||
-    typeof window['end'] !== 'string'
-  )
-    return null;
-  const time = { start: window['start'], end: window['end'] };
-  if (
-    !isValidTimeWindow(time) ||
-    typeof areaName !== 'string' ||
-    !areaName.trim() ||
-    areaName.length > 200
-  )
+  let time: TimeWindow | null = null;
+  if (window !== null) {
+    if (
+      !isRecord(window) ||
+      typeof window['start'] !== 'string' ||
+      typeof window['end'] !== 'string'
+    )
+      return null;
+    time = { start: window['start'], end: window['end'] };
+    if (!isValidTimeWindow(time)) return null;
+  }
+  if (typeof areaName !== 'string' || !areaName.trim() || areaName.length > 200)
     return null;
   if (
     !Array.isArray(preferredCategories) ||

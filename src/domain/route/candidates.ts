@@ -28,11 +28,19 @@ export function selectCandidates(
   request: RouteRequest,
   radiusM: number = AREA_RADIUS_M,
 ): CandidateSelection {
-  const startMinute = minutesOfSeoulDay(request.window.start);
-  const window = {
-    startMinute,
-    endMinute: startMinute + Math.round(diffSeconds(request.window.start, request.window.end) / 60),
-  };
+  const startMinute =
+    request.window === null ? 0 : minutesOfSeoulDay(request.window.start);
+  const window =
+    request.window === null
+      ? null
+      : {
+          startMinute,
+          endMinute:
+            startMinute +
+            Math.round(
+              diffSeconds(request.window.start, request.window.end) / 60,
+            ),
+        };
   const required = new Set(request.requiredSpotIds);
   const preferred = new Set(request.preferredCategories);
 
@@ -50,7 +58,7 @@ export function selectCandidates(
       dropped.push({ candidate, reason: 'outside_area' });
       continue;
     }
-    if (!fitsWindow(candidate.category, window)) {
+    if (window !== null && !fitsWindow(candidate.category, window)) {
       dropped.push({ candidate, reason: 'outside_window' });
       continue;
     }
@@ -59,9 +67,13 @@ export function selectCandidates(
 
   // 안정 정렬: 선호 카테고리가 앞, 그 안에서는 원래 순서.
   const weighted = candidates
-    .map((candidate, index) => ({ candidate, index, score: preferred.has(candidate.category) ? 0 : 1 }))
+    .map((candidate, index) => ({
+      candidate,
+      index,
+      score: preferred.has(candidate.category) ? 0 : 1,
+    }))
     .sort((a, b) => a.score - b.score || a.index - b.index)
-    .map((w) => w.candidate);
+    .map(w => w.candidate);
 
   return { candidates: weighted, dropped };
 }

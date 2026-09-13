@@ -39,7 +39,6 @@ export type InterpretationResult =
   | {
       readonly kind: 'complete';
       readonly draft: InterpretationDraft & {
-        window: TimeWindow;
         areaName: string;
       };
     }
@@ -112,8 +111,9 @@ export function buildSystemPrompt(): string {
   return [
     '너는 산책 요청 문장을 구조화하는 해석기다. 사용자가 저장해 둔 장소 중 오늘 갈 곳을 고르는 데 쓰인다.',
     '문장에서 다음 넷만 뽑는다.',
-    '1. window: 시작·종료 시각. 반드시 오프셋(+09:00)이 붙은 ISO 8601로. 상대 표현("지금부터 두 시간", "오늘 2시")은 함께 주어지는 요청 시각을 기준으로 절대 시각으로 바꾼다. 시각이 문장에 없으면 null. 추측해서 채우지 마라.',
+    '1. window: 시작·종료 시각. 반드시 오프셋(+09:00)이 붙은 ISO 8601로. 상대 표현("지금부터 두 시간")은 함께 주어지는 요청 시각을 기준으로 절대 시각으로 바꾼다. 시간은 선택 조건이다. 시각이 문장에 없거나 "시간 상관없이", "시간 제한 없이"라고 하면 null. 임의의 2시간 예산이나 현재 시각을 만들지 마라.',
     '2. areaName: 동네·지역 이름 그대로(예: 성수동, 연남동). 문장에 없으면 null. 추측해서 채우지 마라.',
+    '"성수 카페거리 동선 추천"은 areaName="성수 카페거리", window=null이다. 카페거리·공원·역 같은 지역 표현을 개별 필수 방문 장소로 중복 분류하지 않는다.',
     '3. preferredCategories: "카페 들르면서"처럼 드러난 선호를 아래 코드로. 없으면 빈 배열.',
     '4. requiredSpotNames: "꼭", "반드시", 특정 장소 이름처럼 꼭 가겠다고 한 곳. 저장된 스팟과 일치하면 그 이름을 쓰고, 목록에 없어도 사용자가 말한 이름을 그대로 남긴다. 언급하지 않았으면 빈 배열.',
     '이미 확인한 조건이 함께 오면 되묻기의 답이다. 최신 문장에 명시한 변경을 반영하고, 나머지 기존 조건은 유지하여 전체 결과를 반환한다.',
@@ -235,10 +235,14 @@ export function parseDraft(
   };
 }
 
-/** `null` 필드에서 기계적으로. 선호 · 필수는 없어도 정당한 상태라 묻지 않는다. */
-export function missingOf(draft: InterpretationDraft): readonly MissingField[] {
+/** 지역 누락과 명시한 시간의 오류만 되묻는다. 시간 생략은 유효한 조건이다. */
+export function missingOf(
+  draft: InterpretationDraft,
+  windowIssue: WindowIssue = 'absent',
+): readonly MissingField[] {
   const missing: MissingField[] = [];
-  if (draft.window === null) missing.push('window');
+  if (windowIssue === 'unusable' || windowIssue === 'past')
+    missing.push('window');
   if (draft.areaName === null) missing.push('area');
   return missing;
 }
@@ -273,8 +277,8 @@ export async function interpret(
     return { kind: 'failed', error: { kind: 'invalid_schema' } };
 
   const { draft, windowIssue } = parsed;
-  const missing = missingOf(draft);
-  if (draft.window !== null && draft.areaName !== null) {
+  const missing = missingOf(draft, windowIssue);
+  if (missing.length === 0 && draft.areaName !== null) {
     return {
       kind: 'complete',
       draft: { ...draft, window: draft.window, areaName: draft.areaName },

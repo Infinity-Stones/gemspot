@@ -19,7 +19,7 @@ import { START_ID } from './types';
 
 export interface ProposeInput {
   readonly start: SpotCoordinates;
-  readonly window: TimeWindow;
+  readonly window: TimeWindow | null;
   readonly candidates: readonly RouteCandidate[];
   readonly table: DistanceTable;
   readonly requiredSpotIds: readonly string[];
@@ -77,11 +77,12 @@ const WALK_METERS_PER_MINUTE = Math.round(
 
 export function buildProposalSystemPrompt(): string {
   return [
-    '너는 도보 산책 동선을 짜는 플래너다. 주어진 후보 스팟 중 시간 예산 안에서 갈 곳과 순서를 정한다.',
+    '너는 도보 산책 동선을 짜는 플래너다. 주어진 후보 스팟 중 조건에 맞는 곳과 방문 순서를 정한다.',
     '규칙:',
+    '- 시간 제한이 없으면 임의의 시간 예산이나 영업 시간대를 적용하지 않는다. 거리와 선호를 기준으로 방문 순서를 추천한다.',
     '- 거리표의 직선거리만 믿는다. 스팟 이름으로 위치를 짐작하지 않는다.',
-    `- 도보 시간은 직선거리 ÷ ${String(WALK_METERS_PER_MINUTE)}m/분 으로 어림한다. 각 스팟의 체류 시간을 더한 합이 예산 안에 들어야 한다.`,
-    '- 전부 방문하지 않아도 된다. 예산에 맞게 고르되, "꼭 갈 곳"은 반드시 넣는다.',
+    `- 도보 시간은 직선거리 ÷ ${String(WALK_METERS_PER_MINUTE)}m/분 으로 어림한다. 시간 예산이 지정되었으면 각 스팟의 체류 시간을 더한 합이 예산 안에 들어야 한다.`,
+    '- 전부 방문하지 않아도 된다. 거리와 선호, 지정된 시간 예산에 맞게 고르되, "꼭 갈 곳"은 반드시 넣는다.',
     '- 선호 카테고리는 우선하되 그것만 고르지는 않는다.',
     '- 출발점(start)에서 가까운 곳부터 크게 돌아 지그재그가 없게 한다.',
     '- reasons에는 order의 모든 id에 대해 왜 그 자리인지 한 문장씩 적는다. 거리·시간대·선호 중 근거를 댄다.',
@@ -92,9 +93,10 @@ export function buildProposalSystemPrompt(): string {
 }
 
 export function buildProposalUserPrompt(input: ProposeInput): string {
-  const budgetMinutes = Math.round(
-    diffSeconds(input.window.start, input.window.end) / 60,
-  );
+  const budgetMinutes =
+    input.window === null
+      ? null
+      : Math.round(diffSeconds(input.window.start, input.window.end) / 60);
   const label = (id: string): string => {
     if (id === START_ID) return 'start';
     const c = input.candidates.find(x => x.id === id);
@@ -109,7 +111,9 @@ export function buildProposalUserPrompt(input: ProposeInput): string {
     )
     .join('\n');
   const lines = [
-    `시간 예산: ${String(budgetMinutes)}분 (${input.window.start} ~ ${input.window.end})`,
+    input.window === null
+      ? '시간 제한 없음. 임의의 출발·종료 시각을 정하지 않는다.'
+      : `시간 예산: ${String(budgetMinutes)}분 (${input.window.start} ~ ${input.window.end})`,
     `선호 카테고리: ${input.preferredCategories.length > 0 ? input.preferredCategories.join(', ') : '(없음)'}`,
     '',
     '후보:',

@@ -2,7 +2,13 @@ import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate, TimeWindow } from '@/shared/routeRequest';
 import { dwellMinutesOf } from '@/shared/spotCategory';
 import { addSeconds, diffSeconds } from '@/shared/time';
-import type { DroppedSpot, Itinerary, ItineraryStop, Leg, OrderingSource } from './types';
+import type {
+  DroppedSpot,
+  Itinerary,
+  ItineraryStop,
+  Leg,
+  OrderingSource,
+} from './types';
 
 /**
  * 시간 배치 — T34(#49). 체류 + 이동을 쌓아 각 지점의 도착 · 출발 시각을 낸다.
@@ -13,8 +19,11 @@ import type { DroppedSpot, Itinerary, ItineraryStop, Leg, OrderingSource } from 
  */
 
 export interface ScheduleInput {
-  readonly start: { readonly coord: SpotCoordinates; readonly departAt: string };
-  readonly window: TimeWindow;
+  readonly start: {
+    readonly coord: SpotCoordinates;
+    readonly departAt: string;
+  };
+  readonly window: TimeWindow | null;
   readonly order: readonly RouteCandidate[];
   /** `order.length`개. `legs[i]`는 `order[i]`로 가는 구간. */
   readonly legs: readonly Leg[];
@@ -23,6 +32,9 @@ export interface ScheduleInput {
   readonly dropped?: readonly DroppedSpot[];
   readonly ordering: OrderingSource;
 }
+
+/** 시간 미지정 동선의 상대 소요시간 계산 기준. 사용자 출발 시각으로 표시하지 않는다. */
+export const RELATIVE_SCHEDULE_START = '2000-01-01T00:00:00+09:00';
 
 export function schedule(input: ScheduleInput): Itinerary {
   if (input.legs.length !== input.order.length) {
@@ -63,10 +75,13 @@ export function schedule(input: ScheduleInput): Itinerary {
     stops,
     legs: input.legs,
     endAt,
-    overBySeconds: Math.max(0, diffSeconds(input.window.end, endAt)),
+    overBySeconds:
+      input.window === null
+        ? 0
+        : Math.max(0, diffSeconds(input.window.end, endAt)),
     totalWalkMinutes: Math.ceil(totalWalkSeconds / 60),
     totalDistanceM: Math.round(totalDistanceM),
-    hasEstimatedLegs: input.legs.some((leg) => leg.source === 'estimate'),
+    hasEstimatedLegs: input.legs.some(leg => leg.source === 'estimate'),
     dropped: input.dropped ?? [],
     ordering: input.ordering,
   };
@@ -79,12 +94,18 @@ export function schedule(input: ScheduleInput): Itinerary {
 export function withoutLastOptional(
   order: readonly RouteCandidate[],
   requiredSpotIds: readonly string[],
-): { readonly order: readonly RouteCandidate[]; readonly removed: RouteCandidate } | null {
+): {
+  readonly order: readonly RouteCandidate[];
+  readonly removed: RouteCandidate;
+} | null {
   const required = new Set(requiredSpotIds);
   for (let i = order.length - 1; i >= 0; i -= 1) {
     const candidate = order[i];
     if (candidate !== undefined && !required.has(candidate.id)) {
-      return { order: [...order.slice(0, i), ...order.slice(i + 1)], removed: candidate };
+      return {
+        order: [...order.slice(0, i), ...order.slice(i + 1)],
+        removed: candidate,
+      };
     }
   }
   return null;

@@ -86,7 +86,7 @@ describe('planRoute — 명세 예시 해피 패스', () => {
 });
 
 describe('planRoute — 제안하지 않는 경우(T47)', () => {
-  it('시간대가 없으면 needs_clarification이고 이후 단계는 부르지 않는다', async () => {
+  it('시간대가 없어도 지역을 찾고 동선을 생성한다', async () => {
     const geocode = vi.fn(foundGeocode);
     const outcome = await planRoute({
       sentence: '성수동 걷고 싶어',
@@ -95,17 +95,15 @@ describe('planRoute — 제안하지 않는 경우(T47)', () => {
       deps: {
         generate: stubGenerate([{ ...SPEC_INTERPRETATION, window: null }]),
         geocode,
+        route: failingRoute,
       },
     });
     expect(outcome).toMatchObject({
-      kind: 'failed',
-      failure: {
-        kind: 'needs_clarification',
-        missing: ['window'],
-        question: '몇 시부터 몇 시까지요?',
-      },
+      kind: 'ok',
+      request: { window: null },
+      itinerary: { window: null, overBySeconds: 0 },
     });
-    expect(geocode).not.toHaveBeenCalled();
+    expect(geocode).toHaveBeenCalledWith('성수동');
   });
 
   it('동네가 좌표로 안 바뀌면 area_not_found', async () => {
@@ -177,6 +175,52 @@ describe('planRoute — 제안하지 않는 경우(T47)', () => {
 });
 
 describe('planFromRequest — 외부 서비스 없이', () => {
+  it('시간 미입력 카페거리 요청은 장소명 검색을 거쳐 2시간을 넘어도 시간 때문에 줄이지 않는다', async () => {
+    const calls: string[] = [];
+    const outcome = await planRoute({
+      sentence: '성수 카페거리 동선 추천해 줘',
+      now: '2026-09-13T03:00:00+09:00',
+      spots: [CAFE_B, FOOD_D],
+      deps: {
+        generate: stubGenerate(
+          [
+            { ...SPEC_INTERPRETATION, areaName: '성수 카페거리', window: null },
+            { order: ['b', 'd'], reasons: [] },
+          ],
+          calls,
+        ),
+        geocode: () =>
+          Promise.resolve({ ok: true, data: { totalCount: 0, hits: [] } }),
+        searchArea: () =>
+          Promise.resolve({
+            ok: true,
+            places: [
+              {
+                name: '성수동카페거리',
+                category: '카페거리',
+                roadAddress: '',
+                jibunAddress: '서울 성동구 성수동2가',
+                coordinates: START,
+              },
+            ],
+          }),
+        route: stubRoute({ 'start>b': 3600, 'b>d': 3600 }),
+      },
+    });
+    if (outcome.kind !== 'ok') throw new Error('expected success');
+    expect(outcome.request.window).toBeNull();
+    expect(outcome.request.area.name).toBe('성수 카페거리');
+    expect(outcome.itinerary.stops.map(stop => stop.candidate.id)).toEqual([
+      'b',
+      'd',
+    ]);
+    expect(outcome.itinerary.dropped).toEqual([]);
+    expect(outcome.itinerary.overBySeconds).toBe(0);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toContain('시간 제한 없음');
+    expect(calls[1]).not.toContain('시간 예산:');
+  });
+
   it('LLM · TMAP이 전부 실패해도 규칙 기반 + 추정으로 동선이 나온다(T32 · T39)', async () => {
     const outcome = await planFromRequest({
       request: REQUEST_14_16,

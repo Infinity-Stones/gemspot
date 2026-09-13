@@ -73,7 +73,7 @@ export function InterpretationCard({
           <dt className={muted}>날짜·시간</dt>
           <dd>
             {window === undefined || window === null
-              ? '걷고 싶은 시간을 알려 주세요'
+              ? '시간 제한 없음'
               : `${localDateTime(window.start).replace('T', ' ')} ~ ${localDateTime(window.end).replace('T', ' ')}`}
           </dd>
         </div>
@@ -130,7 +130,8 @@ function ConditionsEditor({
     requiredSpotIds: request.requiredSpotIds,
   };
   const [conditions, setConditions] = useState(initial);
-  const validTime = isValidTimeWindow(conditions.window);
+  const validTime =
+    conditions.window === null || isValidTimeWindow(conditions.window);
   const signature = (value: RouteConditions) =>
     JSON.stringify({
       ...value,
@@ -148,42 +149,59 @@ function ConditionsEditor({
     >
       <fieldset disabled={pending} className={stack}>
         <legend className={css({ srOnly: true })}>동선 조건 수정</legend>
-        <label className={stack}>
-          출발 일시
+        <label className={row}>
           <input
-            aria-label="출발 날짜와 시간"
-            type="datetime-local"
-            className={field}
-            value={localDateTime(conditions.window.start)}
+            type="checkbox"
+            checked={conditions.window !== null}
             onChange={event =>
               setConditions({
                 ...conditions,
-                window: {
-                  ...conditions.window,
-                  start: `${event.target.value}:00+09:00`,
-                },
+                window: event.target.checked ? { start: '', end: '' } : null,
               })
             }
           />
+          날짜·시간 지정
         </label>
-        <label className={stack}>
-          종료 일시
-          <input
-            aria-label="종료 날짜와 시간"
-            type="datetime-local"
-            className={field}
-            value={localDateTime(conditions.window.end)}
-            onChange={event =>
-              setConditions({
-                ...conditions,
-                window: {
-                  ...conditions.window,
-                  end: `${event.target.value}:00+09:00`,
-                },
-              })
-            }
-          />
-        </label>
+        {conditions.window !== null && (
+          <>
+            <label className={stack}>
+              출발 일시
+              <input
+                aria-label="출발 날짜와 시간"
+                type="datetime-local"
+                className={field}
+                value={localDateTime(conditions.window.start)}
+                onChange={event =>
+                  setConditions({
+                    ...conditions,
+                    window: {
+                      end: conditions.window?.end ?? '',
+                      start: `${event.target.value}:00+09:00`,
+                    },
+                  })
+                }
+              />
+            </label>
+            <label className={stack}>
+              종료 일시
+              <input
+                aria-label="종료 날짜와 시간"
+                type="datetime-local"
+                className={field}
+                value={localDateTime(conditions.window.end)}
+                onChange={event =>
+                  setConditions({
+                    ...conditions,
+                    window: {
+                      start: conditions.window?.start ?? '',
+                      end: `${event.target.value}:00+09:00`,
+                    },
+                  })
+                }
+              />
+            </label>
+          </>
+        )}
         {!validTime && (
           <p role="alert">
             종료는 출발보다 늦어야 하며, 산책은 12시간 이내로 정해 주세요.

@@ -43,7 +43,7 @@ interface Props {
   readonly editAction?: PlanRouteAction;
 }
 
-const EXAMPLE = '지금부터 두 시간 동안 성수동에서 카페 들르면서 걷고 싶어';
+const EXAMPLE = '성수 카페거리 동선 추천해 줘';
 
 const shell = css({
   display: 'flex',
@@ -247,6 +247,9 @@ export function RouteComposer({
         <InterpretationCard draft={context} spots={spots} pending={pending} />
       )}
       <form className={form} action={formData => run(action, formData)}>
+        <p className={counter}>
+          시간은 생략해도 돼요. 걷고 싶은 동네나 거리를 알려 주세요.
+        </p>
         <label className={css({ srOnly: true })} htmlFor="route-sentence">
           {clarification === null ? '어떻게 걷고 싶은지' : '되묻기에 답하기'}
         </label>
