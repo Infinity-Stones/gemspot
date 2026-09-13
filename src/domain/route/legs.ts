@@ -1,5 +1,5 @@
-import type { WalkingRouteOutcome } from '@/lib/platform/tmap';
-import { walkingRoute as defaultWalkingRoute } from '@/lib/platform/tmap';
+import type { MeasuredWalkingRouteOutcome } from '@/lib/platform/walkingRoute';
+import { walkingRoute as defaultWalkingRoute } from '@/lib/platform/walkingRoute';
 import type { SpotCoordinates } from '@/shared/spot';
 import type { RouteCandidate } from '@/shared/routeRequest';
 import { estimateWalkSeconds, haversineM } from './distance';
@@ -9,12 +9,15 @@ import { START_ID } from './types';
 /**
  * 구간 실측 — T41(#56). 실측이 실패한 구간만 직선거리로 추정한다.
  *
- * 구간마다 따로, 병렬로 부른다. 정거장 6개면 6회, 각 8초 타임아웃이라 병렬이
- * 아니면 서버 액션 예산을 넘긴다. 같은 (from, to) 쌍은 요청 범위 캐시로 한 번만
+ * 구간마다 따로 요청한다. OSM 공개 서버의 초당 요청 제한은 어댑터가 담당한다.
+ * 같은 (from, to) 쌍은 요청 범위 캐시로 한 번만
  * 부른다 — 다듬기(T45)에서 안 바뀐 구간을 다시 실측하지 않기 위한 것이다.
  */
 
-export type WalkingRouteFn = (from: SpotCoordinates, to: SpotCoordinates) => Promise<WalkingRouteOutcome>;
+export type WalkingRouteFn = (
+  from: SpotCoordinates,
+  to: SpotCoordinates,
+) => Promise<MeasuredWalkingRouteOutcome>;
 
 /** 요청 범위 캐시. 전역 상태가 아니라 호출자가 만들어 넘긴다. */
 export type LegCache = Map<string, Leg>;
@@ -30,7 +33,12 @@ export interface MeasureLegsInput {
   readonly cache?: LegCache;
 }
 
-function estimatedLeg(fromId: string, from: SpotCoordinates, toId: string, to: SpotCoordinates): Leg {
+function estimatedLeg(
+  fromId: string,
+  from: SpotCoordinates,
+  toId: string,
+  to: SpotCoordinates,
+): Leg {
   const distanceM = Math.round(haversineM(from, to));
   return {
     fromId,
@@ -42,7 +50,9 @@ function estimatedLeg(fromId: string, from: SpotCoordinates, toId: string, to: S
   };
 }
 
-export async function measureLegs(input: MeasureLegsInput): Promise<readonly Leg[]> {
+export async function measureLegs(
+  input: MeasureLegsInput,
+): Promise<readonly Leg[]> {
   const route = input.route ?? defaultWalkingRoute;
   const cache = input.cache ?? new Map<string, Leg>();
 
@@ -71,7 +81,7 @@ export async function measureLegs(input: MeasureLegsInput): Promise<readonly Leg
             toId,
             distanceM: Math.round(outcome.data.distanceM),
             durationS: Math.round(outcome.data.durationS),
-            source: 'tmap',
+            source: outcome.source,
             path: outcome.data.path,
           }
         : estimatedLeg(fromId, from, toId, to);

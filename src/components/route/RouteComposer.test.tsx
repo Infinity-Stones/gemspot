@@ -6,6 +6,10 @@ import type { PlanOutcome } from '@/domain/route';
 import type { PlanRouteAction } from './RouteComposer';
 import { RouteComposer } from './RouteComposer';
 
+vi.mock('./ItineraryMap', () => ({
+  ItineraryMap: () => <section aria-label="동선 지도" />,
+}));
+
 const OK_OUTCOME: PlanOutcome = {
   kind: 'ok',
   request: {
@@ -44,7 +48,19 @@ const OK_OUTCOME: PlanOutcome = {
         reason: '가깝다',
       },
     ],
-    legs: [],
+    legs: [
+      {
+        fromId: 'start',
+        toId: 'a',
+        distanceM: 600,
+        durationS: 480,
+        source: 'osm',
+        path: [
+          { latitude: 37.5447, longitude: 127.0557 },
+          { latitude: 37.5424, longitude: 127.056 },
+        ],
+      },
+    ],
     endAt: '2026-09-12T14:38:00+09:00',
     overBySeconds: 0,
     totalWalkMinutes: 8,
@@ -138,6 +154,9 @@ describe('RouteComposer', () => {
     });
     expect(seen[0]).toMatchObject({ sentence: '성수동 2시', history: '' });
     expect(screen.getByText(/14:08 편집숍 A/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: '동선 지도' }),
+    ).toBeInTheDocument();
   });
 
   it('되묻기가 오면 질문을 보여 주고, 다음 제출에 이전 문장을 history로 잇는다', async () => {

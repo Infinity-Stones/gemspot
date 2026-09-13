@@ -31,9 +31,12 @@ export async function planRouteAction(
   }
 
   const history = readText(formData, 'history');
-  const combined = (
-    history.length > 0 ? `${history}\n${sentence}` : sentence
-  ).slice(0, MAX_SENTENCE_LENGTH);
+  // 최신 정정이 길이 제한 뒤로 밀려 사라지면 같은 되묻기가 무한 반복된다.
+  const latest = sentence.slice(0, MAX_SENTENCE_LENGTH);
+  const historyBudget = MAX_SENTENCE_LENGTH - latest.length - 1;
+  const recentHistory = historyBudget > 0 ? history.slice(-historyBudget) : '';
+  const combined =
+    recentHistory.length > 0 ? `${recentHistory}\n${latest}` : latest;
 
   const { spots, error } = await loadSpots();
   if (error !== null) return { status: 'load_failed' };

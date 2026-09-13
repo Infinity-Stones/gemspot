@@ -27,7 +27,8 @@ export const QUESTION_BOTH = '몇 시부터 몇 시까지, 어느 동네에서 �
  * 시간대를 **읽었는데 이미 지난** 경우. 없는 것과 같은 질문을 돌려주면 사용자는
  * 같은 답을 반복하고 고리에서 빠져나오지 못한다(#144).
  */
-export const QUESTION_PAST_WINDOW = '그 시간은 이미 지났어요. 몇 시부터 몇 시까지 걸으실래요?';
+export const QUESTION_PAST_WINDOW =
+  '그 시간은 이미 지났어요. 날짜와 시작·종료 시각을 알려주세요. 예: 내일 오후 2시부터 4시까지, 또는 지금부터 두 시간.';
 export const QUESTION_PAST_WINDOW_AND_AREA =
   '그 시간은 이미 지났어요. 몇 시부터 몇 시까지, 어느 동네에서 걸을까요?';
 
@@ -35,14 +36,25 @@ export const QUESTION_PAST_WINDOW_AND_AREA =
 export type WindowIssue = 'ok' | 'absent' | 'unusable' | 'past';
 
 export type InterpretationResult =
-  | { readonly kind: 'complete'; readonly draft: InterpretationDraft & { window: TimeWindow; areaName: string } }
+  | {
+      readonly kind: 'complete';
+      readonly draft: InterpretationDraft & {
+        window: TimeWindow;
+        areaName: string;
+      };
+    }
   | {
       readonly kind: 'incomplete';
       readonly missing: readonly MissingField[];
       readonly question: string;
       readonly draft: InterpretationDraft;
     }
-  | { readonly kind: 'failed'; readonly error: Extract<GenerateJsonResult, { ok: false }>['error'] | { kind: 'invalid_schema' } };
+  | {
+      readonly kind: 'failed';
+      readonly error:
+        | Extract<GenerateJsonResult, { ok: false }>['error']
+        | { kind: 'invalid_schema' };
+    };
 
 export interface InterpretInput {
   readonly sentence: string;
@@ -53,7 +65,9 @@ export interface InterpretInput {
   readonly generate?: GenerateJson;
 }
 
-const nullable = (schema: Record<string, unknown>): Record<string, unknown> => ({
+const nullable = (
+  schema: Record<string, unknown>,
+): Record<string, unknown> => ({
   anyOf: [schema, { type: 'null' }],
 });
 
@@ -63,12 +77,18 @@ export const INTERPRETATION_SCHEMA: Readonly<Record<string, unknown>> = {
     window: nullable({
       type: 'object',
       properties: {
-        start: { type: 'string', description: '오프셋이 붙은 ISO 8601. 예: 2026-09-12T14:00:00+09:00' },
+        start: {
+          type: 'string',
+          description: '오프셋이 붙은 ISO 8601. 예: 2026-09-12T14:00:00+09:00',
+        },
         end: { type: 'string', description: '오프셋이 붙은 ISO 8601' },
       },
       required: ['start', 'end'],
     }),
-    areaName: nullable({ type: 'string', description: '동네 이름 그대로. 예: 성수동' }),
+    areaName: nullable({
+      type: 'string',
+      description: '동네 이름 그대로. 예: 성수동',
+    }),
     preferredCategories: {
       type: 'array',
       items: { type: 'string', enum: [...SPOT_CATEGORIES] },
@@ -83,7 +103,9 @@ export const INTERPRETATION_SCHEMA: Readonly<Record<string, unknown>> = {
 };
 
 export function buildSystemPrompt(): string {
-  const categories = SPOT_CATEGORIES.map((c) => `- ${c}: ${SPOT_CATEGORY_TABLE[c].label}`).join('\n');
+  const categories = SPOT_CATEGORIES.map(
+    c => `- ${c}: ${SPOT_CATEGORY_TABLE[c].label}`,
+  ).join('\n');
   return [
     '너는 산책 요청 문장을 구조화하는 해석기다. 사용자가 저장해 둔 장소 중 오늘 갈 곳을 고르는 데 쓰인다.',
     '문장에서 다음 넷만 뽑는다.',
@@ -96,16 +118,29 @@ export function buildSystemPrompt(): string {
     categories,
     '',
     '모르는 것은 null 또는 빈 배열이다. 문장에 없는 정보를 만들어 내지 않는다.',
+    '이전 대화와 최신 답변이 함께 주어지면 최신 답변에서 수정한 날짜·시간·지역을 우선한다. 이전의 지난 시간대로 되돌리지 마라. 최신 답변에 없는 조건만 이전 대화에서 유지한다.',
+    '시작 시간만 수정했고 종료 시간을 확정할 수 없으면 window는 null이다. 오전·오후나 종료 시간을 임의로 만들어 내지 마라.',
   ].join('\n');
 }
 
-export function buildUserPrompt(input: { sentence: string; now: string; spotNames: readonly string[] }): string {
-  const names = input.spotNames.length > 0 ? input.spotNames.join(', ') : '(없음)';
+export function buildUserPrompt(input: {
+  sentence: string;
+  now: string;
+  spotNames: readonly string[];
+}): string {
+  const names =
+    input.spotNames.length > 0 ? input.spotNames.join(', ') : '(없음)';
+  const lines = input.sentence
+    .split('\n')
+    .filter(line => line.trim().length > 0);
+  const latest = lines.at(-1) ?? '';
+  const history = lines.slice(0, -1).join('\n');
   return [
     `요청 시각(Asia/Seoul): ${input.now}`,
     `저장된 스팟 이름: ${names}`,
     '',
-    `문장: ${input.sentence}`,
+    ...(history.length > 0 ? [`이전 대화: ${history}`] : []),
+    `최신 답변: ${latest}`,
   ].join('\n');
 }
 
@@ -124,7 +159,8 @@ export function readWindow(
   raw: unknown,
   now: string,
 ): { readonly window: TimeWindow | null; readonly issue: WindowIssue } {
-  if (raw === null || raw === undefined) return { window: null, issue: 'absent' };
+  if (raw === null || raw === undefined)
+    return { window: null, issue: 'absent' };
   if (!isRecord(raw)) return { window: null, issue: 'unusable' };
 
   const rawStart = raw['start'];
@@ -134,16 +170,19 @@ export function readWindow(
   }
   const start = normalizeSeoulIso(rawStart);
   const end = normalizeSeoulIso(rawEnd);
-  if (start === null || end === null) return { window: null, issue: 'unusable' };
+  if (start === null || end === null)
+    return { window: null, issue: 'unusable' };
 
   const candidate = { start, end };
-  if (timeWindowProblem(candidate) !== null) return { window: null, issue: 'unusable' };
+  if (timeWindowProblem(candidate) !== null)
+    return { window: null, issue: 'unusable' };
 
   // 지난 시각을 그대로 받으면 사용자는 어제 동선을 받는다. 다만 "없음"과는
   // 구분한다 — 이유를 말해야 다른 답을 할 수 있다.
   const nowMs = parseIso(now);
   const endMs = parseIso(end);
-  if (nowMs === null || endMs === null) return { window: null, issue: 'unusable' };
+  if (nowMs === null || endMs === null)
+    return { window: null, issue: 'unusable' };
   if (endMs <= nowMs) return { window: null, issue: 'past' };
 
   return { window: candidate, issue: 'ok' };
@@ -156,20 +195,33 @@ export function readWindow(
 export function parseDraft(
   raw: unknown,
   now: string,
-): { readonly draft: InterpretationDraft; readonly windowIssue: WindowIssue } | null {
+): {
+  readonly draft: InterpretationDraft;
+  readonly windowIssue: WindowIssue;
+} | null {
   if (!isRecord(raw)) return null;
   const { window, areaName, preferredCategories, requiredSpotNames } = raw;
 
   const { window: parsedWindow, issue: windowIssue } = readWindow(window, now);
 
-  if (areaName !== null && areaName !== undefined && typeof areaName !== 'string') return null;
-  const parsedArea = typeof areaName === 'string' && areaName.trim().length > 0 ? areaName.trim() : null;
+  if (
+    areaName !== null &&
+    areaName !== undefined &&
+    typeof areaName !== 'string'
+  )
+    return null;
+  const parsedArea =
+    typeof areaName === 'string' && areaName.trim().length > 0
+      ? areaName.trim()
+      : null;
 
   const categories: SpotCategory[] = Array.isArray(preferredCategories)
     ? preferredCategories.filter(isSpotCategory)
     : [];
   const names: string[] = Array.isArray(requiredSpotNames)
-    ? requiredSpotNames.filter((n): n is string => typeof n === 'string' && n.length > 0)
+    ? requiredSpotNames.filter(
+        (n): n is string => typeof n === 'string' && n.length > 0,
+      )
     : [];
 
   return {
@@ -191,7 +243,10 @@ export function missingOf(draft: InterpretationDraft): readonly MissingField[] {
   return missing;
 }
 
-export function questionFor(missing: readonly MissingField[], windowIssue: WindowIssue = 'absent'): string {
+export function questionFor(
+  missing: readonly MissingField[],
+  windowIssue: WindowIssue = 'absent',
+): string {
   const askWindow = missing.includes('window');
   const askArea = missing.includes('area');
   if (askWindow && windowIssue === 'past') {
@@ -202,7 +257,9 @@ export function questionFor(missing: readonly MissingField[], windowIssue: Windo
   return QUESTION_AREA;
 }
 
-export async function interpret(input: InterpretInput): Promise<InterpretationResult> {
+export async function interpret(
+  input: InterpretInput,
+): Promise<InterpretationResult> {
   const generate = input.generate ?? defaultGenerateJson;
   const result = await generate({
     system: buildSystemPrompt(),
@@ -212,12 +269,21 @@ export async function interpret(input: InterpretInput): Promise<InterpretationRe
   if (!result.ok) return { kind: 'failed', error: result.error };
 
   const parsed = parseDraft(result.data, input.now);
-  if (parsed === null) return { kind: 'failed', error: { kind: 'invalid_schema' } };
+  if (parsed === null)
+    return { kind: 'failed', error: { kind: 'invalid_schema' } };
 
   const { draft, windowIssue } = parsed;
   const missing = missingOf(draft);
   if (draft.window !== null && draft.areaName !== null) {
-    return { kind: 'complete', draft: { ...draft, window: draft.window, areaName: draft.areaName } };
+    return {
+      kind: 'complete',
+      draft: { ...draft, window: draft.window, areaName: draft.areaName },
+    };
   }
-  return { kind: 'incomplete', missing, question: questionFor(missing, windowIssue), draft };
+  return {
+    kind: 'incomplete',
+    missing,
+    question: questionFor(missing, windowIssue),
+    draft,
+  };
 }

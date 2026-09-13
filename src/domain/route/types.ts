@@ -1,5 +1,9 @@
 import type { SpotCoordinates } from '@/shared/spot';
-import type { RouteCandidate, RouteRequest, TimeWindow } from '@/shared/routeRequest';
+import type {
+  RouteCandidate,
+  RouteRequest,
+  TimeWindow,
+} from '@/shared/routeRequest';
 import type { SpotCategory } from '@/shared/spot';
 
 /**
@@ -14,9 +18,10 @@ import type { SpotCategory } from '@/shared/spot';
 export type OrderingSource = 'llm' | 'rule';
 
 /** 구간 시간이 실측인지 직선거리 추정인지(T41). */
-export type LegSource = 'tmap' | 'estimate';
+export type LegSource = 'osm' | 'tmap' | 'estimate';
 
-export type DropReason = 'outside_window' | 'outside_area' | 'over_time' | 'user';
+export type DropReason =
+  'outside_window' | 'outside_area' | 'over_time' | 'user';
 
 export const START_ID = 'start';
 
@@ -46,7 +51,10 @@ export interface DroppedSpot {
 }
 
 export interface Itinerary {
-  readonly start: { readonly coord: SpotCoordinates; readonly departAt: string };
+  readonly start: {
+    readonly coord: SpotCoordinates;
+    readonly departAt: string;
+  };
   readonly window: TimeWindow;
   readonly stops: readonly ItineraryStop[];
   /** `stops.length`개. `legs[i]`는 `stops[i]`에 **도착하는** 구간이다. */
@@ -90,7 +98,10 @@ export type PlanFailure =
       readonly dropped: readonly DroppedSpot[];
     }
   | { readonly kind: 'interpretation_failed' }
-  | { readonly kind: 'service_unavailable'; readonly service: 'llm' | 'geocoding' };
+  | {
+      readonly kind: 'service_unavailable';
+      readonly service: 'llm' | 'geocoding';
+    };
 
 export interface PlanSuccess {
   readonly kind: 'ok';
@@ -100,4 +111,5 @@ export interface PlanSuccess {
   readonly unmatchedRequiredNames: readonly string[];
 }
 
-export type PlanOutcome = PlanSuccess | { readonly kind: 'failed'; readonly failure: PlanFailure };
+export type PlanOutcome =
+  PlanSuccess | { readonly kind: 'failed'; readonly failure: PlanFailure };

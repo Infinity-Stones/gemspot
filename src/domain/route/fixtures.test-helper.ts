@@ -55,7 +55,10 @@ export const PARK_F: RouteCandidate = {
 export const ALL_SPOTS = [SHOP_A, CAFE_B, BOOK_C, FOOD_D, DESSERT_E, PARK_F];
 
 export const REQUEST_14_16: RouteRequest = {
-  window: { start: '2026-09-12T14:00:00+09:00', end: '2026-09-12T16:00:00+09:00' },
+  window: {
+    start: '2026-09-12T14:00:00+09:00',
+    end: '2026-09-12T16:00:00+09:00',
+  },
   area: { name: '성수동', center: START },
   preferredCategories: ['cafe'],
   requiredSpotIds: [],
@@ -70,14 +73,38 @@ export const SPEC_LEG_SECONDS: Readonly<Record<string, number>> = {
 
 export function specLegs(): readonly Leg[] {
   return [
-    { fromId: 'start', toId: 'a', distanceM: 600, durationS: 480, source: 'tmap', path: [START, SHOP_A.coord] },
-    { fromId: 'a', toId: 'b', distanceM: 500, durationS: 380, source: 'tmap', path: [SHOP_A.coord, CAFE_B.coord] },
-    { fromId: 'b', toId: 'c', distanceM: 500, durationS: 320, source: 'tmap', path: [CAFE_B.coord, BOOK_C.coord] },
+    {
+      fromId: 'start',
+      toId: 'a',
+      distanceM: 600,
+      durationS: 480,
+      source: 'tmap',
+      path: [START, SHOP_A.coord],
+    },
+    {
+      fromId: 'a',
+      toId: 'b',
+      distanceM: 500,
+      durationS: 380,
+      source: 'tmap',
+      path: [SHOP_A.coord, CAFE_B.coord],
+    },
+    {
+      fromId: 'b',
+      toId: 'c',
+      distanceM: 500,
+      durationS: 320,
+      source: 'tmap',
+      path: [CAFE_B.coord, BOOK_C.coord],
+    },
   ];
 }
 
 /** 항상 성공하는 실측 스텁. 고정 초를 주면 그 값, 없으면 400초 · 500 m. */
-export function stubRoute(seconds: Readonly<Record<string, number>> = {}, calls: string[] = []): WalkingRouteFn {
+export function stubRoute(
+  seconds: Readonly<Record<string, number>> = {},
+  calls: string[] = [],
+): WalkingRouteFn {
   return (from, to) => {
     const key = `${String(from.latitude)},${String(from.longitude)}>${String(to.latitude)},${String(to.longitude)}`;
     calls.push(key);
@@ -86,24 +113,38 @@ export function stubRoute(seconds: Readonly<Record<string, number>> = {}, calls:
     const durationS = seconds[`${idFrom}>${idTo}`] ?? 400;
     return Promise.resolve({
       ok: true,
+      source: 'tmap',
       data: { distanceM: 500, durationS, path: [from, to] },
     });
   };
 }
 
 function idOf(coord: { latitude: number; longitude: number }): string {
-  if (coord.latitude === START.latitude && coord.longitude === START.longitude) return 'start';
-  return ALL_SPOTS.find((s) => s.coord.latitude === coord.latitude && s.coord.longitude === coord.longitude)?.id ?? '?';
+  if (coord.latitude === START.latitude && coord.longitude === START.longitude)
+    return 'start';
+  return (
+    ALL_SPOTS.find(
+      s =>
+        s.coord.latitude === coord.latitude &&
+        s.coord.longitude === coord.longitude,
+    )?.id ?? '?'
+  );
 }
 
 /** 항상 실패하는 실측 스텁(타임아웃). */
 export const failingRoute: WalkingRouteFn = () =>
-  Promise.resolve({ ok: false, error: { kind: 'http', error: { kind: 'timeout', message: 't' } } });
+  Promise.resolve({
+    ok: false,
+    error: { kind: 'http', error: { kind: 'timeout', message: 't' } },
+  });
 
 /** 고정 JSON을 돌려주는 LLM 스텁. 호출 횟수를 셀 수 있게 배열을 받는다. */
-export function stubGenerate(responses: readonly unknown[], calls: string[] = []): GenerateJson {
+export function stubGenerate(
+  responses: readonly unknown[],
+  calls: string[] = [],
+): GenerateJson {
   let i = 0;
-  return (input) => {
+  return input => {
     calls.push(input.user);
     const data = responses[Math.min(i, responses.length - 1)];
     i += 1;

@@ -7,6 +7,7 @@ import type { RoutePlanState } from '@/app/(main)/route/planState';
 import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import type { PlanFailure } from '@/domain/route';
 import { ItineraryList } from './ItineraryList';
+import { ItineraryMap } from './ItineraryMap';
 import { PlanFailureNotice } from './PlanFailureNotice';
 import { UPLOAD_PATH } from '@/shared/routes';
 
@@ -36,7 +37,7 @@ interface Props {
   readonly loadFailed: boolean;
 }
 
-const EXAMPLE = '오늘 2시부터 4시까지 성수동에서 카페 들르면서 걷고 싶어';
+const EXAMPLE = '지금부터 두 시간 동안 성수동에서 카페 들르면서 걷고 싶어';
 
 const shell = css({
   display: 'flex',
@@ -256,6 +257,10 @@ export function RouteComposer({ action, spotCount, loadFailed }: Props) {
         <p className={notice} role="alert">
           저장한 스팟을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
         </p>
+      )}
+
+      {state.status === 'done' && state.outcome.kind === 'ok' && (
+        <ItineraryMap itinerary={state.outcome.itinerary} />
       )}
 
       {state.status === 'done' && state.outcome.kind === 'ok' && (
