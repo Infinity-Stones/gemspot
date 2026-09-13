@@ -56,6 +56,7 @@ describe('카카오 Local 키워드 검색', () => {
           category: DOCUMENT.category_name,
           roadAddress: DOCUMENT.road_address_name,
           jibunAddress: DOCUMENT.address_name,
+          coordinates: { latitude: 37.5482, longitude: 127.0454 },
         },
       ],
     });
@@ -80,6 +81,7 @@ describe('카카오 Local 키워드 검색', () => {
           category: DOCUMENT.category_name,
           roadAddress: '',
           jibunAddress: DOCUMENT.address_name,
+          coordinates: { latitude: 37.5482, longitude: 127.0454 },
         },
       ],
     });
@@ -89,6 +91,16 @@ describe('카카오 Local 키워드 검색', () => {
     expect(
       parseLocalPlace({ ...DOCUMENT, place_name: ' 카페 <별> & 달 ' })?.name,
     ).toBe('카페 <별> & 달');
+  });
+
+  it.each([
+    { x: '', y: '' },
+    { x: 'NaN', y: '37' },
+    { x: '127', y: '100' },
+  ])('잘못된 좌표를 (0, 0)이나 다른 출발점으로 사용하지 않는다: %j', values => {
+    expect(parseLocalPlace({ ...DOCUMENT, ...values })).not.toHaveProperty(
+      'coordinates',
+    );
   });
 
   it.each([null, '', '   '])(

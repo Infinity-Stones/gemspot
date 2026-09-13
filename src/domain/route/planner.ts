@@ -8,7 +8,7 @@ import type { LegCache, WalkingRouteFn } from './legs';
 import { measureLegs } from './legs';
 import { proposeOrder } from './propose';
 import { schedule, withoutLastOptional } from './schedule';
-import type { GeocodeFn } from './startPoint';
+import type { AreaSearchFn, GeocodeFn } from './startPoint';
 import { resolveArea } from './startPoint';
 import type {
   DroppedSpot,
@@ -33,6 +33,7 @@ import { START_ID } from './types';
 export interface PlannerDeps {
   readonly generate?: GenerateJson;
   readonly geocode?: GeocodeFn;
+  readonly searchArea?: AreaSearchFn;
   readonly route?: WalkingRouteFn;
 }
 
@@ -99,7 +100,7 @@ export async function planRoute(input: PlanRouteInput): Promise<PlanOutcome> {
   }
 
   const { draft } = interpretation;
-  const area = await resolveArea(draft.areaName, deps.geocode);
+  const area = await resolveArea(draft.areaName, deps.geocode, deps.searchArea);
   if (area.kind === 'not_found') {
     return {
       kind: 'failed',

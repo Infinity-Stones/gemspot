@@ -119,6 +119,7 @@ describe('planRoute — 제안하지 않는 경우(T47)', () => {
         ]),
         geocode: () =>
           Promise.resolve({ ok: true, data: { totalCount: 0, hits: [] } }),
+        searchArea: () => Promise.resolve({ ok: true, places: [] }),
       },
     });
     expect(outcome).toMatchObject({
