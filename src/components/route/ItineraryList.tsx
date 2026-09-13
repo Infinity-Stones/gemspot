@@ -22,22 +22,21 @@ const shell = css({
   px: '6',
   py: '6',
   rounded: 'panel',
-  borderWidth: '0',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.line',
   bg: 'ui.surface',
-  boxShadow: 'floating',
 });
 
 const head = css({ display: 'flex', flexDirection: 'column', gap: '1' });
-const headline = css({ textStyle: 'subheading', fontWeight: 'medium' });
+const headline = css({ textStyle: 'subheading' });
 const muted = css({ textStyle: 'bodySm', color: 'ui.subtle' });
 
 const badge = css({
   px: '3',
   py: '2',
-  rounded: 'nav',
-  bg: 'ui.blueWash',
+  rounded: 'control',
+  bg: 'ui.tag',
   color: 'ui.ink',
   textStyle: 'bodySm',
 });
@@ -46,7 +45,7 @@ const badge = css({
 const warning = css({
   px: '3',
   py: '2',
-  rounded: 'nav',
+  rounded: 'control',
   bg: 'ui.muted',
   color: 'ui.ink',
   textStyle: 'bodySm',
@@ -87,7 +86,7 @@ const number = css({
 });
 
 const stopBody = css({ display: 'flex', flexDirection: 'column', gap: '1' });
-const stopTitle = css({ textStyle: 'body', fontWeight: 'semibold' });
+const stopTitle = css({ textStyle: 'body', fontWeight: 'medium' });
 const edge = css({
   textStyle: 'bodySm',
   color: 'ui.subtle',

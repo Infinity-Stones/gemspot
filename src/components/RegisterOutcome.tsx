@@ -27,20 +27,16 @@ interface Props {
 const shell = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '4',
-  p: '6',
+  gap: '3',
+  p: '4',
   rounded: 'panel',
-  borderWidth: '0',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.line',
   bg: 'ui.surface',
-  boxShadow: 'floating',
 });
 
-const groupTitle = css({
-  textStyle: 'subheading',
-  fontWeight: 'semibold',
-});
+const groupTitle = css({ textStyle: 'subheading' });
 
 const list = css({
   display: 'flex',
@@ -57,7 +53,7 @@ const row = css({
   flexWrap: 'wrap',
   alignItems: 'baseline',
   gap: '2',
-  textStyle: 'bodySm',
+  textStyle: 'body',
 });
 
 const registeredName = css({
@@ -71,8 +67,9 @@ const mapLink = css({
 });
 
 const rejectedGroup = css({
-  pt: '4',
-  borderTopWidth: '1px',
+  pt: '3',
+  mt: '1',
+  borderTopWidth: 'hairline',
   borderTopStyle: 'solid',
   borderTopColor: 'ui.line',
 });

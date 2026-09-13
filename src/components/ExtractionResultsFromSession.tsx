@@ -46,13 +46,13 @@ const empty = css({
   flexDirection: 'column',
   gap: '3',
   alignItems: 'flex-start',
-  p: '6',
+  p: '4',
   rounded: 'panel',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'dashed',
   borderColor: 'ui.border',
   color: 'ui.subtle',
-  textStyle: 'bodySm',
+  textStyle: 'body',
 });
 
 const savingNote = css({

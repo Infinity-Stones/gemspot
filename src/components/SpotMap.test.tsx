@@ -78,6 +78,7 @@ function installNaverMaps() {
         Map: FakeMap,
         Marker: FakeMarker,
         Event: eventApi,
+        Position: { BOTTOM_LEFT: 8 },
       },
     },
   });

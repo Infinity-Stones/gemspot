@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { css } from 'styled-system/css';
+import { defaultButton } from './uiStyles';
 
 interface Props {
   placeName: string;
@@ -13,11 +14,12 @@ const panel = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '2',
-  px: '6',
-  py: '6',
+  p: '4',
   bg: 'ui.surface',
   rounded: 'panel',
-  boxShadow: 'floating',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
 });
 
 // 닫기를 제목 줄에 둔다. 주소 줄에 함께 두면 긴 주소가 버튼을 화면 밖으로
@@ -31,22 +33,7 @@ const titleRow = css({
 
 const name = css({ textStyle: 'subheading' });
 
-const closeLink = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexShrink: '0',
-  minWidth: '11',
-  minHeight: '11',
-  px: '4',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.muted',
-  color: 'ui.ink',
-  textStyle: 'bodySm',
-});
+const closeLink = defaultButton;
 
 const addressRow = css({
   display: 'flex',

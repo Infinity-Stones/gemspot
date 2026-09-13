@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import type { Itinerary } from '@/domain/route';
 import { useTheme } from '@/hooks/useTheme';
-import { loadNaverMaps, subscribeNaverMapsAuthFailure } from '../naverMaps';
+import {
+  bottomLeftControls,
+  loadNaverMaps,
+  subscribeNaverMapsAuthFailure,
+} from '../naverMaps';
 import type { NaverMap, NaverMaps, NaverMarker } from '../naverMaps';
 import { legsToLines } from './routePresentation';
 
@@ -16,27 +20,24 @@ const pin = css({
   height: '8',
   px: '2',
   rounded: 'full',
-  bg: 'violet.600',
-  color: 'white',
+  bg: 'ui.accent',
+  color: 'ui.onAccent',
   fontWeight: 'bold',
   boxShadow: 'md',
-  borderWidth: '2px',
-  borderColor: 'white',
-  _dark: { bg: 'violet.400', color: 'slate.950', borderColor: 'slate.950' },
+  borderWidth: 'thick',
+  borderColor: 'ui.surface',
 });
 const frame = css({
   position: 'relative',
   height: '[360px]',
   rounded: 'xl',
   overflow: 'hidden',
-  bg: 'slate.100',
-  _dark: { bg: 'slate.900' },
+  bg: 'ui.muted',
 });
 const canvas = css({
   width: 'full',
   height: 'full',
-  color: 'violet.600',
-  _dark: { color: 'violet.400' },
+  color: 'ui.accentText',
 });
 const overlay = css({
   position: 'absolute',
@@ -49,18 +50,16 @@ const overlay = css({
   p: '6',
   textAlign: 'center',
   textStyle: 'sm',
-  color: 'slate.700',
-  bg: 'slate.100',
-  _dark: { color: 'slate.300', bg: 'slate.900' },
+  color: 'ui.subtle',
+  bg: 'ui.muted',
 });
 const retryButton = css({
   rounded: 'lg',
   px: '4',
   py: '2',
-  bg: 'violet.600',
-  color: 'white',
+  bg: 'ui.accent',
+  color: 'ui.onAccent',
   cursor: 'pointer',
-  _dark: { bg: 'violet.500' },
 });
 
 export function RouteMap({ itinerary }: { readonly itinerary: Itinerary }) {
@@ -86,6 +85,7 @@ export function RouteMap({ itinerary }: { readonly itinerary: Itinerary }) {
         map = new maps.Map(container.current, {
           center: new maps.LatLng(point.latitude, point.longitude),
           zoom: 16,
+          ...bottomLeftControls(maps),
         });
         instance.current = { maps, map };
         setStatus('ready');
@@ -202,8 +202,7 @@ export function RouteMap({ itinerary }: { readonly itinerary: Itinerary }) {
       <p
         className={css({
           textStyle: 'sm',
-          color: 'slate.600',
-          _dark: { color: 'slate.400' },
+          color: 'ui.subtle',
         })}
       >
         출발 → {itinerary.stops.map((_, i) => String(i + 1)).join(' → ')}

@@ -22,7 +22,13 @@ export default function NewSpotPage() {
   return (
     <WorkflowPage
       title="핀 찍기"
-      description="기억해 두고 싶은 곳이 있나요? 가게를 찾고, 지도에서 위치를 확인한 뒤 나만의 장소로 저장하세요."
+      description={
+        <>
+          기억해 두고 싶은 곳이 있나요?
+          <br />
+          가게를 찾고, 지도에서 위치를 확인한 뒤 나만의 장소로 저장하세요.
+        </>
+      }
       guidance="가게 이름으로 검색하거나, 알고 있는 주소를 직접 입력할 수 있어요."
     >
       <PinSpotForm action={pinSpotAction} />

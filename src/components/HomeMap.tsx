@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { css } from 'styled-system/css';
+import { defaultButton } from './uiStyles';
 import { IntroSplash } from './IntroSplash';
 import type { MapMarker } from './SpotMap';
 import { SpotMap } from './SpotMap';
@@ -38,20 +39,7 @@ const noticeText = css({
   color: 'ui.subtle',
 });
 
-const retryButton = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '11',
-  px: '5',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.surface',
-  textStyle: 'bodySm',
-  cursor: 'pointer',
-});
+const retryButton = defaultButton;
 
 export function HomeMap({ spot, markers }: Props) {
   const router = useRouter();

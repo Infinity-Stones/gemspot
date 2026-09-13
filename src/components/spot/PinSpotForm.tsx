@@ -2,6 +2,13 @@
 
 import { useActionState, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
+import {
+  defaultButton,
+  field as fieldBox,
+  fieldLabel,
+  input,
+  primaryButton,
+} from '../uiStyles';
 import type { PinDraft, PinFormState } from '@/app/(main)/spots/new/pinState';
 import { IDLE_PIN_STATE } from '@/app/(main)/spots/new/pinState';
 import type { PinFailure } from '@/app/(main)/spots/new/pinState';
@@ -41,35 +48,19 @@ interface Props {
 const form = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '5',
+  gap: '4',
   width: 'full',
-  p: { base: '6', md: '8' },
+  p: { base: '4', md: '6' },
   bg: 'ui.surface',
   rounded: 'panel',
-  boxShadow: 'preview',
-});
-
-const field = css({ display: 'flex', flexDirection: 'column', gap: '2' });
-
-const label = css({
-  textStyle: 'bodySm',
-  fontWeight: 'medium',
-  color: 'ui.ink',
-});
-
-const control = css({
-  width: 'full',
-  px: '4',
-  py: '3',
-  rounded: 'input',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.input',
-  color: 'ui.ink',
-  textStyle: 'body',
-  _placeholder: { color: 'ui.subtle' },
+  borderColor: 'ui.line',
 });
+
+const field = fieldBox;
+const label = fieldLabel;
+const control = input;
 
 const hint = css({
   textStyle: 'bodySm',
@@ -77,58 +68,17 @@ const hint = css({
 });
 
 // 플로팅 자리의 버튼은 줄을 꽉 채운다 — 화면 아래에서 좌우로 흔들리지 않는다.
-const blockAction = css({
-  justifyContent: 'center',
-  width: 'full',
-  minHeight: '12',
-});
+const blockAction = css({ width: 'full' });
 
-const primary = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  px: '5',
-  py: '3',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.action',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  cursor: 'pointer',
-  textStyle: 'button',
-  fontWeight: 'semibold',
-  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-});
-
-/**
- * 화면 안에서 후보를 불러오는 동작 — 검색. 저장과 같은 무게로 두면 무엇을
- * 먼저 눌러야 하는지가 사라지므로 면을 채우지 않는다.
- */
-const secondary = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  px: '5',
-  py: '3',
-  rounded: 'control',
-  borderWidth: '[1.5px]',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'transparent',
-  color: 'ui.ink',
-  cursor: 'pointer',
-  textStyle: 'bodySm',
-  fontWeight: 'medium',
-  _hover: { bg: 'ui.muted' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-});
+const primary = primaryButton;
+const secondary = defaultButton;
 
 const preview = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '3',
   rounded: 'panel',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.line',
   overflow: 'hidden',
@@ -159,10 +109,8 @@ const inlineField = css({
 
 const inlineAction = css({
   flexShrink: '0',
-  justifyContent: 'center',
-  // 입력 칸과 높이를 맞추고, 글자가 접히지 않을 만큼은 넓힌다.
-  minWidth: { base: '16', sm: '24' },
-  minHeight: '12',
+  // 글자가 접히지 않을 만큼은 넓힌다.
+  minWidth: { base: '16', sm: '20' },
   whiteSpace: 'nowrap',
 });
 
@@ -183,24 +131,28 @@ const candidateButton = css({
   width: 'full',
   px: '4',
   py: '3',
-  rounded: 'nav',
-  borderWidth: '1px',
+  rounded: 'control',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.line',
   bg: 'ui.surface',
   color: 'ui.ink',
   textAlign: 'left',
   cursor: 'pointer',
-  _hover: { borderColor: 'ui.accent', bg: 'ui.muted' },
+  transition: 'colors',
+  _hover: { borderColor: 'ui.accent' },
 });
 
 const alert = css({
-  px: '4',
-  py: '3',
-  rounded: 'nav',
+  px: '3',
+  py: '2',
+  rounded: 'control',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
   bg: 'ui.muted',
   color: 'ui.ink',
-  textStyle: 'bodySm',
+  textStyle: 'body',
 });
 
 /**

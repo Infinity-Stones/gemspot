@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { css } from 'styled-system/css';
+import { pageDescription, pageTitle } from '@/components/uiStyles';
 import { HOME_PATH } from '@/shared/routes';
 
 /**
@@ -22,16 +23,9 @@ const shell = css({
 
 const mark = css({ width: '[72px]', height: 'auto', opacity: '[0.6]' });
 
-const title = css({
-  textStyle: 'heading',
-  fontWeight: 'extrabold',
-  letterSpacing: 'tight',
-});
+const title = pageTitle;
 
-const message = css({
-  textStyle: 'bodySm',
-  color: 'ui.subtle',
-});
+const message = pageDescription;
 
 const homeLink = css({
   display: 'inline-flex',

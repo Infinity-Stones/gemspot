@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
-import { loadNaverMaps, readNaverMaps } from './naverMaps';
+import { bottomLeftControls, loadNaverMaps, readNaverMaps } from './naverMaps';
 import type {
   NaverEventListener,
   NaverMap,
@@ -183,7 +183,14 @@ export function SpotMap({
         const center = new maps.LatLng(startLatitude, startLongitude);
 
         mapsRef.current = maps;
-        mapRef.current = new maps.Map(element, { center, zoom: DEFAULT_ZOOM });
+        mapRef.current = new maps.Map(element, {
+          center,
+          zoom: DEFAULT_ZOOM,
+          // 네이버 로고와 저작권 표기는 가리면 안 된다(이용약관). 기본 자리가
+          // 오른쪽 아래라 화면 아래 떠 있는 동작 버튼과 겹치므로, 로고가 이미
+          // 있는 왼쪽으로 모은다.
+          ...bottomLeftControls(maps),
+        });
         setStatus('ready');
       })
       .catch(() => {

@@ -17,6 +17,7 @@ import { legsToLines } from './routePresentation';
 vi.mock('../naverMaps', () => ({
   loadNaverMaps: vi.fn(),
   subscribeNaverMapsAuthFailure: vi.fn(() => () => undefined),
+  bottomLeftControls: () => ({}),
 }));
 const base = schedule({
   start: { coord: START, departAt: REQUEST_14_16.window.start },
@@ -68,6 +69,7 @@ const sdk = {
   Map: MapStub,
   Marker: Overlay,
   Polyline: Overlay,
+  Position: { BOTTOM_LEFT: 8 },
 } as unknown as NaverMaps;
 
 describe('도보 지도', () => {

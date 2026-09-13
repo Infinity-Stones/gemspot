@@ -32,9 +32,14 @@ const alternative = css({
 export default function UploadPage() {
   return (
     <WorkflowPage
-      layout="stacked"
       title="스크린샷 업로드"
-      description="저장해 둔 한 장을, 가 보고 싶은 장소로. 가게 이름과 주소가 담긴 스크린샷을 골라 주세요."
+      description={
+        <>
+          저장해 둔 한 장을, 가 보고 싶은 장소로.
+          <br />
+          가게 이름과 주소가 담긴 스크린샷을 골라 주세요.
+        </>
+      }
       guidance={
         <Link className={alternative} href={SPOT_NEW_PATH}>
           주소를 알고 있다면 직접 핀 찍기
