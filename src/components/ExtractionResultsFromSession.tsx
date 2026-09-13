@@ -10,6 +10,7 @@ import {
 import { css } from 'styled-system/css';
 import { CANDIDATES_SESSION_KEY } from '@/app/(main)/upload/extractState';
 import { registerSpotsAction } from '@/app/(main)/upload/results/actions';
+import { previewSpotLocationAction } from '@/app/(main)/upload/results/previewAction';
 import type { RegisterSpotsResult } from '@/app/(main)/upload/results/registerState';
 import { UPLOAD_PATH } from '@/shared/routes';
 import { isSpotCategory, type SpotCandidate } from '@/shared/spot';
@@ -137,7 +138,11 @@ export function ExtractionResultsFromSession() {
 
   return (
     <>
-      <ExtractionResults candidates={candidates} onContinue={register} />
+      <ExtractionResults
+        candidates={candidates}
+        onContinue={register}
+        locateAddress={previewSpotLocationAction}
+      />
       {saving && <p className={savingNote}>지도에 등록하는 중…</p>}
       {result !== null && !saving && <RegisterOutcome result={result} />}
     </>

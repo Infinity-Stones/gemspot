@@ -8,6 +8,8 @@ import type { SpotCandidate, SpotCategory } from '@/shared/spot';
 import { SPOT_CATEGORIES, isSpotCategory } from '@/shared/spot';
 import { labelOf } from '@/shared/spotCategory';
 import type { FormEvent } from 'react';
+import { SpotLocationPreview } from './spot/SpotLocationPreview';
+import type { LocateSpotAddress } from './spot/SpotLocationPreview';
 
 export interface UploadImage {
   /** 업로드 한 장의 식별자. 후보 id와 달리 한 이미지에서 나온 후보들이 공유한다. */
@@ -52,6 +54,8 @@ interface Props {
   candidates: readonly ExtractionResultCandidate[];
   /** 생략하면 선택은 가능하지만 STEP 4로 넘기는 완료 버튼은 비활성화된다. */
   onContinue?: ContinueWithCandidates;
+  /** 주소를 저장하지 않고 지도에서 미리 확인하는 경계. */
+  locateAddress?: LocateSpotAddress;
 }
 
 type ResultKind = 'success' | 'failure';
@@ -595,7 +599,11 @@ function receiptKey(candidates: readonly ExtractionResultCandidate[]): string {
   return JSON.stringify(candidates);
 }
 
-function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
+function ExtractionResultsReceipt({
+  candidates,
+  onContinue,
+  locateAddress,
+}: Props) {
   // OCR 후보와 사용자가 확정한 수동 입력 후보가 함께 사는 STEP 3의 목록 상태.
   // 서버 저장은 T15의 명시적인 저장 선택 뒤에만 일어나며 여기서는 호출하지 않는다.
   const [reviewCandidates, setReviewCandidates] = useState(candidates);
@@ -750,6 +758,13 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
                     ) : null}
                   </div>
                 </div>
+                {locateAddress !== undefined && (
+                  <SpotLocationPreview
+                    name={candidate.name}
+                    address={candidate.roadAddress}
+                    locate={locateAddress}
+                  />
+                )}
                 <label className={decideRow}>
                   <span className={fieldLabel}>저장할 카테고리 선택</span>
                   <select
@@ -834,12 +849,8 @@ function ExtractionResultsReceipt({ candidates, onContinue }: Props) {
   );
 }
 
-export function ExtractionResults({ candidates, onContinue }: Props) {
+export function ExtractionResults(props: Props) {
   return (
-    <ExtractionResultsReceipt
-      key={receiptKey(candidates)}
-      candidates={candidates}
-      {...(onContinue === undefined ? {} : { onContinue })}
-    />
+    <ExtractionResultsReceipt key={receiptKey(props.candidates)} {...props} />
   );
 }
