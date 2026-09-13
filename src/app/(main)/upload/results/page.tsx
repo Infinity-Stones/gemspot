@@ -1,4 +1,5 @@
 import { css } from 'styled-system/css';
+import { pageDescription, pageTitle } from '@/components/uiStyles';
 import { BackLink } from '@/components/BackLink';
 import { BrandLink } from '@/components/BrandLink';
 import { ExtractionResultsFromSession } from '@/components/ExtractionResultsFromSession';
@@ -28,14 +29,9 @@ const heading = css({
   gap: '5',
 });
 
-const title = css({
-  textStyle: { base: 'heading', md: 'display' },
-});
+const title = pageTitle;
 
-const lede = css({
-  textStyle: 'bodySm',
-  color: 'ui.subtle',
-});
+const lede = pageDescription;
 
 /**
  * 추출 결과 — 메인 플로우의 STEP 3.

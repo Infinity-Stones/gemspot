@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { css } from 'styled-system/css';
+import { defaultButton, primaryButton } from './uiStyles';
 import { FloatingActionBar } from './FloatingActionBar';
 import { UploadAnalysisStatus, UploadScanOverlay } from './UploadAnalysis';
 import type { ExtractState } from '@/app/(main)/upload/extractState';
@@ -89,33 +90,6 @@ const shell = css({
 });
 
 /**
- * 화면 안에서 끝나는 동작 — 파일 선택. 눌러도 이 화면에 그대로 남는다.
- *
- * 제출 버튼보다 가볍게, 중립색 외곽선을 두른 캡슐로 표시한다.
- */
-const button = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '2',
-  minHeight: '11',
-  px: '5',
-  rounded: 'control',
-  // 1px은 이 크기에서 묻힌다.
-  borderWidth: '[1.5px]',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  // 면을 채우지 않는다. 상자 바탕이 그대로 비쳐 제출 버튼보다 한 단 뒤로 간다.
-  bg: 'transparent',
-  color: 'ui.ink',
-  cursor: 'pointer',
-  textStyle: 'bodySm',
-  fontWeight: 'medium',
-  transition: 'colors',
-  _hover: { bg: 'ui.muted' },
-});
-
-/**
  * 파일 입력은 화면에서 감춘다 — 브라우저 기본 모양은 OS마다 다르고 안에 있는
  * "선택된 파일 없음" 문구를 지울 수 없다.
  *
@@ -142,12 +116,11 @@ const dropZone = css({
   gap: '5',
   px: '6',
   rounded: 'panel',
-  borderWidth: '0',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
+  borderWidth: 'hairline',
+  borderStyle: 'dashed',
+  borderColor: 'ui.border',
   bg: 'ui.surface',
   color: 'ui.subtle',
-  boxShadow: 'preview',
 });
 
 const uploadIcon = css({
@@ -172,11 +145,10 @@ const cell = css({
   width: 'full',
   rounded: 'panel',
   overflow: 'hidden',
-  borderWidth: '0',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.line',
   bg: 'ui.surface',
-  boxShadow: 'card',
 });
 
 const thumb = css({
@@ -196,10 +168,10 @@ const removeButton = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '11',
-  height: '11',
+  width: 'control',
+  height: 'control',
   rounded: 'control',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.border',
   bg: 'ui.surface',
@@ -207,14 +179,14 @@ const removeButton = css({
   cursor: 'pointer',
   textStyle: 'bodySm',
   lineHeight: 'none',
-  _hover: { borderColor: 'ui.border', color: 'ui.subtle' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  boxShadow: 'floating',
+  transition: 'colors',
+  _hover: { color: 'ui.danger', borderColor: 'ui.dangerBorder' },
+  _disabled: { color: 'ui.border', cursor: 'not-allowed' },
 });
 
 const fileName = css({
-  px: '6',
-  py: '5',
+  px: '4',
+  py: '3',
   textStyle: 'bodySm',
   color: 'ui.subtle',
   overflow: 'hidden',
@@ -222,21 +194,22 @@ const fileName = css({
   whiteSpace: 'nowrap',
 });
 
+// 실패 안내는 Ant의 alert과 같은 자리 — 옅은 바탕에 같은 계열 1px 선.
 const warning = css({
   width: 'full',
-  p: '6',
+  p: '4',
   rounded: 'panel',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.muted',
+  borderColor: 'ui.dangerBorder',
+  bg: 'ui.dangerWash',
   color: 'ui.ink',
 });
 
 const warningTitle = css({
-  textStyle: 'bodySm',
+  textStyle: 'body',
   fontWeight: 'medium',
-  mb: '2',
+  mb: '1',
 });
 
 const warningList = css({
@@ -262,34 +235,11 @@ const fallbackActions = css({
   mt: '3',
 });
 
-/** 실패 안내와 복구 동작도 중립색 지면 위에 둔다. */
-const retryButton = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  px: '3',
-  py: '2',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.muted',
-  color: 'ui.ink',
-  cursor: 'pointer',
-  textStyle: 'bodySm',
-  fontWeight: 'medium',
-  transition: 'colors',
-  _hover: { bg: 'ui.surface', borderColor: 'ui.border' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-  minHeight: '11',
-});
-
 /** 상자의 글자색을 그대로 쓰고 밑줄로만 링크임을 드러낸다. */
 const fallbackLink = css({
-  textStyle: 'bodySm',
-  fontWeight: 'medium',
-  color: 'ui.ink',
+  textStyle: 'body',
+  color: 'ui.accentText',
   textDecoration: 'underline',
-  _hover: { color: 'ui.ink' },
 });
 
 /**
@@ -345,32 +295,8 @@ function explainFailure(reason: ExtractFailureReason): string {
   }
 }
 
-/**
- * 이 화면을 끝내고 다음으로 넘기는 동작 — 제출. 화면에서 가장 강하다.
- */
-const submitButton = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  gap: '2',
-  // 고른 뒤 눌러야 하는 유일한 버튼이다. 미리보기 폭에 맞춰 크게 둔다.
-  width: 'full',
-
-  minHeight: '12',
-  px: '5',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.action',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  cursor: 'pointer',
-  textStyle: 'button',
-  fontWeight: 'semibold',
-  transition: 'colors',
-  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-});
+/** 이 화면을 끝내고 다음으로 넘기는 동작. 미리보기 폭에 맞춰 가득 채운다. */
+const submitButton = css({ width: 'full' });
 
 /**
  * 앞선 업로드가 결과 화면에 넘겨 둔 blob URL. 없으면 null.
@@ -589,7 +515,7 @@ export function UploadForm({ action }: Props) {
             <path d="M22 39l8-9 12 13M36 36l6-6 9 10" />
             <circle cx="38" cy="21" r="4" />
           </svg>
-          <button type="button" className={button} onClick={openPicker}>
+          <button type="button" className={defaultButton} onClick={openPicker}>
             스크린샷 고르기
           </button>
           <p className={formatHint}>가게 이름과 주소가 보이는 한 장</p>
@@ -637,7 +563,7 @@ export function UploadForm({ action }: Props) {
                   사진을 다시 고르게 하지 않는다 — 실패의 원인이 사진에 있었던
                   적은 없다.
                 */
-                  <button type="submit" className={retryButton}>
+                  <button type="submit" className={defaultButton}>
                     다시 시도
                   </button>
                 )}
@@ -686,7 +612,7 @@ export function UploadForm({ action }: Props) {
             <FloatingActionBar>
               <button
                 type="submit"
-                className={submitButton}
+                className={`${primaryButton} ${submitButton}`}
                 disabled={pending}
                 aria-busy={pending}
               >

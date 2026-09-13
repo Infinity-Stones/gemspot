@@ -40,8 +40,16 @@ export interface NaverMaps {
   Point: new (x: number, y: number) => NaverPoint;
   Map: new (
     element: HTMLElement,
-    options: { center: NaverLatLng; zoom: number },
+    options: {
+      center: NaverLatLng;
+      zoom: number;
+      logoControlOptions?: { position: number };
+      mapDataControlOptions?: { position: number };
+      scaleControlOptions?: { position: number };
+    },
   ) => NaverMap;
+  /** 컨트롤을 놓을 자리. SDK가 주는 상수를 그대로 쓴다. */
+  Position: { BOTTOM_LEFT: number };
   Marker: new (options: {
     position: NaverLatLng;
     map: NaverMap;
@@ -79,6 +87,21 @@ export function subscribeNaverMapsAuthFailure(
   authFailureListeners.add(listener);
   return () => {
     authFailureListeners.delete(listener);
+  };
+}
+
+/**
+ * 네이버 로고와 저작권 표기를 왼쪽 아래로 모은다.
+ *
+ * 가리면 안 되는 표기인데(이용약관) 기본 자리가 오른쪽 아래라, 화면 아래
+ * 떠 있는 동작 버튼과 겹친다. 로고가 이미 있는 쪽으로 붙여 둔다.
+ */
+export function bottomLeftControls(maps: NaverMaps) {
+  const position = maps.Position.BOTTOM_LEFT;
+  return {
+    logoControlOptions: { position },
+    mapDataControlOptions: { position },
+    scaleControlOptions: { position },
   };
 }
 

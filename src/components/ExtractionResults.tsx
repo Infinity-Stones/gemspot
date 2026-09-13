@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
+import {
+  card,
+  defaultButton,
+  field,
+  fieldLabel,
+  input,
+  primaryButton,
+  sectionTitle,
+} from './uiStyles';
 import { FloatingActionBar } from './FloatingActionBar';
 import { Toast } from './Toast';
 import type { SpotCandidate, SpotCategory } from '@/shared/spot';
@@ -63,7 +72,7 @@ type ResultKind = 'success' | 'failure';
 const shell = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '6',
+  gap: '5',
 });
 
 const alertBackdrop = css({
@@ -73,7 +82,7 @@ const alertBackdrop = css({
   display: 'grid',
   placeItems: 'center',
   p: '6',
-  bg: 'design.ink/30',
+  bg: 'gray.11/45',
 });
 
 const alertCard = css({
@@ -81,57 +90,41 @@ const alertCard = css({
   maxWidth: 'md',
   display: 'flex',
   flexDirection: 'column',
-  gap: '5',
+  gap: '4',
   p: '6',
   rounded: 'panel',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
   bg: 'ui.surface',
   color: 'ui.ink',
+  // 떠 있는 것만 그림자를 든다. 카드까지 그림자를 주면 무엇이 위에 있는지가
+  // 사라진다.
   boxShadow: 'floating',
 });
 
 const alertCopy = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '2',
+  gap: '1',
 });
 
-const alertTitle = css({
-  textStyle: 'subheading',
-  fontWeight: 'bold',
-});
+const alertTitle = css({ textStyle: 'subheading' });
 
-const alertDescription = css({
-  textStyle: 'bodySm',
-  color: 'ui.subtle',
-});
+const alertDescription = css({ textStyle: 'body', color: 'ui.subtle' });
 
 const alertCounts = css({
-  p: '4',
-  rounded: 'panel',
-  bg: 'ui.tag',
-  color: 'ui.onTag',
+  p: '3',
+  rounded: 'control',
+  bg: 'ui.muted',
+  color: 'ui.ink',
   textAlign: 'center',
-  fontWeight: 'semibold',
+  textStyle: 'body',
 });
 
-const alertButton = css({
-  minHeight: '11',
-  px: '5',
-  rounded: 'control',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { bg: 'ui.actionHover' },
-});
+const albumCard = card;
 
 const list = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '4',
+  gap: '3',
   m: '0',
   p: '0',
   listStyle: 'none',
@@ -140,38 +133,10 @@ const list = css({
 const album = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '4',
+  gap: '3',
   m: '0',
   p: '0',
   listStyle: 'none',
-});
-
-const albumCard = css({
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-  rounded: 'panel',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
-  bg: 'ui.surface',
-  boxShadow: 'floating',
-});
-
-// 원본은 주소를 옮겨 적을 때만 필요하다. 카드마다 큰 사진을 펼쳐 두면
-// 정작 채워야 할 입력칸이 화면 밖으로 밀린다.
-const previewButton = css({
-  minHeight: '11',
-  px: '3',
-  rounded: 'control',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  color: 'ui.ink',
-  textStyle: 'bodySm',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { borderColor: 'ui.accent', bg: 'ui.muted' },
 });
 
 const previewDialog = css({
@@ -183,14 +148,12 @@ const previewDialog = css({
   maxWidth: 'lg',
   p: '0',
   rounded: 'panel',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
   bg: 'ui.surface',
   overflow: 'hidden',
+  boxShadow: 'floating',
   // 딤은 뒤를 가리는 게 아니라 앞을 띄우는 장치다. 꽉 채우면 원본이 어느
   // 화면 위에 떠 있는지 사라진다.
-  '&::backdrop': { bg: 'design.ink/30' },
+  '&::backdrop': { bg: 'gray.11/45' },
 });
 
 const previewImage = css({
@@ -208,17 +171,6 @@ const previewFooter = css({
   p: '3',
 });
 
-const previewClose = css({
-  minHeight: '11',
-  px: '4',
-  rounded: 'control',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  textStyle: 'bodySm',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-});
-
 const albumDetails = css({
   display: 'flex',
   flexDirection: 'column',
@@ -230,7 +182,7 @@ const albumDetails = css({
 const failureNames = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: '4',
+  gap: '3',
   width: 'full',
   m: '0',
   p: '0',
@@ -242,194 +194,63 @@ const manualForm = css({
   flexDirection: 'column',
   gap: '3',
   width: 'full',
-  p: '4',
-  rounded: 'nav',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
+  p: '3',
+  rounded: 'control',
   bg: 'ui.muted',
 });
 
-const field = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1',
-  width: 'full',
-});
-
-const fieldLabel = css({
-  textStyle: 'bodySm',
-  fontWeight: 'semibold',
-  color: 'ui.ink',
-});
-
-const input = css({
-  width: 'full',
-  minHeight: '11',
-  px: '3',
-  rounded: 'input',
-  // 1px은 이 크기에서 묻혀 입력칸이 있는지조차 보이지 않는다.
-  borderWidth: '[1.5px]',
-  borderStyle: 'solid',
-  borderColor: 'ui.border',
-  bg: 'ui.surface',
-  color: 'ui.ink',
-  textStyle: 'body',
-});
-
-const addButton = css({
-  width: 'full',
-  minHeight: '11',
-  px: '4',
-  rounded: 'control',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.action',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  textStyle: 'button',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { borderColor: 'ui.action', bg: 'ui.actionHover' },
-});
-
-// 아이콘은 작지만 누를 자리는 44px을 지킨다. 그 여백이 카드 안에서 빈칸처럼
-// 보이지 않도록, 남는 만큼을 음수 마진으로 되돌린다.
+// 삭제는 카드 오른쪽 위. 글자 없이 아이콘만 두되 누를 자리는 44px을 지키고,
+// 남는 여백이 카드 안에서 빈칸처럼 보이지 않게 음수 마진으로 되돌린다.
 const deleteButton = css({
   alignSelf: 'flex-end',
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  width: '11',
-  height: '11',
+  width: 'control',
+  height: 'control',
   mt: '-2',
-  mb: '-3',
+  mb: '-2',
   mr: '-2',
   rounded: 'control',
-  color: 'ui.accentText',
+  color: 'ui.subtle',
   cursor: 'pointer',
-  _hover: { color: 'ui.accentText', bg: 'ui.tag' },
+  transition: 'colors',
+  _hover: { color: 'ui.danger', bg: 'ui.dangerWash' },
 });
 
-// 한 건이 어디서 시작해 어디서 끝나는지 카드가 말한다. 추출된 값과 그에
-// 딸린 카테고리가 같은 면 위에 있어야 두 건이 섞여 읽히지 않는다.
-const card = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '3',
-  p: '6',
-  rounded: 'panel',
-  borderWidth: 'hairline',
-  borderStyle: 'solid',
-  borderColor: 'ui.line',
-  bg: 'ui.surface',
-  boxShadow: 'floating',
-});
-
-const sectionTitle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '2',
-  mb: '3',
-  textStyle: 'body',
-  fontWeight: 'semibold',
-  color: 'ui.accentText',
-});
-
-// 건수는 색만으로 구분되지 않게 숫자를 그대로 읽힌다. 원은 그 숫자가
-// 제목이 아니라 개수라는 것만 표시한다.
+// 목록 제목과 건수. 건수는 색만으로 읽히지 않게 숫자를 그대로 적는다.
 const countBadge = css({
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
-  minWidth: '6',
-  height: '6',
+  minWidth: '5',
+  height: '5',
   px: '1',
-  rounded: 'full',
-  bg: 'ui.action',
-  color: 'ui.onAction',
+  rounded: 'badge',
+  bg: 'ui.muted',
+  color: 'ui.subtle',
   textStyle: 'caption',
-  fontWeight: 'bold',
-});
-
-const failureSectionTitle = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '2',
-  mb: '3',
-  textStyle: 'body',
-  fontWeight: 'semibold',
-  color: 'ui.accentText',
-});
-
-const failureCountBadge = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minWidth: '6',
-  height: '6',
-  px: '1',
-  rounded: 'full',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  textStyle: 'caption',
-  fontWeight: 'bold',
-});
-
-const decideRow = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1',
 });
 
 const decideSelect = css({ width: 'full' });
 
-const continueButton = css({
-  width: 'full',
-  minHeight: '11',
-  px: '5',
-  rounded: 'control',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  textStyle: 'button',
-  fontWeight: 'semibold',
-  cursor: 'pointer',
-  _hover: { bg: 'ui.actionHover' },
-  _disabled: {
-    bg: 'ui.muted',
-    color: 'ui.subtle',
-    cursor: 'not-allowed',
-  },
-});
-
-// 추출해 온 값(상호명 · 주소)만 따로 담는다. 이 카드 안에서 사용자가 고르는
-// 것(카테고리 · 저장/삭제)과 서버가 읽어 온 것이 같은 바탕에 섞이면, 무엇을
-// 확인해야 하는지가 드러나지 않는다.
+// 추출해 온 값(상호명 · 주소)만 따로 담는다. 사용자가 고르는 것과 서버가
+// 읽어 온 것이 같은 바탕에 섞이면 무엇을 확인해야 하는지가 드러나지 않는다.
 const extracted = css({
   display: 'flex',
   flexDirection: 'column',
   gap: '1',
-  px: '4',
-  py: '3',
-  rounded: 'nav',
-  bg: 'ui.tag',
+  px: '3',
+  py: '2',
+  rounded: 'control',
+  bg: 'ui.muted',
 });
 
-const candidateName = css({
-  textStyle: 'body',
-  fontWeight: 'semibold',
-  color: 'ui.onTag',
-});
+const candidateName = css({ textStyle: 'subheading', color: 'ui.ink' });
 
-const address = css({
-  textStyle: 'bodySm',
-  color: 'ui.accentText',
-});
+const address = css({ textStyle: 'bodySm', color: 'ui.subtle' });
 
-const manualOrigin = css({
-  textStyle: 'caption',
-  color: 'ui.accentText',
-});
+const manualOrigin = css({ textStyle: 'caption', color: 'ui.accentText' });
 
 function isSuccessfulCandidate(
   candidate: ExtractionResultCandidate,
@@ -497,7 +318,7 @@ function ImagePreview({ image, onClose }: ImagePreviewProps) {
       <img className={previewImage} src={image.src} alt={image.alt} />
       <div className={previewFooter}>
         <button
-          className={previewClose}
+          className={primaryButton}
           type="button"
           onClick={() => {
             dialogRef.current?.close();
@@ -588,7 +409,7 @@ function ManualCandidateForm({
           required
         />
       </label>
-      <button className={addButton} type="submit">
+      <button className={primaryButton} type="submit">
         성공 데이터로 추가
       </button>
     </form>
@@ -705,7 +526,7 @@ function ExtractionResultsReceipt({
           </p>
           <button
             ref={summaryButtonRef}
-            className={alertButton}
+            className={primaryButton}
             type="button"
             onClick={() => {
               setIsSummaryOpen(false);
@@ -748,7 +569,7 @@ function ExtractionResultsReceipt({
           <ul className={list}>
             {successes.map(candidate => (
               <li className={card} key={candidate.id}>
-                <div className={decideRow}>
+                <div className={field}>
                   <span className={fieldLabel}>추출 정보</span>
                   <div className={extracted}>
                     <h3 className={candidateName}>{candidate.name}</h3>
@@ -765,7 +586,7 @@ function ExtractionResultsReceipt({
                     locate={locateAddress}
                   />
                 )}
-                <label className={decideRow}>
+                <label className={field}>
                   <span className={fieldLabel}>저장할 카테고리 선택</span>
                   <select
                     className={`${input} ${decideSelect}`}
@@ -795,16 +616,16 @@ function ExtractionResultsReceipt({
 
       {failureCount > 0 && (
         <section aria-label="주소 입력이 필요한 결과">
-          <h2 className={failureSectionTitle}>
+          <h2 className={sectionTitle}>
             실패 데이터
-            <span className={failureCountBadge}>{failureCount}</span>
+            <span className={countBadge}>{failureCount}</span>
           </h2>
           <ul className={album}>
             {failureAlbum.map(({ image, candidates: failedCandidates }) => (
               <li className={albumCard} key={image.id}>
                 <div className={albumDetails}>
                   <button
-                    className={previewButton}
+                    className={defaultButton}
                     type="button"
                     onClick={() => {
                       setPreviewImage(image);
@@ -834,7 +655,7 @@ function ExtractionResultsReceipt({
       {successes.length > 0 ? (
         <FloatingActionBar>
           <button
-            className={continueButton}
+            className={primaryButton}
             type="button"
             disabled={!canContinue}
             onClick={() => {

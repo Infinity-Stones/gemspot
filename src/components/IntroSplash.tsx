@@ -42,6 +42,18 @@ const splash = css({
 
 const hidden = css({ opacity: '[0]', pointerEvents: 'none' });
 
+// 만든 사람을 남기는 자리. 화면 가운데(슬로건·로고)와 섞이지 않게 아래에
+// 붙여 두고, 안전 영역만큼 띄운다.
+const credit = css({
+  position: 'absolute',
+  left: '0',
+  right: '0',
+  bottom: '[calc(24px + env(safe-area-inset-bottom))]',
+  textAlign: 'center',
+  textStyle: 'caption',
+  color: 'ui.subtle',
+});
+
 const slogan = css({
   textStyle: 'bodySm',
   fontWeight: 'medium',
@@ -134,6 +146,7 @@ export function IntroSplash({ isReady }: Props) {
         height={120}
         priority
       />
+      <p className={credit}>© {new Date().getFullYear()} 인피니티 스톤</p>
     </div>
   );
 }

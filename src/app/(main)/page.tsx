@@ -1,4 +1,5 @@
 import { css } from 'styled-system/css';
+import { pageDescription, pageTitle } from '@/components/uiStyles';
 import { SpotDetailPanel } from '@/components/SpotDetailPanel';
 import { HomeMap } from '@/components/HomeMap';
 import { BrandLink } from '@/components/BrandLink';
@@ -34,39 +35,56 @@ const screen = css({
   pb: '[calc(104px + env(safe-area-inset-bottom))]',
   display: 'grid',
   gridTemplateRows: 'auto minmax(320px, 1fr) auto',
-  gap: '8',
+  gap: '5',
   minHeight: '[100dvh]',
 });
-const intro = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  alignItems: 'flex-end',
-  justifyContent: 'space-between',
-  gap: '4',
-});
-const title = css({
-  mt: '4',
-  textStyle: { base: 'heading', md: 'display' },
-  textWrap: 'balance',
-});
-const description = css({ mt: '5', color: 'ui.subtle', textStyle: 'body' });
+const intro = css({ display: 'flex', flexDirection: 'column' });
+const title = `${pageTitle} ${css({ mt: '2' })}`;
+const description = `${pageDescription} ${css({ mt: '1' })}`;
+// 건수는 읽는 값이지 누르는 것이 아니다. 알약 배경과 여백을 두면 버튼으로
+// 보여서, 눌러도 아무 일이 없다는 걸 눌러 보고 알게 된다.
+// 건수는 지도 위에 띄운다. 제목 줄에 두면 좁은 화면에서 설명과 겹치고, 넓은
+// 화면에서는 반대쪽 끝으로 밀려 무엇에 대한 숫자인지 멀어진다.
 const count = css({
-  color: 'ui.onTag',
-  bg: 'ui.tag',
-  rounded: 'badge',
+  position: 'absolute',
+  top: '3',
+  left: '0',
+  right: '0',
+  width: 'fit',
+  mx: 'auto',
+  zIndex: 'docked',
   px: '4',
   py: '2',
+  // 지도 위에 얹히는 것은 지면 위 컨트롤이 아니라 떠 있는 표식이라, 이 자리만
+  // 캡슐로 둔다. 지도 UI의 관습이기도 하다.
+  rounded: 'full',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
+  bg: 'ui.surface',
+  color: 'ui.ink',
   textStyle: 'bodySm',
   fontWeight: 'medium',
   whiteSpace: 'nowrap',
+  boxShadow: 'floating',
+});
+
+// 문장에서 바뀌는 건 숫자뿐이다. 그 자리만 프라이머리로 짚어 주면 몇 곳인지가
+// 문장을 읽지 않아도 먼저 눈에 든다.
+const countValue = css({
+  color: 'ui.accentText',
+  fontWeight: 'bold',
+  fontVariantNumeric: 'tabular-nums',
 });
 const mapArea = css({
   position: 'relative',
   minHeight: '0',
   overflow: 'hidden',
   rounded: 'panel',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
   bg: 'ui.surface',
-  boxShadow: 'card',
 });
 const dataNotice = css({
   position: 'absolute',
@@ -76,9 +94,9 @@ const dataNotice = css({
   width: 'fit',
   mx: 'auto',
   zIndex: 'docked',
-  px: '5',
-  py: '3',
-  rounded: 'nav',
+  px: '4',
+  py: '2',
+  rounded: 'control',
   bg: 'ui.surface',
   color: 'ui.subtle',
   boxShadow: 'floating',
@@ -153,10 +171,12 @@ export default async function HomePage({ searchParams }: Props) {
             저장한 장소를 둘러보고, 나만의 동선을 만들어 보세요.
           </p>
         </div>
-        <p className={count}>저장한 장소 {spots.length}곳</p>
       </header>
       <div className={mapArea}>
         <HomeMap spot={spot} markers={markers} />
+        <p className={count}>
+          저장한 장소 <span className={countValue}>{spots.length}</span>곳
+        </p>
         {error !== null && (
           <p className={dataNotice} role="alert">
             저장한 스팟을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { css } from 'styled-system/css';
+import { primaryButton } from '../uiStyles';
 import type { RoutePlanState } from '@/app/(main)/route/planState';
 import { IDLE_STATE, MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import type { PlanFailure, PlanSuccess } from '@/domain/route';
@@ -57,17 +58,19 @@ const form = css({
   gap: '3',
   bg: 'ui.surface',
   rounded: 'panel',
-  p: { base: '6', md: '8' },
-  boxShadow: 'preview',
+  p: { base: '4', md: '6' },
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
 });
 
 const textarea = css({
   width: 'full',
-  minHeight: '48',
-  px: '5',
-  py: '5',
+  minHeight: '40',
+  px: '3',
+  py: '3',
   rounded: 'input',
-  borderWidth: '1px',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.border',
   bg: 'ui.input',
@@ -90,33 +93,20 @@ const counter = css({
   fontFamily: 'sans',
 });
 
-const button = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '2',
-  px: '5',
-  py: '3',
-  rounded: 'control',
-  borderWidth: '1px',
-  borderStyle: 'solid',
-  borderColor: 'ui.action',
-  bg: 'ui.action',
-  color: 'ui.onAction',
-  cursor: 'pointer',
-  textStyle: 'button',
-  fontWeight: 'semibold',
-  transition: 'colors',
-  _hover: { bg: 'ui.actionHover', borderColor: 'ui.action' },
-  _disabled: { opacity: '0.5', cursor: 'not-allowed' },
-});
+const button = primaryButton;
 
+// 안내는 프라이머리 계열의 옅은 바탕에 둔다. 파란 바탕은 이 화면 어디에도
+// 없는 색이라 알림만 다른 서비스에서 온 것처럼 보인다.
 const notice = css({
-  px: '6',
-  py: '8',
+  px: '4',
+  py: '4',
   rounded: 'panel',
-  bg: 'ui.blueWash',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.accentBorder',
+  bg: 'ui.accentMuted',
   color: 'ui.ink',
-  textStyle: 'bodySm',
+  textStyle: 'body',
 });
 
 const transcript = css({
@@ -145,8 +135,8 @@ const asked = css({
   maxWidth: '[85%]',
   px: '4',
   py: '2',
-  rounded: 'nav',
-  bg: 'ui.blueWash',
+  rounded: 'control',
+  bg: 'ui.tag',
   color: 'ui.ink',
   textStyle: 'bodySm',
 });

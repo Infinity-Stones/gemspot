@@ -9,13 +9,13 @@ const overlay = css({
   inset: '0',
   overflow: 'hidden',
   pointerEvents: 'none',
-  bg: 'design.ink/30',
+  bg: 'gray.11/45',
 });
 
 const scan = css({
   position: 'absolute',
   inset: '0',
-  borderBottomWidth: '2px',
+  borderBottomWidth: 'thick',
   borderBottomStyle: 'solid',
   borderBottomColor: 'ui.accent',
 
@@ -83,8 +83,8 @@ const copy = css({
 });
 
 const title = css({
-  textStyle: 'bodySm',
-  fontWeight: 'semibold',
+  textStyle: 'body',
+  fontWeight: 'medium',
   color: 'ui.ink',
 });
 

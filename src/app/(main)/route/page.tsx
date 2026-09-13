@@ -29,8 +29,16 @@ export default async function RoutePage() {
   return (
     <WorkflowPage
       title="동선 만들기"
-      description="모아 둔 장소를 오늘의 산책으로. 언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 들려주세요."
-      guidance="가고 싶은 동네와 시간을 알려주면, 저장한 장소를 걷기 좋은 순서로 이어 드려요."
+      description={
+        <>
+          모아 둔 장소를 오늘의 산책으로.
+          <br />
+          언제, 어디서, 어떻게 걷고 싶은지 한 문장으로 들려주세요.
+          <br />
+          가고 싶은 동네와 시간을 알려주면, 저장한 장소를 걷기 좋은 순서로 이어
+          드려요.
+        </>
+      }
     >
       <RouteComposer
         action={planRouteAction}

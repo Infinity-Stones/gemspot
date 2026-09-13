@@ -8,11 +8,21 @@ import { ROUTE_PATH, SPOT_NEW_PATH, UPLOAD_PATH } from '@/shared/routes';
 import { ThemeToggle } from './ThemeToggle';
 
 // 페이지 높이·지도 경계에 관계없이 현재 화면의 하단을 기준으로 둔다.
+//
+// 화면 아래에 동작 바가 깔린 페이지에서는 그 위로 올라간다. 바가 가로를 다
+// 쓰기 때문에 옆으로 비킬 자리가 없다. 바 높이(여백 16 + 컨트롤 44 + 아래
+// 여백 20)만큼 띄우고, 그 위에 다시 16px을 둔다.
 const dock = css({
   position: 'fixed',
   right: { base: '5', md: '8' },
   bottom: '[calc(24px + env(safe-area-inset-bottom))]',
   zIndex: 'docked',
+  'body:has([data-floating-bar]) &': {
+    bottom: {
+      base: '[calc(16px + 44px + max(20px, env(safe-area-inset-bottom)) + 16px)]',
+      lg: '[calc(24px + env(safe-area-inset-bottom))]',
+    },
+  },
 });
 const actions = css({
   display: 'flex',
@@ -25,22 +35,20 @@ const action = css.raw({
   alignItems: 'center',
   justifyContent: 'center',
   gap: '2',
-  minHeight: '12',
+  minHeight: 'control',
   px: '4',
   rounded: 'control',
-  borderWidth: '0',
+  borderWidth: 'hairline',
   borderStyle: 'solid',
   borderColor: 'ui.border',
-  bg: 'ui.surface/80',
+  bg: 'ui.surface',
   color: 'ui.ink',
-  backdropFilter: 'auto',
-  backdropBlur: 'md',
   textStyle: 'button',
   boxShadow: 'floating',
   whiteSpace: 'nowrap',
-  _hover: { bg: 'ui.surface/90' },
+  _hover: { borderColor: 'ui.accentHover', color: 'ui.accentText' },
   '&[aria-current=page]': {
-    outlineWidth: '2px',
+    outlineWidth: 'thick',
     outlineStyle: 'solid',
     outlineColor: 'ui.accent',
     outlineOffset: '0.5',
@@ -53,10 +61,16 @@ const action = css.raw({
   },
 });
 const linkAction = css(action);
+// 이 묶음에서 주 동작은 업로드 하나다. 채움은 그 하나만 든다.
 const uploadAction = css(action, {
+  borderColor: 'ui.accent',
   bg: 'ui.floatingAction',
   color: 'ui.onFloatingAction',
-  _hover: { bg: 'ui.floatingActionHover' },
+  _hover: {
+    borderColor: 'ui.floatingActionHover',
+    bg: 'ui.floatingActionHover',
+    color: 'ui.onFloatingAction',
+  },
 });
 const utilityRow = css({ display: 'flex', gap: '2' });
 const pinAction = css(action, { flex: '1', px: '3' });
@@ -72,8 +86,8 @@ const trigger = css({
   alignItems: 'center',
   justifyContent: 'center',
   gap: '2',
-  width: '14',
-  height: '14',
+  width: 'controlLg',
+  height: 'controlLg',
   listStyle: 'none',
   cursor: 'pointer',
   rounded: 'control',
@@ -92,7 +106,7 @@ const trigger = css({
     },
   },
   'details[open] > &': {
-    outlineWidth: '2px',
+    outlineWidth: 'thick',
     outlineStyle: 'solid',
     outlineColor: 'ui.accent',
     outlineOffset: '0.5',

@@ -3,9 +3,10 @@ import { defineConfig } from '@pandacss/dev';
 /**
  * Panda CSS 구성.
  *
- * DESIGN.md의 Jitter 팔레트·캡슐 모서리·타이포·확산 그림자를
- * 공식 프리셋 위에 이름 있는 토큰으로 등록한다.
- * 화면은 ui.* 시맨틱 토큰을 쓰고, 테마별 지면과 글자색은 여기서 짝을 이룬다.
+ * DESIGN.md의 Ant Design 기반 체계 — 프라이머리 보라, 중립 회색 축,
+ * 6·8px 모서리, 얕은 3단 그림자, 14px 본문 — 를 공식 프리셋 위에 이름 있는
+ * 토큰으로 등록한다. 화면은 ui.* 시맨틱 토큰을 쓰고, 테마별 지면과 글자색은
+ * 여기서 짝을 이룬다.
  *
  * `outdir`(styled-system/)은 커밋하지 않는다. `pnpm install`의 prepare 훅이
  * `panda codegen`을 돌려 만들고, tsconfig의 `styled-system/*` path와
@@ -41,32 +42,67 @@ export default defineConfig({
     extend: {
       tokens: {
         colors: {
-          design: {
-            studio: { value: '#f2f1f3' },
-            violet: { value: '#7a40ed' },
-            ink: { value: '#19171c' },
-            paper: { value: '#ffffff' },
-            hairline: { value: '#e5e4e7' },
-            mist: { value: '#97979b' },
-            slate: { value: '#6e6e73' },
-            black: { value: '#000000' },
-            plum: { value: '#17082c' },
-            lilac: { value: '#a981ff' },
-            lavender: { value: '#cab3f8' },
-            blue: { value: '#00b2ff' },
-            sky: { value: '#e6f4ff' },
-            ice: { value: '#a9dbff' },
-            volt: { value: '#f5ff63' },
-            darkSurface: { value: '#2d2933' },
+          // Ant Design v5의 색 생성 규칙을 프라이머리(#7a40ed)에 적용한 10단계.
+          // 6이 기준색, 5가 hover, 7이 active다.
+          primary: {
+            1: { value: '#f6f0ff' },
+            2: { value: '#ead9ff' },
+            3: { value: '#d5bbfc' },
+            4: { value: '#bd98f8' },
+            5: { value: '#a172f3' },
+            6: { value: '#7a40ed' },
+            7: { value: '#5f2bcc' },
+            8: { value: '#461aa6' },
+            9: { value: '#2f0d80' },
+            10: { value: '#1c0659' },
+          },
+          // Ant의 중립 계열. 지면·표면·보더·글자가 전부 이 축에서 나온다.
+          gray: {
+            1: { value: '#ffffff' },
+            2: { value: '#fafafa' },
+            3: { value: '#f5f5f5' },
+            4: { value: '#f0f0f0' },
+            5: { value: '#d9d9d9' },
+            6: { value: '#bfbfbf' },
+            7: { value: '#8c8c8c' },
+            8: { value: '#595959' },
+            9: { value: '#1f1f1f' },
+            10: { value: '#141414' },
+            11: { value: '#000000' },
+          },
+          // 다크에서 쓰는 중립. Ant 다크 테마의 지면·보더 값이다.
+          grayDark: {
+            container: { value: '#141414' },
+            elevated: { value: '#1f1f1f' },
+            border: { value: '#424242' },
+            split: { value: '#303030' },
+            text: { value: '#e6e6e6' },
+            textSecondary: { value: '#a6a6a6' },
+          },
+          status: {
+            error: { value: '#ff4d4f' },
+            errorBg: { value: '#fff2f0' },
+            errorBorder: { value: '#ffccc7' },
+            errorDark: { value: '#dc4446' },
+            errorBgDark: { value: '#2c1618' },
+            success: { value: '#52c41a' },
+            info: { value: '#1677ff' },
+            infoBg: { value: '#e6f4ff' },
           },
         },
+        // 선 굵기는 둘뿐이다. Ant의 1px이 기본이고, 강조가 필요한 자리만 2px.
+        borderWidths: {
+          hairline: { value: '1px' },
+          thick: { value: '2px' },
+        },
+        // Ant의 모서리: 기본 6, 큰 면 8, 작은 태그 4. 캡슐은 쓰지 않는다.
         radii: {
-          control: { value: '50px' },
-          panel: { value: '40px' },
-          hero: { value: '40px' },
-          input: { value: '26px' },
-          nav: { value: '20px' },
-          badge: { value: '40px' },
+          control: { value: '6px' },
+          panel: { value: '8px' },
+          hero: { value: '8px' },
+          input: { value: '6px' },
+          nav: { value: '8px' },
+          badge: { value: '4px' },
         },
         fonts: {
           sans: {
@@ -75,203 +111,247 @@ export default defineConfig({
           },
           display: {
             value:
-              'var(--font-inter-tight), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif',
+              'var(--font-inter), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif',
           },
         },
+        // Ant의 3단 그림자. 카드는 거의 눕고, 떠 있는 것만 확실히 뜬다.
         shadows: {
-          preview: {
-            value:
-              '0 152px 61px rgba(25,23,28,0.01), 0 85px 51px rgba(25,23,28,0.05), 0 38px 38px rgba(25,23,28,0.09), 0 9px 21px rgba(25,23,28,0.10)',
-          },
           card: {
             value:
-              '0 119px 48px rgba(0,0,0,0.01), 0 67px 40px rgba(0,0,0,0.05), 0 30px 30px rgba(0,0,0,0.09), 0 7px 16px rgba(0,0,0,0.10)',
+              '0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02)',
           },
           floating: {
             value:
-              '0 63px 25px rgba(0,0,0,0.01), 0 35px 21px rgba(0,0,0,0.05), 0 16px 16px rgba(0,0,0,0.09), 0 4px 9px rgba(0,0,0,0.10)',
+              '0 6px 16px 0 rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05)',
+          },
+          preview: {
+            value:
+              '0 6px 16px 0 rgba(0,0,0,0.08), 0 3px 6px -4px rgba(0,0,0,0.12), 0 9px 28px 8px rgba(0,0,0,0.05)',
           },
         },
-        sizes: { page: { value: '1200px' } },
+        sizes: {
+          page: { value: '1200px' },
+          // Ant의 컨트롤 높이(32/40)는 터치 타깃 44px에 못 미친다. 모바일
+          // 화면이라 기본을 44로 올리고, 큰 컨트롤만 48로 둔다.
+          control: { value: '44px' },
+          controlLg: { value: '48px' },
+        },
       },
       semanticTokens: {
         colors: {
           ui: {
             canvas: {
-              value: {
-                base: '{colors.design.studio}',
-                _dark: '{colors.design.ink}',
-              },
+              value: { base: '{colors.gray.3}', _dark: '{colors.gray.11}' },
             },
             surface: {
               value: {
-                base: '{colors.design.paper}',
-                _dark: '{colors.design.darkSurface}',
+                base: '{colors.gray.1}',
+                _dark: '{colors.grayDark.container}',
               },
             },
             muted: {
               value: {
-                base: '{colors.design.studio}',
-                _dark: '{colors.design.ink}',
+                base: '{colors.gray.2}',
+                _dark: '{colors.grayDark.elevated}',
               },
             },
             ink: {
               value: {
-                base: '{colors.design.ink}',
-                _dark: '{colors.design.paper}',
+                base: '{colors.gray.9}',
+                _dark: '{colors.grayDark.text}',
               },
             },
             subtle: {
               value: {
-                base: '{colors.design.slate}',
-                _dark: '{colors.design.mist}',
+                base: '{colors.gray.8}',
+                _dark: '{colors.grayDark.textSecondary}',
               },
             },
             border: {
               value: {
-                base: '{colors.design.hairline}',
-                _dark: '{colors.neutral.600}',
+                base: '{colors.gray.5}',
+                _dark: '{colors.grayDark.border}',
               },
             },
             line: {
               value: {
-                base: '{colors.design.hairline}',
-                _dark: '{colors.neutral.700}',
+                base: '{colors.gray.4}',
+                _dark: '{colors.grayDark.split}',
               },
             },
-            accent: { value: '{colors.design.violet}' },
-            onAccent: { value: '{colors.design.paper}' },
+            accent: { value: '{colors.primary.6}' },
+            accentHover: { value: '{colors.primary.5}' },
+            accentActive: { value: '{colors.primary.7}' },
+            accentBorder: {
+              value: {
+                base: '{colors.primary.3}',
+                _dark: '{colors.primary.8}',
+              },
+            },
+            onAccent: { value: '{colors.gray.1}' },
             accentText: {
               value: {
-                base: '{colors.design.violet}',
-                _dark: '{colors.design.lavender}',
+                base: '{colors.primary.6}',
+                _dark: '{colors.primary.4}',
               },
             },
-            action: {
-              value: {
-                base: '{colors.design.ink}',
-                _dark: '{colors.design.paper}',
-              },
-            },
-            onAction: {
-              value: {
-                base: '{colors.design.paper}',
-                _dark: '{colors.design.ink}',
-              },
-            },
-            actionHover: {
-              value: {
-                base: '{colors.design.darkSurface}',
-                _dark: '{colors.design.hairline}',
-              },
-            },
-            floatingAction: { value: '{colors.design.lavender}' },
-            onFloatingAction: { value: '{colors.design.plum}' },
-            floatingActionHover: { value: '{colors.design.lilac}' },
+            // 주 동작은 프라이머리다. 검정 채움 버튼을 따로 두면 화면마다
+            // 무엇이 주 동작인지가 달라진다.
+            action: { value: '{colors.primary.6}' },
+            onAction: { value: '{colors.gray.1}' },
+            actionHover: { value: '{colors.primary.5}' },
+            floatingAction: { value: '{colors.primary.6}' },
+            onFloatingAction: { value: '{colors.gray.1}' },
+            floatingActionHover: { value: '{colors.primary.5}' },
             tag: {
               value: {
-                base: '{colors.design.lavender}',
-                _dark: '{colors.design.plum}',
+                base: '{colors.primary.1}',
+                _dark: '{colors.primary.9}',
               },
             },
             onTag: {
               value: {
-                base: '{colors.design.plum}',
-                _dark: '{colors.design.lavender}',
+                base: '{colors.primary.7}',
+                _dark: '{colors.primary.3}',
               },
             },
             blueWash: {
               value: {
-                base: '{colors.design.sky}',
-                _dark: '{colors.design.darkSurface}',
+                base: '{colors.status.infoBg}',
+                _dark: '{colors.grayDark.elevated}',
               },
             },
             input: {
               value: {
-                base: '{colors.design.studio}',
-                _dark: '{colors.design.darkSurface}',
+                base: '{colors.gray.1}',
+                _dark: '{colors.grayDark.container}',
               },
             },
+            // 지면(#f5f5f5) 위에 놓이는 안내의 바탕. primary.1은 지면과 명도가
+            // 거의 같아 상자가 있는지조차 보이지 않는다.
+            accentMuted: {
+              value: {
+                base: '{colors.primary.2}',
+                _dark: '{colors.primary.9}',
+              },
+            },
+            // Ant의 끈 상태: 지면보다 한 단 눌린 회색 바탕에 흐린 글자,
+            // 테두리는 살아 있는 것과 같은 굵기로 남긴다.
+            disabled: {
+              value: {
+                base: '{colors.gray.3}',
+                _dark: '{colors.grayDark.elevated}',
+              },
+            },
+            onDisabled: {
+              value: { base: '{colors.gray.6}', _dark: '{colors.gray.7}' },
+            },
+            danger: {
+              value: {
+                base: '{colors.status.error}',
+                _dark: '{colors.status.errorDark}',
+              },
+            },
+            dangerBorder: {
+              value: {
+                base: '{colors.status.errorBorder}',
+                _dark: '{colors.status.errorDark}',
+              },
+            },
+            dangerWash: {
+              value: {
+                base: '{colors.status.errorBg}',
+                _dark: '{colors.status.errorBgDark}',
+              },
+            },
+            success: { value: '{colors.status.success}' },
           },
         },
       },
+      // Ant의 타입 스케일. 본문 14px이 기준이고, 제목은 20/24/30/38로 오른다.
       textStyles: {
         caption: {
           value: {
             fontFamily: 'sans',
             fontSize: '12px',
-            lineHeight: '1.5',
+            lineHeight: '1.67',
             fontWeight: '400',
           },
         },
+        // Ant의 작은 글자는 12px이지만 한글은 그 크기에서 획이 뭉친다.
+        // 화면에서 가장 많이 쓰는 단계라 13px로 한 칸만 올린다.
         bodySm: {
           value: {
             fontFamily: 'sans',
-            fontSize: '14px',
-            lineHeight: '1.5',
+            fontSize: '13px',
+            lineHeight: '1.6',
             fontWeight: '400',
           },
         },
         body: {
           value: {
             fontFamily: 'sans',
+            fontSize: '14px',
+            lineHeight: '1.5714',
+            fontWeight: '400',
+          },
+        },
+        // Ant의 fontSizeLG. 제목 바로 아래 한 문장처럼 본문보다 한 단 앞세울
+        // 자리에 쓴다.
+        bodyLg: {
+          value: {
+            fontFamily: 'sans',
             fontSize: '16px',
             lineHeight: '1.5',
-            letterSpacing: '-0.02em',
             fontWeight: '400',
           },
         },
         button: {
           value: {
             fontFamily: 'sans',
-            fontSize: '16px',
-            lineHeight: '1.5',
-            letterSpacing: '-0.02em',
-            fontWeight: '600',
+            fontSize: '14px',
+            lineHeight: '1.5714',
+            fontWeight: '500',
           },
         },
         subheading: {
           value: {
             fontFamily: 'sans',
-            fontSize: '21px',
-            lineHeight: '1.38',
-            letterSpacing: '-0.02em',
+            fontSize: '16px',
+            lineHeight: '1.5',
             fontWeight: '600',
           },
         },
         headingSm: {
           value: {
             fontFamily: 'sans',
-            fontSize: '26px',
-            lineHeight: '1.25',
+            fontSize: '20px',
+            lineHeight: '1.4',
             fontWeight: '600',
           },
         },
         heading: {
           value: {
-            fontFamily: 'display',
-            fontSize: '40px',
-            lineHeight: '1.2',
-            letterSpacing: '-0.03em',
-            fontWeight: '750',
+            fontFamily: 'sans',
+            fontSize: '24px',
+            lineHeight: '1.35',
+            fontWeight: '600',
           },
         },
         headingLg: {
           value: {
-            fontFamily: 'display',
-            fontSize: '48px',
-            lineHeight: '1.15',
-            letterSpacing: '-0.03em',
-            fontWeight: '750',
+            fontFamily: 'sans',
+            fontSize: '30px',
+            lineHeight: '1.27',
+            fontWeight: '600',
           },
         },
         display: {
           value: {
-            fontFamily: 'display',
-            fontSize: '80px',
-            lineHeight: '0.95',
-            letterSpacing: '-0.032em',
-            fontWeight: '800',
+            fontFamily: 'sans',
+            fontSize: '38px',
+            lineHeight: '1.21',
+            fontWeight: '600',
           },
         },
       },
