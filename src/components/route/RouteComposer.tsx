@@ -12,7 +12,7 @@ import { PlanFailureNotice } from './PlanFailureNotice';
 import { SPOT_NEW_PATH, UPLOAD_PATH } from '@/shared/routes';
 import type { RouteCandidate, RouteConditions } from '@/shared/routeRequest';
 import { InterpretationCard } from './InterpretationCard';
-import { RouteMap } from './RouteMap';
+import { ItineraryMap } from './ItineraryMap';
 
 /**
  * 한 문장을 받아 동선을 청하는 입력 — T44(#59).
@@ -309,7 +309,7 @@ export function RouteComposer({
             pending={pending}
             {...(replanAction === undefined ? {} : { onSubmit: replan })}
           />
-          <RouteMap itinerary={result.itinerary} />
+          <ItineraryMap itinerary={result.itinerary} />
           <ItineraryList
             itinerary={result.itinerary}
             areaName={result.request.area.name}

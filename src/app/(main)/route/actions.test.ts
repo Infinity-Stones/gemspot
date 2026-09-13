@@ -40,6 +40,21 @@ function routeForm(): FormData {
 }
 
 describe('planRouteAction 스팟 저장소', () => {
+  it('500자 대화에서도 최신 시간 정정이 잘리지 않는다', async () => {
+    domain.loadSpots.mockResolvedValue({ spots: [], error: null });
+    domain.planRoute.mockResolvedValue(FAILED_OUTCOME);
+    const form = new FormData();
+    const correction = '내일 오후 2시부터 4시까지 성수동';
+    form.set('sentence', correction);
+    form.set('history', '예전 대화'.repeat(100));
+    const result = await planRouteAction({ status: 'idle' }, form);
+    expect(result.status).toBe('done');
+    const { sentence } = domain.planRoute.mock.calls[0]?.[0] as {
+      sentence: string;
+    };
+    expect(sentence.length).toBeLessThanOrEqual(500);
+    expect(sentence).toBe(correction);
+  });
   beforeEach(() => {
     domain.loadSpots.mockReset();
     domain.planRoute.mockReset();

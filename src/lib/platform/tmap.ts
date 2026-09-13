@@ -1,5 +1,6 @@
 import type { SpotCoordinates } from '@/shared/spot';
 import { isSpotCoordinates } from '@/shared/spot';
+import type { WalkingRoute } from '@/shared/walkingRoute';
 import { tmapAppKey } from './env';
 import type { HttpFailure, PostJsonOptions } from './httpClient';
 import { postJson } from './httpClient';
@@ -16,17 +17,11 @@ import { postJson } from './httpClient';
  * 도메인은 `WalkingRoute`만 본다.
  */
 
-const PEDESTRIAN_ENDPOINT = 'https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1';
+const PEDESTRIAN_ENDPOINT =
+  'https://apis.openapi.sk.com/tmap/routes/pedestrian?version=1';
 
 /** 실측 응답은 GET보다 오래 걸린다. 기본 5초로는 정상 응답도 끊긴다. */
 const DEFAULT_TIMEOUT_MS = 8_000;
-
-export interface WalkingRoute {
-  readonly distanceM: number;
-  readonly durationS: number;
-  /** 보행 경로선. `[from, …, to]`. */
-  readonly path: readonly SpotCoordinates[];
-}
 
 export type WalkingRouteFailure =
   | { readonly kind: 'no_app_key' }
@@ -62,11 +57,16 @@ export function parseWalkingRoute(raw: unknown): WalkingRoute | null {
   if (!Array.isArray(features) || features.length === 0) return null;
 
   const first = features[0] as unknown;
-  const props = isRecord(first) && isRecord(first['properties']) ? first['properties'] : null;
+  const props =
+    isRecord(first) && isRecord(first['properties'])
+      ? first['properties']
+      : null;
   if (props === null) return null;
   const { totalDistance, totalTime } = props;
-  if (typeof totalDistance !== 'number' || typeof totalTime !== 'number') return null;
-  if (!Number.isFinite(totalDistance) || !Number.isFinite(totalTime)) return null;
+  if (typeof totalDistance !== 'number' || typeof totalTime !== 'number')
+    return null;
+  if (!Number.isFinite(totalDistance) || !Number.isFinite(totalTime))
+    return null;
 
   const path: SpotCoordinates[] = [];
   for (const feature of features as unknown[]) {
@@ -80,7 +80,12 @@ export function parseWalkingRoute(raw: unknown): WalkingRoute | null {
       if (point === null) continue;
       const last = path.at(-1);
       // 구간 경계에서 끝점과 다음 시작점이 같은 좌표로 겹친다. 하나만 남긴다.
-      if (last !== undefined && last.latitude === point.latitude && last.longitude === point.longitude) continue;
+      if (
+        last !== undefined &&
+        last.latitude === point.latitude &&
+        last.longitude === point.longitude
+      )
+        continue;
       path.push(point);
     }
   }
@@ -94,7 +99,11 @@ export async function walkingRoute(
   to: SpotCoordinates,
   options: WalkingRouteOptions = {},
 ): Promise<WalkingRouteOutcome> {
-  const { appKey = tmapAppKey(), timeoutMs = DEFAULT_TIMEOUT_MS, ...http } = options;
+  const {
+    appKey = tmapAppKey(),
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    ...http
+  } = options;
   if (appKey === null) return { ok: false, error: { kind: 'no_app_key' } };
 
   const result = await postJson<unknown>(
@@ -112,13 +121,17 @@ export async function walkingRoute(
     },
     { ...http, timeoutMs, headers: { appKey, ...http.headers } },
   );
-  if (!result.ok) return { ok: false, error: { kind: 'http', error: result.error } };
+  if (!result.ok)
+    return { ok: false, error: { kind: 'http', error: result.error } };
 
   const route = parseWalkingRoute(result.data);
   if (route === null) {
     return {
       ok: false,
-      error: { kind: 'http', error: { kind: 'parse', message: 'TMAP 응답에 경로가 없습니다' } },
+      error: {
+        kind: 'http',
+        error: { kind: 'parse', message: 'TMAP 응답에 경로가 없습니다' },
+      },
     };
   }
   return { ok: true, data: route };

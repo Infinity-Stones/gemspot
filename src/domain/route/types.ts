@@ -18,7 +18,7 @@ import type { SpotCategory } from '@/shared/spot';
 export type OrderingSource = 'llm' | 'rule';
 
 /** 구간 시간이 실측인지 직선거리 추정인지(T41). */
-export type LegSource = 'tmap' | 'estimate';
+export type LegSource = 'osm' | 'tmap' | 'estimate';
 
 export type DropReason =
   'outside_window' | 'outside_area' | 'over_time' | 'user';

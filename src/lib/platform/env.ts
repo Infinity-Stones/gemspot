@@ -40,11 +40,16 @@ export function naverApiKey(): string | null {
 /**
  * TMAP 보행자 경로 앱 키 (M7 구간 실측 · T40).
  *
- * 없으면 구간 도보 시간을 직선거리로 추정한다(T41). 그래도 여기 이름을 올려
+ * OSM 실패 시 보완용이다. 두 제공자 모두 실패하면 직선거리로 추정한다. 이름을 올려
  * 두는 이유는 필요한 키의 목록이 한 화면에 있어야 한다는 것이다.
  */
 export function tmapAppKey(): string | null {
   return readOptional('TMAP_APP_KEY');
+}
+
+/** OSRM 도보 프로필 서버 주소. 미설정이면 FOSSGIS 공개 도보 서버를 쓴다. */
+export function osmRoutingBaseUrl(): string | null {
+  return readOptional('OSM_ROUTING_BASE_URL');
 }
 
 /** OpenAI 호환 API 설정. 기본 주소·키·모델은 서버 환경 변수로만 지정한다. */

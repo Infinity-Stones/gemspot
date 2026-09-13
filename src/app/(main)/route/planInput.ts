@@ -167,7 +167,9 @@ export function readEditablePlan(
     )
       continue;
     if (
-      (leg['source'] !== 'tmap' && leg['source'] !== 'estimate') ||
+      (leg['source'] !== 'osm' &&
+        leg['source'] !== 'tmap' &&
+        leg['source'] !== 'estimate') ||
       !Array.isArray(leg['path']) ||
       leg['path'].length < 2 ||
       leg['path'].length > 10000 ||
