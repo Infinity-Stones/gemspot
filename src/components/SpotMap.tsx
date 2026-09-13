@@ -92,12 +92,22 @@ function loadNaverMaps(): Promise<NaverMaps> {
 
   return new Promise((resolve, reject) => {
     const existing = document.getElementById(SCRIPT_ID);
+    // 인증 실패로 전역 객체가 비워졌어도 이미 실린 script의 load 이벤트는
+    // 다시 오지 않는다. 재진입을 영원히 기다리게 하지 않고 실패로 판정한다.
+    if (
+      existing instanceof HTMLScriptElement &&
+      existing.dataset['state'] !== 'loading'
+    ) {
+      reject(new Error('지도 SDK를 사용할 수 없습니다'));
+      return;
+    }
     const script =
       existing instanceof HTMLScriptElement
         ? existing
         : document.createElement('script');
 
     const handleLoad = () => {
+      script.dataset['state'] = 'loaded';
       const maps = readNaverMaps();
       if (maps === null) {
         reject(new Error('지도 SDK가 실렸지만 naver.maps가 없습니다'));
@@ -110,6 +120,7 @@ function loadNaverMaps(): Promise<NaverMaps> {
     script.addEventListener(
       'error',
       () => {
+        script.dataset['state'] = 'failed';
         reject(new Error('지도 SDK를 받지 못했습니다'));
       },
       { once: true },
@@ -117,6 +128,7 @@ function loadNaverMaps(): Promise<NaverMaps> {
 
     if (existing === null) {
       script.id = SCRIPT_ID;
+      script.dataset['state'] = 'loading';
       script.src = SCRIPT_SOURCE;
       script.async = true;
       document.head.appendChild(script);
@@ -276,6 +288,10 @@ export function SpotMap({
       .then(maps => {
         const element = containerRef.current;
         if (cancelled || element === null) return;
+        if (readNaverMaps() !== maps) {
+          setStatus('failed');
+          return;
+        }
 
         const { latitude: startLatitude, longitude: startLongitude } =
           initialCenterRef.current;
@@ -291,8 +307,6 @@ export function SpotMap({
 
     return () => {
       cancelled = true;
-      mapRef.current?.destroy();
-      mapRef.current = null;
     };
   }, [hasCoordinate]);
 
@@ -307,7 +321,13 @@ export function SpotMap({
   useEffect(() => {
     const maps = mapsRef.current;
     const map = mapRef.current;
-    if (maps === null || map === null || !hasCoordinate) return;
+    if (
+      maps === null ||
+      map === null ||
+      readNaverMaps() !== maps ||
+      !hasCoordinate
+    )
+      return;
 
     map.setCenter(new maps.LatLng(latitude, longitude));
   }, [status, latitude, longitude, hasCoordinate]);
@@ -317,7 +337,13 @@ export function SpotMap({
   useEffect(() => {
     const maps = mapsRef.current;
     const map = mapRef.current;
-    if (maps === null || map === null || !fitMarkers || markers.length === 0)
+    if (
+      maps === null ||
+      map === null ||
+      readNaverMaps() !== maps ||
+      !fitMarkers ||
+      markers.length === 0
+    )
       return;
 
     const positions = markers.map(
@@ -343,7 +369,13 @@ export function SpotMap({
   useEffect(() => {
     const maps = mapsRef.current;
     const map = mapRef.current;
-    if (maps === null || map === null || !hasCoordinate) return;
+    if (
+      maps === null ||
+      map === null ||
+      readNaverMaps() !== maps ||
+      !hasCoordinate
+    )
+      return;
 
     const position = new maps.LatLng(latitude, longitude);
     const marks: NaverMarker[] = [];
@@ -369,6 +401,9 @@ export function SpotMap({
     }
 
     return () => {
+      // 인증 실패 시 SDK가 지도를 파괴하고 naver.maps까지 비운다.
+      // 이전 인스턴스의 메서드는 더 이상 호출할 수 없다.
+      if (readNaverMaps() !== maps) return;
       for (const mark of marks) mark.setMap(null);
     };
   }, [status, latitude, longitude, hasCoordinate, hasMarker, hasLocationDot]);
@@ -378,10 +413,11 @@ export function SpotMap({
   useEffect(() => {
     const maps = mapsRef.current;
     const map = mapRef.current;
-    if (maps === null || map === null) return;
+    if (maps === null || map === null || readNaverMaps() !== maps) return;
 
     const drawn = new Map<string, NaverMarker>();
     const redraw = () => {
+      if (readNaverMaps() !== maps) return;
       const bounds = map.getBounds();
       for (const spot of markers) {
         const position = new maps.LatLng(spot.latitude, spot.longitude);
@@ -414,11 +450,26 @@ export function SpotMap({
     redraw();
 
     return () => {
-      maps.Event.removeListener(listener);
-      for (const marker of drawn.values()) marker.setMap(null);
+      if (readNaverMaps() === maps) {
+        maps.Event.removeListener(listener);
+        for (const marker of drawn.values()) marker.setMap(null);
+      }
       drawn.clear();
     };
   }, [status, markers, onMarkerSelect]);
+
+  // effect 정리는 선언 순서대로 실행된다. 마커와 리스너보다 먼저 지도를
+  // 파괴하면 뒤의 setMap(null)이 이미 비워진 SDK 내부를 읽어 화면 이동이
+  // 실패한다. 지도 자체의 정리는 모든 오버레이 effect 뒤에 둔다.
+  useEffect(() => {
+    return () => {
+      const maps = mapsRef.current;
+      const map = mapRef.current;
+      mapRef.current = null;
+      mapsRef.current = null;
+      if (maps !== null && readNaverMaps() === maps) map?.destroy();
+    };
+  }, [hasCoordinate]);
 
   // 좌표가 숫자가 아니면 지도를 부를 것도 없다 — 렌더 중에 판정되므로 상태로
   // 들고 있지 않는다.

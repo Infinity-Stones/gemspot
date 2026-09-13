@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MapMarker } from './SpotMap';
 import { SpotMap } from './SpotMap';
@@ -89,8 +89,107 @@ describe('SpotMap 범위와 정리', () => {
     FakeMarker.instances = [];
     eventApi.listeners = [];
     eventApi.removed = [];
+    document.getElementById('naver-maps-sdk')?.remove();
     installNaverMaps();
   });
+
+  it('화면을 떠날 때 마커와 리스너를 먼저 정리하고 지도를 파괴한다', async () => {
+    const { unmount } = render(
+      <SpotMap
+        latitude={37.5}
+        longitude={127}
+        placeName="선택한 스팟"
+        markers={MARKERS}
+        hasLocationDot
+      />,
+    );
+    await waitFor(() => expect(FakeMarker.instances).toHaveLength(4));
+
+    const map = FakeMap.instances[0];
+    for (const marker of FakeMarker.instances) {
+      marker.setMap.mockImplementation(() => {
+        if (map.destroy.mock.calls.length > 0) {
+          throw new Error('파괴된 지도에서는 마커를 분리할 수 없습니다');
+        }
+      });
+    }
+    map.destroy.mockImplementation(() => {
+      for (const listener of eventApi.listeners) {
+        expect(eventApi.removed).toContain(listener);
+      }
+    });
+
+    expect(unmount).not.toThrow();
+    for (const marker of FakeMarker.instances) {
+      expect(marker.setMap).toHaveBeenCalledWith(null);
+    }
+    expect(map.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('인증 실패로 SDK가 제거되어도 재렌더와 화면 이동이 실패하지 않는다', async () => {
+    const { rerender, unmount } = render(
+      <SpotMap
+        latitude={37.5}
+        longitude={127}
+        placeName="선택한 스팟"
+        markers={MARKERS}
+      />,
+    );
+    await waitFor(() => expect(FakeMarker.instances).toHaveLength(3));
+    const map = FakeMap.instances[0];
+    const invalidSdk = () => {
+      throw new Error('인증 실패로 SDK가 제거되었습니다');
+    };
+    map.destroy.mockImplementation(invalidSdk);
+    map.setCenter.mockImplementation(invalidSdk);
+    for (const marker of FakeMarker.instances)
+      marker.setMap.mockImplementation(invalidSdk);
+    Object.assign(globalThis, { naver: { maps: null } });
+
+    expect(() =>
+      rerender(
+        <SpotMap
+          latitude={37.6}
+          longitude={127}
+          placeName="다른 스팟"
+          markers={MARKERS}
+        />,
+      ),
+    ).not.toThrow();
+    expect(unmount).not.toThrow();
+    expect(map.destroy).not.toHaveBeenCalled();
+    expect(eventApi.removed).toHaveLength(0);
+  });
+
+  it.each(['loaded', 'failed'])(
+    'SDK script가 %s 상태인데 전역 객체가 없으면 재진입 로딩을 끝낸다',
+    async state => {
+      Object.assign(globalThis, { naver: { maps: null } });
+      const script = document.createElement('script');
+      script.id = 'naver-maps-sdk';
+      script.dataset['state'] = state;
+      document.head.appendChild(script);
+      const onSettled = vi.fn();
+
+      render(
+        <SpotMap
+          latitude={37.5}
+          longitude={127}
+          placeName="선택한 스팟"
+          onSettled={onSettled}
+        />,
+      );
+
+      await waitFor(() =>
+        expect(screen.getByRole('status')).toHaveTextContent(
+          '지도를 불러오지 못했습니다.',
+        ),
+      );
+      expect(onSettled).toHaveBeenCalledOnce();
+      expect(FakeMap.instances).toHaveLength(0);
+      script.remove();
+    },
+  );
 
   it('여러 핀의 범위를 한 번 맞추고 목록 변경 때 이전 마커를 걷는다', async () => {
     const { rerender, unmount } = render(
