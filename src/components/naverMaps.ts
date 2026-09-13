@@ -23,7 +23,7 @@ export interface NaverMap {
   destroy(): void;
 }
 
-interface NaverEventListener {
+export interface NaverEventListener {
   readonly _brand: 'naverEventListener';
 }
 

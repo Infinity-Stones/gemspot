@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { css } from 'styled-system/css';
 import { loadNaverMaps, readNaverMaps } from './naverMaps';
-import type { NaverMap, NaverMaps, NaverMarker } from './naverMaps';
+import type {
+  NaverEventListener,
+  NaverMap,
+  NaverMaps,
+  NaverMarker,
+} from './naverMaps';
 
 /** 지도에 찍을 한 건. 도메인 모양을 그대로 받지 않는다 — 지도는 좌표와 이름만 안다. */
 export interface MapMarker {
@@ -295,7 +300,21 @@ export function SpotMap({
     const map = mapRef.current;
     if (maps === null || map === null || readNaverMaps() !== maps) return;
 
-    const drawn = new Map<string, NaverMarker>();
+    // 마커와 그 클릭 리스너는 함께 산다. 지도에서 떼기만 하고 리스너를 두면
+    // SDK의 등록부가 마커와 그 클로저를 계속 붙들어, 지도를 앞뒤로 옮길수록
+    // 같은 스팟의 리스너가 쌓인다.
+    interface DrawnMarker {
+      readonly marker: NaverMarker;
+      readonly clickListener: NaverEventListener | null;
+    }
+
+    const drawn = new Map<string, DrawnMarker>();
+
+    const erase = ({ marker, clickListener }: DrawnMarker) => {
+      if (clickListener !== null) maps.Event.removeListener(clickListener);
+      marker.setMap(null);
+    };
+
     const redraw = () => {
       if (readNaverMaps() !== maps) return;
       const bounds = map.getBounds();
@@ -311,16 +330,17 @@ export function SpotMap({
             title: spot.name,
             icon: gemPinIcon(maps),
           });
-          if (onMarkerSelect !== undefined) {
-            maps.Event.addListener(marker, 'click', () => {
-              onMarkerSelect(spot.id);
-            });
-          }
-          drawn.set(spot.id, marker);
+          const clickListener =
+            onMarkerSelect === undefined
+              ? null
+              : maps.Event.addListener(marker, 'click', () => {
+                  onMarkerSelect(spot.id);
+                });
+          drawn.set(spot.id, { marker, clickListener });
           continue;
         }
         if (!isVisible && existing !== undefined) {
-          existing.setMap(null);
+          erase(existing);
           drawn.delete(spot.id);
         }
       }
@@ -332,7 +352,7 @@ export function SpotMap({
     return () => {
       if (readNaverMaps() === maps) {
         maps.Event.removeListener(listener);
-        for (const marker of drawn.values()) marker.setMap(null);
+        for (const entry of drawn.values()) erase(entry);
       }
       drawn.clear();
     };

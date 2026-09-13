@@ -372,6 +372,34 @@ const submitButton = css({
   _disabled: { opacity: '0.5', cursor: 'not-allowed' },
 });
 
+/**
+ * 앞선 업로드가 결과 화면에 넘겨 둔 blob URL. 없으면 null.
+ *
+ * 넘긴 쪽(이 화면)은 그때 소유권을 놓고, 받은 쪽(결과 화면)은 자기가 언제
+ * 끝나는지 모른 채 뒤로가기로 다시 열릴 수 있다. 그래서 해제 시점을 다음
+ * 장으로 교체가 **끝난 뒤**로 둔다 — 그 순간에는 앞 장을 보는 화면이 없다.
+ */
+function readHandedOffPreviewUrl(): string | null {
+  try {
+    const stored = sessionStorage.getItem(CANDIDATES_SESSION_KEY);
+    if (stored === null) return null;
+
+    const parsed: unknown = JSON.parse(stored);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+
+    const uploadImage = (parsed as { uploadImage?: unknown }).uploadImage;
+    if (typeof uploadImage !== 'object' || uploadImage === null) return null;
+
+    const source = (uploadImage as { src?: unknown }).src;
+    return typeof source === 'string' && source.startsWith('blob:')
+      ? source
+      : null;
+  } catch {
+    // 저장소가 막혀 있거나 값이 깨졌으면 풀 것도 없다.
+    return null;
+  }
+}
+
 export function UploadForm({ action }: Props) {
   const router = useRouter();
   const [state, submit, pending] = useActionState(action, IDLE_EXTRACT_STATE);
@@ -500,12 +528,22 @@ export function UploadForm({ action }: Props) {
       alt: uploaded.file.name,
     };
 
+    // 앞서 넘긴 장은 결과 화면과 함께 사라져도 blob URL이 남아 원본 바이트를
+    // 문서가 닫힐 때까지 붙든다. 올린 횟수만큼 사진이 쌓이는 자리다.
+    const replaced = readHandedOffPreviewUrl();
+
     try {
       sessionStorage.setItem(
         CANDIDATES_SESSION_KEY,
         JSON.stringify({ candidates: state.candidates, uploadImage }),
       );
       handedOffPreviewUrlRef.current = uploaded.previewUrl;
+      // 저장이 끝난 뒤에 푼다. 먼저 풀면 저장이 실패했을 때 화면에 남아 있는
+      // 앞 장의 결과가 죽은 URL을 가리킨다. 같은 URL이면 지금 넘긴 장이므로
+      // 건드리지 않는다 — 이 effect가 다시 돌아도 제 것을 지우지 않는다.
+      if (replaced !== null && replaced !== uploaded.previewUrl) {
+        URL.revokeObjectURL(replaced);
+      }
     } catch {
       // 저장소가 막혀 있으면 결과 화면이 빈 상태를 보여준다. 여기서 이동을
       // 막으면 사용자는 아무 일도 일어나지 않은 화면만 보게 된다.
