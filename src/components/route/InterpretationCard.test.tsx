@@ -60,11 +60,69 @@ describe('해석 조건 확인과 수정', () => {
       />,
     );
     expect(screen.getByText('성수동')).toBeInTheDocument();
-    expect(
-      screen.getByText('걷고 싶은 시간을 알려 주세요'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('시간 제한 없음')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '조건 수정' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('시간을 생략한 상태로 선호를 수정하고 원할 때만 날짜·시간을 추가한다', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <InterpretationCard
+        request={{ ...REQUEST_14_16, window: null }}
+        spots={ALL_SPOTS}
+        pending={false}
+        onSubmit={onSubmit}
+      />,
+    );
+    expect(screen.getByText('시간 제한 없음')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '조건 수정' }));
+    expect(screen.queryByLabelText('출발 날짜와 시간')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '식사' }));
+    await user.click(screen.getByRole('button', { name: '다시 제안' }));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        window: null,
+        preferredCategories: ['cafe', 'meal'],
+      }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: '날짜·시간 지정' }));
+    expect(screen.getByRole('button', { name: '다시 제안' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('출발 날짜와 시간'), {
+      target: { value: '2026-09-15T14:00' },
+    });
+    fireEvent.change(screen.getByLabelText('종료 날짜와 시간'), {
+      target: { value: '2026-09-15T16:00' },
+    });
+    await user.click(screen.getByRole('button', { name: '다시 제안' }));
+    expect(onSubmit).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        window: {
+          start: '2026-09-15T14:00:00+09:00',
+          end: '2026-09-15T16:00:00+09:00',
+        },
+      }),
+    );
+  });
+
+  it('지정한 시간 제한을 해제할 수 있다', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <InterpretationCard
+        request={REQUEST_14_16}
+        spots={ALL_SPOTS}
+        pending={false}
+        onSubmit={onSubmit}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: '조건 수정' }));
+    await user.click(screen.getByRole('checkbox', { name: '날짜·시간 지정' }));
+    await user.click(screen.getByRole('button', { name: '다시 제안' }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ window: null }),
+    );
   });
 });

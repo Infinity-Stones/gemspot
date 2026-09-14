@@ -6,8 +6,8 @@ import type { PlanOutcome } from '@/domain/route';
 import type { PlanRouteAction } from './RouteComposer';
 import { RouteComposer } from './RouteComposer';
 
-vi.mock('./RouteMap', () => ({
-  RouteMap: () => <section aria-label="도보 동선 지도" />,
+vi.mock('./ItineraryMap', () => ({
+  ItineraryMap: () => <section aria-label="도보 동선 지도" />,
 }));
 
 const OK_OUTCOME: PlanOutcome = {

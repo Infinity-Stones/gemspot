@@ -3,7 +3,7 @@ import { MAX_SENTENCE_LENGTH } from '@/app/(main)/route/planState';
 import { planFromRequest, planRoute } from '@/domain/route';
 import { loadSpots, toRouteCandidate } from '@/domain/spot';
 import { isSpotCategory, isSpotCoordinates } from '@/shared/spot';
-import type { RouteRequest } from '@/shared/routeRequest';
+import type { RouteRequest, TimeWindow } from '@/shared/routeRequest';
 import { isValidTimeWindow } from '@/shared/routeRequest';
 import { formatSeoulIso } from '@/shared/time';
 
@@ -28,14 +28,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseRouteRequest(raw: unknown): RouteRequest | null {
   if (!isRecord(raw)) return null;
   const { window, area, preferredCategories, requiredSpotIds } = raw;
-  if (!isRecord(window) || !isRecord(area)) return null;
-  const { start, end } = window;
-  if (
-    typeof start !== 'string' ||
-    typeof end !== 'string' ||
-    !isValidTimeWindow({ start, end })
-  )
-    return null;
+  if (!isRecord(area)) return null;
+  let time: TimeWindow | null = null;
+  if (window !== null) {
+    if (!isRecord(window)) return null;
+    const { start, end } = window;
+    if (
+      typeof start !== 'string' ||
+      typeof end !== 'string' ||
+      !isValidTimeWindow({ start, end })
+    )
+      return null;
+    time = { start, end };
+  }
   const { name, center } = area;
   if (typeof name !== 'string' || !isSpotCoordinates(center)) return null;
   const preferred = Array.isArray(preferredCategories)
@@ -45,7 +50,7 @@ function parseRouteRequest(raw: unknown): RouteRequest | null {
     ? requiredSpotIds.filter((id): id is string => typeof id === 'string')
     : [];
   return {
-    window: { start, end },
+    window: time,
     area: {
       name,
       center: { latitude: center.latitude, longitude: center.longitude },

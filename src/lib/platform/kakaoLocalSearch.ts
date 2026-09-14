@@ -1,4 +1,6 @@
 import { kakaoRestApiKey } from './env';
+import type { SpotCoordinates } from '@/shared/spot';
+import { isSpotCoordinates } from '@/shared/spot';
 import type { GetJsonOptions, HttpFailure } from './httpClient';
 import { getJson } from './httpClient';
 
@@ -13,6 +15,7 @@ export interface LocalPlace {
   readonly category: string;
   readonly roadAddress: string;
   readonly jibunAddress: string;
+  readonly coordinates?: SpotCoordinates;
 }
 
 export type LocalSearchOutcome =
@@ -42,11 +45,15 @@ export function parseLocalPlace(raw: unknown): LocalPlace | null {
   if (!isRecord(raw)) return null;
   const name = text(raw['place_name']);
   if (name.length === 0) return null;
+  const x = text(raw['x']);
+  const y = text(raw['y']);
+  const coordinates = { longitude: Number(x), latitude: Number(y) };
   return {
     name,
     category: text(raw['category_name']),
     roadAddress: text(raw['road_address_name']),
     jibunAddress: text(raw['address_name']),
+    ...(x && y && isSpotCoordinates(coordinates) ? { coordinates } : {}),
   };
 }
 

@@ -7,8 +7,12 @@ import { interpret } from './interpret';
 import type { LegCache, WalkingRouteFn } from './legs';
 import { measureLegs } from './legs';
 import { proposeOrder } from './propose';
-import { schedule, withoutLastOptional } from './schedule';
-import type { GeocodeFn } from './startPoint';
+import {
+  RELATIVE_SCHEDULE_START,
+  schedule,
+  withoutLastOptional,
+} from './schedule';
+import type { AreaSearchFn, GeocodeFn } from './startPoint';
 import { resolveArea } from './startPoint';
 import type {
   DroppedSpot,
@@ -33,6 +37,7 @@ import { START_ID } from './types';
 export interface PlannerDeps {
   readonly generate?: GenerateJson;
   readonly geocode?: GeocodeFn;
+  readonly searchArea?: AreaSearchFn;
   readonly route?: WalkingRouteFn;
 }
 
@@ -99,7 +104,7 @@ export async function planRoute(input: PlanRouteInput): Promise<PlanOutcome> {
   }
 
   const { draft } = interpretation;
-  const area = await resolveArea(draft.areaName, deps.geocode);
+  const area = await resolveArea(draft.areaName, deps.geocode, deps.searchArea);
   if (area.kind === 'not_found') {
     return {
       kind: 'failed',
@@ -190,7 +195,10 @@ export async function planFromRequest(
       ...(deps.route === undefined ? {} : { route: deps.route }),
     });
     return schedule({
-      start: { coord: request.area.center, departAt: request.window.start },
+      start: {
+        coord: request.area.center,
+        departAt: request.window?.start ?? RELATIVE_SCHEDULE_START,
+      },
       window: request.window,
       order: current,
       legs,
@@ -308,7 +316,7 @@ export async function reschedule(input: RescheduleInput): Promise<Itinerary> {
   return schedule({
     start: {
       coord: input.request.area.center,
-      departAt: input.request.window.start,
+      departAt: input.request.window?.start ?? RELATIVE_SCHEDULE_START,
     },
     window: input.request.window,
     order: input.order,

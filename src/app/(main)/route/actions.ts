@@ -32,8 +32,7 @@ export async function planRouteAction(
   if (sentence.length === 0) {
     return {
       status: 'invalid',
-      message:
-        '어디서 몇 시부터 몇 시까지 걷고 싶은지 한 문장으로 적어 주세요.',
+      message: '걷고 싶은 동네나 거리를 적어 주세요. 시간은 생략해도 돼요.',
       ...continuation,
     };
   }
@@ -71,7 +70,7 @@ export async function planFromRequestAction(
     return {
       status: 'invalid',
       message:
-        '동네와 날짜·시간을 확인해 주세요. 산책은 12시간 이내로 정할 수 있어요.',
+        '동네를 확인해 주세요. 시간을 지정한다면 출발·종료를 12시간 이내로 정해 주세요.',
     };
   const { spots, error } = await loadSpots();
   if (error !== null) return { status: 'load_failed' };

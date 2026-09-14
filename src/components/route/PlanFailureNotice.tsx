@@ -49,9 +49,9 @@ export function PlanFailureNotice({ failure }: Props) {
     return (
       <div className={box} role="alert">
         <p>
-          {formatSeoulHourMinute(failure.window.start)}~
-          {formatSeoulHourMinute(failure.window.end)}에 {failure.areaName}에서
-          갈 만한 스팟이 없어요.
+          {failure.window !== null &&
+            `${formatSeoulHourMinute(failure.window.start)}~${formatSeoulHourMinute(failure.window.end)}에 `}
+          {failure.areaName}에서 갈 만한 스팟이 없어요.
         </p>
         {failure.dropped.length > 0 && (
           <ul className={droppedList}>
@@ -64,7 +64,9 @@ export function PlanFailureNotice({ failure }: Props) {
           </ul>
         )}
         <p className={detail}>
-          시간대를 바꾸거나 다른 동네로 다시 말해 주세요.
+          {failure.window === null
+            ? '이 지역의 장소를 저장하거나 다른 동네로 다시 말해 주세요.'
+            : '시간대를 바꾸거나 다른 동네로 다시 말해 주세요.'}
         </p>
       </div>
     );
@@ -87,8 +89,8 @@ export function PlanFailureNotice({ failure }: Props) {
       <div className={box} role="alert">
         <p>요청을 이해하지 못했어요.</p>
         <p className={detail}>
-          언제, 어디서 걷고 싶은지를 넣어 다시 말해 주세요. 예: 오늘 저녁
-          7시부터 9시까지 성수동에서 카페 들르면서.
+          걷고 싶은 동네나 거리를 넣어 다시 말해 주세요. 예: 성수 카페거리 동선
+          추천해 줘.
         </p>
       </div>
     );

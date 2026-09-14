@@ -18,7 +18,7 @@ import type { SpotCategory } from '@/shared/spot';
 export type OrderingSource = 'llm' | 'rule';
 
 /** 구간 시간이 실측인지 직선거리 추정인지(T41). */
-export type LegSource = 'tmap' | 'estimate';
+export type LegSource = 'osm' | 'tmap' | 'estimate';
 
 export type DropReason =
   'outside_window' | 'outside_area' | 'over_time' | 'user';
@@ -58,7 +58,7 @@ export interface Itinerary {
     readonly coord: SpotCoordinates;
     readonly departAt: string;
   };
-  readonly window: TimeWindow;
+  readonly window: TimeWindow | null;
   readonly stops: readonly ItineraryStop[];
   /** `stops.length`개. `legs[i]`는 `stops[i]`에 **도착하는** 구간이다. */
   readonly legs: readonly Leg[];
@@ -96,7 +96,7 @@ export type PlanFailure =
   | { readonly kind: 'area_not_found'; readonly areaName: string }
   | {
       readonly kind: 'no_candidates';
-      readonly window: TimeWindow;
+      readonly window: TimeWindow | null;
       readonly areaName: string;
       readonly dropped: readonly DroppedSpot[];
     }

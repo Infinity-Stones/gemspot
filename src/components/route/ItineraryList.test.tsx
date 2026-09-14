@@ -62,6 +62,21 @@ const BASE: Itinerary = {
 };
 
 describe('ItineraryList', () => {
+  it('시간을 지정하지 않으면 도착 시각 대신 출발 후 소요시간을 표시한다', () => {
+    render(
+      <ItineraryList
+        itinerary={{ ...BASE, window: null }}
+        areaName="성수 카페거리"
+      />,
+    );
+    expect(
+      screen.getByText('시간 제한 없이 · 성수 카페거리'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('원하는 시간에 출발')).toBeInTheDocument();
+    expect(screen.getByText(/출발 후 약 8분 · 편집숍 A/)).toBeInTheDocument();
+    expect(screen.queryByText(/14:08/)).not.toBeInTheDocument();
+    expect(screen.getByText(/이동·체류 포함 약/)).toBeInTheDocument();
+  });
   it('시간대 · 동네 · 합계와 각 정거장의 도착 시각 · 체류를 보여 준다', () => {
     render(<ItineraryList itinerary={BASE} areaName="성수동" />);
 

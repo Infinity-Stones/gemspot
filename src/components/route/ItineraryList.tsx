@@ -1,7 +1,7 @@
 import { css } from 'styled-system/css';
 import type { Itinerary } from '@/domain/route';
 import { labelOf } from '@/shared/spotCategory';
-import { formatSeoulHourMinute } from '@/shared/time';
+import { diffSeconds, formatSeoulHourMinute } from '@/shared/time';
 import { DROP_REASON_TEXT } from './routePresentation';
 import { actionButton, row } from './routeStyles';
 
@@ -132,13 +132,17 @@ export function ItineraryList({
 }: Props) {
   const { stops, legs, dropped } = itinerary;
   const overMinutes = Math.ceil(itinerary.overBySeconds / 60);
+  const flexible = itinerary.window === null;
+  const elapsedMinutes = (at: string) =>
+    Math.ceil(diffSeconds(itinerary.start.departAt, at) / 60);
 
   return (
     <section className={shell} aria-label="제안된 동선">
       <header className={head}>
         <p className={headline}>
-          {formatSeoulHourMinute(itinerary.window.start)}~
-          {formatSeoulHourMinute(itinerary.window.end)} · {areaName}
+          {itinerary.window === null
+            ? `시간 제한 없이 · ${areaName}`
+            : `${formatSeoulHourMinute(itinerary.window.start)}~${formatSeoulHourMinute(itinerary.window.end)} · ${areaName}`}
         </p>
         <p className={muted}>
           총 도보 {String(itinerary.totalWalkMinutes)}분 ·{' '}
@@ -155,6 +159,11 @@ export function ItineraryList({
           분이에요. 실제 영업시간은 방문 전에 확인해 주세요.
         </p>
       </header>
+      {flexible && (
+        <p className={muted}>
+          이동·체류 포함 약 {String(elapsedMinutes(itinerary.endAt))}분 예상
+        </p>
+      )}
 
       {itinerary.ordering === 'rule' && (
         <p className={badge} role="status">
@@ -176,7 +185,9 @@ export function ItineraryList({
       )}
 
       <p className={edge}>
-        {formatSeoulHourMinute(itinerary.start.departAt)} 출발
+        {flexible
+          ? '원하는 시간에 출발'
+          : `${formatSeoulHourMinute(itinerary.start.departAt)} 출발`}
       </p>
 
       <ol className={list}>
@@ -197,7 +208,10 @@ export function ItineraryList({
                 </span>
                 <div className={stopBody}>
                   <p className={stopTitle}>
-                    {formatSeoulHourMinute(stop.arriveAt)} {stop.candidate.name}
+                    {flexible
+                      ? `출발 후 약 ${String(elapsedMinutes(stop.arriveAt))}분 ·`
+                      : formatSeoulHourMinute(stop.arriveAt)}{' '}
+                    {stop.candidate.name}
                   </p>
                   <p className={muted}>
                     {labelOf(stop.candidate.category)} · 체류{' '}
@@ -250,7 +264,11 @@ export function ItineraryList({
         })}
       </ol>
 
-      <p className={edge}>{formatSeoulHourMinute(itinerary.endAt)} 끝</p>
+      <p className={edge}>
+        {flexible
+          ? `약 ${String(elapsedMinutes(itinerary.endAt))}분 후 마무리`
+          : `${formatSeoulHourMinute(itinerary.endAt)} 끝`}
+      </p>
 
       {dropped.length > 0 && (
         <section className={droppedSection} aria-label="빠진 스팟">

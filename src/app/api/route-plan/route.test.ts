@@ -40,6 +40,29 @@ describe('POST /api/route-plan 스팟 저장소', () => {
     domain.toRouteCandidate.mockReset();
   });
 
+  it('구조화 API에서도 시간 제한 없는 요청을 받을 수 있다', async () => {
+    domain.loadSpots.mockResolvedValue({ spots: [], error: null });
+    domain.planFromRequest.mockResolvedValue(FAILED_OUTCOME);
+    const request = {
+      window: null,
+      area: {
+        name: '성수 카페거리',
+        center: { latitude: 37.54, longitude: 127.05 },
+      },
+      preferredCategories: ['cafe'],
+      requiredSpotIds: [],
+    };
+    const response = await POST(
+      new Request('http://localhost/api/route-plan', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ request }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    expect(domain.planFromRequest).toHaveBeenCalledWith({ request, spots: [] });
+  });
+
   it('저장 스팟 조회에 실패하면 샘플 후보로 숨기지 않고 503을 돌려준다', async () => {
     domain.loadSpots.mockResolvedValue({
       spots: [],

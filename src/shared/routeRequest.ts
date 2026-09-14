@@ -8,9 +8,8 @@ import { diffSeconds, parseIso } from './time';
  * 문장을 이 모양으로 바꾸는 것은 LLM 어댑터의 일이고, 이 모양만 손으로 채워도
  * 엔진은 돈다. 그래서 이 계약은 LLM · TMAP · Geocoding 어느 것도 모른다.
  *
- * `window`와 `area.center`가 **필수**인 것이 핵심이다. 옵셔널로 두면 "빠진
- * 조건을 기본값으로 채우는" 경로가 타입 수준에서 열린다(T36). 해석 도중의
- * 불완전한 상태는 도메인 안의 별도 타입이 맡는다.
+ * 지역 좌표는 필수다. `window: null`은 시간 제한 없는 추천이며,
+ * 임의의 출발·종료 시각을 사용자 조건으로 만들지 않는다.
  */
 
 /** 오프셋이 붙은 ISO 8601 둘. `start < end`, 길이 ≤ 12시간(`isValidTimeWindow`). */
@@ -20,7 +19,7 @@ export interface TimeWindow {
 }
 
 export interface RouteRequest {
-  readonly window: TimeWindow;
+  readonly window: TimeWindow | null;
   readonly area: {
     /** 사용자가 말한 이름. 예: 성수동 */
     readonly name: string;
@@ -70,7 +69,7 @@ export function isValidTimeWindow(window: TimeWindow): boolean {
 
 /** 조건 직접 수정 화면이 보내는 값. 출발 좌표는 서버가 다시 조회한다. */
 export interface RouteConditions {
-  readonly window: TimeWindow;
+  readonly window: TimeWindow | null;
   readonly areaName: string;
   readonly preferredCategories: readonly SpotCategory[];
   readonly requiredSpotIds: readonly string[];

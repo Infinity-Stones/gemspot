@@ -3,8 +3,6 @@ import { failingGenerate, stubGenerate } from './fixtures.test-helper';
 import {
   QUESTION_AREA,
   QUESTION_PAST_WINDOW,
-  QUESTION_BOTH,
-  QUESTION_WINDOW,
   buildUserPrompt,
   interpret,
   parseDraft,
@@ -41,7 +39,7 @@ describe('interpret (LLM 응답 고정)', () => {
     }
   });
 
-  it('"성수동 걷고 싶어" → 시간대가 없어 되묻는다', async () => {
+  it('"성수동 걷고 싶어" → 시간을 만들거나 되묻지 않고 바로 추천한다', async () => {
     const result = await interpret({
       ...base,
       sentence: '성수동 걷고 싶어',
@@ -55,13 +53,12 @@ describe('interpret (LLM 응답 고정)', () => {
       ]),
     });
     expect(result).toMatchObject({
-      kind: 'incomplete',
-      missing: ['window'],
-      question: QUESTION_WINDOW,
+      kind: 'complete',
+      draft: { window: null, areaName: '성수동' },
     });
   });
 
-  it('동네만 없으면 동네를, 둘 다 없으면 합쳐 묻는다', async () => {
+  it('시간 유무에 관계없이 동네가 없을 때 동네만 묻는다', async () => {
     const window = {
       start: '2026-09-12T14:00:00+09:00',
       end: '2026-09-12T16:00:00+09:00',
@@ -95,8 +92,8 @@ describe('interpret (LLM 응답 고정)', () => {
     });
     expect(r2).toMatchObject({
       kind: 'incomplete',
-      missing: ['window', 'area'],
-      question: QUESTION_BOTH,
+      missing: ['area'],
+      question: QUESTION_AREA,
     });
   });
 
