@@ -13,7 +13,9 @@ const frame = css({
   height: { base: '[360px]', md: '[480px]' },
   rounded: 'panel',
   overflow: 'hidden',
-  boxShadow: 'preview',
+  borderWidth: 'hairline',
+  borderStyle: 'solid',
+  borderColor: 'ui.line',
 });
 const canvas = css({
   width: 'full',
@@ -30,7 +32,7 @@ const markerClass = css({
   rounded: 'full',
   bg: 'ui.action',
   color: 'ui.onAction',
-  borderWidth: '2px',
+  borderWidth: 'thick',
   borderStyle: 'solid',
   borderColor: 'ui.surface',
   textStyle: 'bodySm',
